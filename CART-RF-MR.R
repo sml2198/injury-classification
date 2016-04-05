@@ -23,11 +23,10 @@ library(ROSE)
 
 ######################################################################################################
 setwd("/Users/Sarah/Dropbox (SLS)/R-code")
-setwd("X:/Projects/Mining/NIOSH/analysis/data/4_coded")
 validatex = read.csv("coded_MR_validation_set.csv", header = T)
 trainx = read.csv("coded_MR_training_set.csv", header = T)
 
-# generate random number & reorder data
+# RANDOMLY SORT DATA (IT WAS ORDERED IN STATA BEFORE THIS)
 set.seed(625)
 rand <- runif(nrow(trainx))
 train <- trainx[order(rand),]
@@ -36,37 +35,38 @@ rand2 <- runif(nrow(validatex))
 validate <- validatex[order(rand2),]
 
 ######################################################################################################
-# define randomforest function on real data (true proportion of positive/negative outcomes)
+# DEFINE RANDOM FOREST (TRUE PROPORTION OF 0'S AND 1'S)
 set.seed(1)
-rf <- randomForest(MR ~ ., data = train[1:600,], mtry = 11, 
-                   keep.inbag = TRUE,  # mandatory,
-                   importance = TRUE,  # recommended, else ordering by giniImpurity (unstable)
+rf <- randomForest(MR ~ ., data = train[1:600,], mtry = 11,
+                   keep.inbag = TRUE, 
+                   importance = TRUE, 
                    ntree = 400)
 rf
 
-# inspect ranked variables & error rate
+# INSPECT RANKED VARIABLES AND ERROR RATE
 plot(rf)
 plot(margin(rf))
 getTree(rf,1, labelVar=TRUE)
-# store variable importance
+
+# STORE VARIABLE IMPORTANCE
 round(importance(rf),2)
 df.rf_imp <- data.frame(variable = names(rf$importance[,1]), importance = rf$importance[,1])
 df.rf_imp <- df.rfImportance[ order(-df.rfImportance[,2]),]
 
 # PREDICT ON REMAINING OBSERVATIONS & PLOT THE PREDICTIONS (TOP ROW) VS ACTUALS IN TABLE 
-rf_predictions = predict(rf, train[601:1000,],type="class")
-table(train[601:1000,55], predicted = rf_predictions)
-#NO  253   0
-#YES 145   2
+rf.predictions = predict(rf, train[601:1000,],type="class")
+table(train[601:1000,55], predicted = rf.predictions)
+#NO  240   2
+#YES 137  21
 
-# PREDICT ON OUT OF BAG OBSERVATIONS & PLOT THE PREDICTIONS (TOP ROW) VS ACTUALS IN TABLE 
-rf_oob_predictions = predict(rf, train[1:600,],type="class")
-table(train[1:600,55], predicted = rf_oob_predictions)
-#NO  382   0
-#YES 195  23
+# PREDICT ON OUT OF BAG OBSERVATIONS 
+rf.oob.predictions = predict(rf, train[1:600,],type="class")
+table(train[1:600,55], predicted = rf.oob.predictions)
+#NO  393   0
+#YES 155  52
 
-# plot variable importance for rf
-rf_imp_plot <- function(df.rf_imp, title='Variable importance for Random Forest model') {
+# PLOT VARIABLE IMPORTANCE
+rf.imp.plot <- function(df.rf_imp, title='Variable importance for Random Forest model') {
   ggplot(df.rf_imp, aes(x=reorder(variable, importance), y=importance)) + 
     geom_bar(stat='identity', color=BLUE, fill=BLUE) +
     coord_flip() + 
@@ -75,24 +75,45 @@ rf_imp_plot <- function(df.rf_imp, title='Variable importance for Random Forest 
     labs(title=title) +
     theme_enigma()
 }
-rf_imp_plot 
+rf.imp.plot 
 
 ######################################################################################################
-# OVERSAMPLE POSITIVE OUTCOMES (MR=1)FOR RANDOM FOREST: generate new balanced data by ROSE
+# OVERSAMPLE POSITIVE OUTCOMES (MR=1)FOR RANDOM FOREST: JUST USING SAMPSIZE
+set.seed(2)
+rf.samp <- randomForest(MR ~ ., data = train[1:600,], mtry = 11, sampsize=c(100, 100), 
+                   keep.inbag = TRUE,  # classwt=c(p0,p1), SAMP SIZE IS OVERSAMPLING "YES"'S
+                   importance = TRUE,  
+                   ntree = 400)
+rf.samp
+
+# PREDICT ON REMAINING
+rf.predictions = predict(rf.samp, train[601:1000,],type="class")
+table(train[601:1000,55], predicted = rf.predictions)
+#NO  242   0
+#YES 142  16
+
+# PREDICT ON OOB
+rf.oob.predictions = predict(rf.samp, train[1:600,],type="class")
+table(train[1:600,55], predicted = rf.oob.predictions)
+#NO  393   0
+#YES 177  30
+
+######################################################################################################
+# OVERSAMPLE POSITIVE OUTCOMES (MR=1)FOR RANDOM FOREST: GENERATE BALANCED DATA W ROSE
 train.rosex <- ROSE(MR ~ ., data=train)$data
 
-# check (im)balance of new data and sort randomly, for kicks
+# CHECK IMBALANCE AND SORT RANDOMLY (FOR SHITZNGIGGLES)
 table(train.rosex$MR)
 set.seed(836)
 rand3 <- runif(nrow(train.rosex))
 train.rose <- train.rosex[order(rand3),]
 
-# define randomforest function on ROSE oversampled data
+# DEFINE RF ON ROSE OVERSAMPLED DATA
 set.seed(2)
 rf.rose <- randomForest(MR ~ ., data = train.rose[1:600,], mtry = 11, ntree = 100)
 rf.rose
 
-# inspect ranked variables & error rate
+# INSPECT RANKED VARIABLES AND ERROR RATE
 plot(margin(rf.rose))
 # store variable importance
 round(importance(rf.rose),2)
