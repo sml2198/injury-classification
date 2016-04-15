@@ -16,6 +16,7 @@ ps_data[,grep("averagemineheight", names(ps_data))] = as.numeric(ps_data[,grep("
 
 #Merge redundant 'not-found' values within variables. Note: Values like "Unknown" or "Other" are not funneled into "No Value Found"
 ps_data[, "uglocation"] = ifelse(ps_data[, "uglocation"] == "NOT MARKED", "NO VALUE FOUND", ps_data[, "uglocation"])
+ps_data[, "accidenttype"] = ifelse(ps_data[, "accidenttype"] == "NOT ELSEWHERE CLASSIFIED", "NO VALUE FOUND", ps_data[, "accidenttype"])
 ps_data[, "immediatenotificationclass"] = ifelse(ps_data[, "immediatenotificationclass"] == "NOT MARKED", "NO VALUE FOUND", ps_data[, "immediatenotificationclass"])
 ps_data[, "natureofinjury"] = ifelse(ps_data[, "natureofinjury"] == "UNCLASSIFIED,NOT DETERMED", "NO VALUE FOUND", ps_data[, "natureofinjury"])
 ps_data[, "equipmanufacturer"] = ifelse(ps_data[, "equipmanufacturer"] == "Not Reported", "NO VALUE FOUND", ps_data[, "equipmanufacturer"])
