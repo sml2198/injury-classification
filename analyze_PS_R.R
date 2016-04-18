@@ -36,9 +36,7 @@ for (i in indices_with_date) {
 }
 
 # MERGE IN OTHER VARIABLES FROM PROTO-ALGORITHM (LIKE KEYWORD FLAGS) CHANGE TO KEEP ANY OTHER ADDTL VARS
-ps_tngSet_intnl = read.csv("X:/Projects/Mining/NIOSH/analysis/data/training/training_set_1_internal.csv")
-ps_data = merge(ps_data, ps_tngSet_intnl, c("mineid", "documentno"))
-remove(ps_tngSet_intnl)
+ps_data = merge(ps_data, read.csv("X:/Projects/Mining/NIOSH/analysis/data/training/training_set_1_internal.csv"), c("mineid", "documentno"))
 ps_data = ps_data[, c(-grep("\\.y", names(ps_data)))]
 names(ps_data) = gsub("\\.[x|y]", "", names(ps_data))
 
@@ -103,4 +101,3 @@ new_dummies = apply(cbind(dummy(ps_data$sourceofinjury), dummy(ps_data$occupatio
                     MARGIN = 2, FUN = function(x) factor(x))
 #Memory issues with the next line so, for now, this is mostly to outline what ideally should happen at this stage. 4/16/16
 #ps_data = merge(ps_data, data.frame(new_dummies))
-
