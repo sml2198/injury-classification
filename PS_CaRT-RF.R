@@ -46,13 +46,13 @@ tabulate(ps_testSet$PS)
 
 cart = rpart(PS ~ ., data = ps_trainingSet, method = "class")
 table(ps_testSet$PS, predicted = predict(cart, ps_testSet, type = "class"))
+#rpart.plot(cart, type = 1, extra = 1, fallen.leaves = T)
 
 #We need to find an oversampler that's more cognizant of the distributions of each predictor.
 ps_trainingSet_rose = ROSE(PS ~ ., data = ps_trainingSet, seed = 123)$data
 tabulate(ps_trainingSet_rose$PS)
 cart_rose = rpart(PS ~ ., data = ps_trainingSet_rose, method = "class")
 table(ps_testSet$PS, predicted = predict(cart_rose, ps_testSet, type = "class"))
-#rpart.plot(cart, type = 1, extra = 1, fallen.leaves = T)
 
 #AdaBoost.M1
 
@@ -70,3 +70,5 @@ table(ps_testSet$PS, predicted = predict(ps_rf, ps_testSet, type = "class"))
 
 #Kill everything:
 #rm(list = ls())
+
+
