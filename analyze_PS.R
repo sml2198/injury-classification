@@ -1,5 +1,13 @@
 #analyze_PS.R by Nikhil Saifullah 4/14/16
 
+install.packages("dummies")
+library(dummies)
+
+#Specify imputation method here: 1 - means & modes, 2 - medians & modes, 3 - random sampling from distribution - best we can do for now
+#4 - multiple imputation through regression
+
+imputation_method = 3
+
 ps_data = read.csv("X:/Projects/Mining/NIOSH/analysis/data/training/coded_sets/Training_Set_Pinning_And_Striking_Accidents-January-29-2016.csv")
 ps_data = ps_data[!is.na(ps_data$mineid),]
 names(ps_data)[names(ps_data) == 'X'] = 'PS'
@@ -43,12 +51,56 @@ ps_data[, "keyword"] = ifelse((ps_data[, "trap"] == 1 | ps_data[, "pin"] == 1 | 
 ps_data = ps_data[, c(-grep("pinner", names(ps_data)), -grep("pinion", names(ps_data)))]
 
 var_classes = sapply(ps_data[,names(ps_data)], class)
-factor_vars = names(var_classes[grep("factor", var_classes)])
-charac_vars = names(var_classes[grep("character", var_classes)])
+charac_vars = names(var_classes[c(grep("character", var_classes), grep("factor", var_classes))])
 num_vars = names(var_classes[c(grep("numeric", var_classes), grep("integer", var_classes))])
 #We don't use date vars as of yet so no need to store a list of their names, "logical" class vars are missing all obsvtns
 ps_data = ps_data[, -grep("logical", var_classes)]
 
-for (i in length(charac_vars)) {
-  ps_data[, charac_vars[i]] = ifelse((ps_data[,charac_vars[i]] == "NO VALUE FOUND" | ps_data[,charac_vars[i]] == "UNKNOWN" | ps_data[,charac_vars[i]] == "?"), NA_character_, ps_data[,charac_vars[i]])
+for (i in 1:length(charac_vars)) {
+  ps_data[, charac_vars[i]] = ifelse((ps_data[,charac_vars[i]] == "NO VALUE FOUND" | ps_data[,charac_vars[i]] == "UNKNOWN" | 
+                                        ps_data[,charac_vars[i]] == "?" | ps_data[,charac_vars[i]] == ""), NA_character_, ps_data[,charac_vars[i]])
 }
+
+#Must define function to calculate mode for imputation methods 1 & 2
+modus = function(x) {
+  uniqv = unique(x)
+  uniqv[which.max(tabulate(match(x, uniqv)))]
+}
+
+if (imputation_method == 1 | imputation_method == 2) {
+  for (i in 1:length(num_vars)) {
+    ps_data[, num_vars[i]] = ifelse(is.na(ps_data[, num_vars[i]]), mean(ps_data[, num_vars[i]]), ps_data[, num_vars[i]])
+  }
+  if (imputation_method == 2) {
+    for (i in 1:length(num_vars)) {
+      ps_data[, num_vars[i]] = ifelse(is.na(ps_data[, num_vars[i]]), median(ps_data[, num_vars[i]]), ps_data[, num_vars[i]])
+    }
+  }
+  for (i in 1:length(charac_vars)) {
+    ps_data[, charac_vars[i]] = ifelse(is.na(ps_data[, charac_vars[i]]), modus(ps_data[, charac_vars[i]]), ps_data[, charac_vars[i]])
+  }
+} else if (imputation_method == 3) {
+  for (i in 1:length(num_vars)) {
+    i_rowsmissing = row.names(ps_data)[is.na(ps_data[, num_vars[i]])]
+    while (sum(!complete.cases(ps_data[, num_vars[i]])) > 0) {
+      replace_rows = sample(setdiff(row.names(ps_data), i_rowsmissing), length(i_rowsmissing), replace = T)
+      ps_data[i_rowsmissing, num_vars[i]] = ps_data[replace_rows, num_vars[i]]
+    }
+  }
+  for (i in 1:length(charac_vars)) {
+    i_rowsmissing = row.names(ps_data)[is.na(ps_data[, charac_vars[i]])]
+    while (sum(!complete.cases(ps_data[, charac_vars[i]])) > 0) {
+      replace_rows = sample(setdiff(row.names(ps_data), i_rowsmissing), length(i_rowsmissing), replace = T)
+      ps_data[i_rowsmissing, charac_vars[i]] = ps_data[replace_rows, charac_vars[i]]
+    }
+  }
+} else {
+  #Not to be implemented as of now. 4/15/16
+}
+
+new_dummies = apply(cbind(dummy(ps_data$sourceofinjury), dummy(ps_data$occupation), dummy(ps_data$equipmentmodelno), dummy(ps_data$fipscountyname),
+                          dummy(ps_data$controllername), dummy(ps_data$operatorname), dummy(ps_data$controllerid), dummy(ps_data$operatorid)),
+                          MARGIN = 2, FUN = function(x) factor(x))
+#Memory issues with the next line so, for now, this is mostly to outline what ideally should happen at this stage. 4/16/16
+#ps_data = merge(ps_data, data.frame(new_dummies))
+
