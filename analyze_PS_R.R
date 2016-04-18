@@ -50,10 +50,10 @@ ps_data[, "trap"] = ifelse(grepl("( )trap[a-z]*", ps_data[,"narrative"]), 1, 0)
 ps_data[, "keyword"] = ifelse((ps_data[, "trap"] == 1 | ps_data[, "pin"] == 1 | ps_data[, "trap"] == 1), 1, 0)
 ps_data = ps_data[, c(-grep("pinner", names(ps_data)), -grep("pinion", names(ps_data)))]
 
+#We don't use date vars as of yet so no need to store a list of their names, "logical" class vars are missing all obsvtns
 var_classes = sapply(ps_data[,names(ps_data)], class)
 charac_vars = names(var_classes[c(grep("character", var_classes), grep("factor", var_classes))])
 num_vars = names(var_classes[c(grep("numeric", var_classes), grep("integer", var_classes))])
-#We don't use date vars as of yet so no need to store a list of their names, "logical" class vars are missing all obsvtns
 ps_data = ps_data[, -grep("logical", var_classes)]
 
 for (i in 1:length(charac_vars)) {
