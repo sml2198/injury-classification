@@ -10,6 +10,7 @@ install.packages("reshape2")
 install.packages("scales")
 install.packages("pROC")
 install.packages("ROSE")
+install.packages("ROCR")
 library(rpart)
 library(rpart.plot)
 library(tree)
@@ -19,10 +20,12 @@ library(bigrf)
 library(reshape2)
 library(scales)
 library(pROC)
+library(ROCR)
 library(ROSE)
 
 ######################################################################################################
 setwd("/Users/Sarah/Dropbox (SLS)/R-code")
+setwd("X:/Projects/Mining/NIOSH/analysis/data/4_coded")
 validatex = read.csv("coded_MR_validation_set.csv", header = T)
 trainx = read.csv("coded_MR_training_set.csv", header = T)
 
@@ -33,6 +36,7 @@ train <- trainx[order(rand),]
 set.seed(508)
 rand2 <- runif(nrow(validatex))
 validate <- validatex[order(rand2),]
+#which( colnames(train)=="MR" )
 
 ######################################################################################################
 # DEFINE RANDOM FOREST (TRUE PROPORTION OF 0'S AND 1'S)
@@ -56,14 +60,10 @@ df.rf_imp <- df.rfImportance[ order(-df.rfImportance[,2]),]
 # PREDICT ON REMAINING OBSERVATIONS & PLOT THE PREDICTIONS (TOP ROW) VS ACTUALS IN TABLE 
 rf.predictions = predict(rf, train[601:1000,],type="class")
 table(train[601:1000,55], predicted = rf.predictions)
-#NO  240   2
-#YES 137  21
 
 # PREDICT ON OUT OF BAG OBSERVATIONS 
 rf.oob.predictions = predict(rf, train[1:600,],type="class")
 table(train[1:600,55], predicted = rf.oob.predictions)
-#NO  393   0
-#YES 155  52
 
 # PLOT VARIABLE IMPORTANCE
 rf.imp.plot <- function(df.rf_imp, title='Variable importance for Random Forest model') {
@@ -79,24 +79,13 @@ rf.imp.plot
 
 ######################################################################################################
 # OVERSAMPLE POSITIVE OUTCOMES (MR=1)FOR RANDOM FOREST: JUST USING SAMPSIZE
-set.seed(2)
-rf.samp <- randomForest(MR ~ ., data = train[1:600,], mtry = 11, sampsize=c(100, 100), 
-                   keep.inbag = TRUE,  # classwt=c(p0,p1), SAMP SIZE IS OVERSAMPLING "YES"'S
-                   importance = TRUE,  
-                   ntree = 400)
-rf.samp
-
 # PREDICT ON REMAINING
 rf.predictions = predict(rf.samp, train[601:1000,],type="class")
 table(train[601:1000,55], predicted = rf.predictions)
-#NO  242   0
-#YES 142  16
 
 # PREDICT ON OOB
 rf.oob.predictions = predict(rf.samp, train[1:600,],type="class")
 table(train[1:600,55], predicted = rf.oob.predictions)
-#NO  393   0
-#YES 177  30
 
 ######################################################################################################
 # OVERSAMPLE POSITIVE OUTCOMES (MR=1)FOR RANDOM FOREST: GENERATE BALANCED DATA W ROSE
@@ -115,7 +104,6 @@ rf.rose
 
 # INSPECT RANKED VARIABLES AND ERROR RATE
 plot(margin(rf.rose))
-# store variable importance
 round(importance(rf.rose),2)
 
 # PREDICT ON REMAINING OBSERVATIONS & PLOT THE PREDICTIONS (TOP ROW) VS ACTUALS IN TABLE 
@@ -130,8 +118,6 @@ rfDownsampled <- randomForest(MR ~ ., train[1:600,], ntree = 100, mtry = 11,
 rfDownsampled
 rf_down_predictions = predict(rfDownsampled, train[601:1000,],type="class")
 table(train[601:1000,55], predicted = rf_down_predictions)
-#NO  253   0
-#YES 122   25
 
 ######################################################################################################
 # CREATE CART FUNCTION WITH RPART AND EXECUTE ON 1ST 600 OBSERVATIONS
@@ -146,8 +132,40 @@ summary(cart)
 
 # PREDICT ON REMAINING OBSERVATIONS & PLOT THE PREDICTIONS (TOP ROW) VS ACTUALS IN TABLE 
 cart_predictions = predict(cart, train[601:1000,],type="class")
-table(train[601:1000,55], predicted = cart_predictions)
-#NO  230  23
-#YES  28 119
+table(train[601:1000,51], predicted = cart_predictions)
+
+# MAKE ROC PLOT FOR REGULAR CART 
+fit.pr = predict(cart,newdata=train[601:1000,],type="prob")[,2]
+fit.pred = prediction(fit.pr,train[601:1000,51])
+fit.perf = performance(fit.pred,"tpr","fpr")
+plot(fit.perf,lwd=2,col="blue",
+     main="ROC:  Classification Trees on Training Data")
+abline(a=0,b=1)
 
 ######################################################################################################
+# OVERSAMPLE POSITIVE OUTCOMES (MR=1)FOR RANDOM FOREST: GENERATE BALANCED DATA W ROSE
+train.rosex <- ROSE(MR ~ ., data=train)$data
+
+# CHECK IMBALANCE AND SORT RANDOMLY (FOR SHITZNGIGGLES)
+table(train.rosex$MR)
+set.seed(836)
+rand3 <- runif(nrow(train.rosex))
+train.rose <- train.rosex[order(rand3),]
+
+# DO CART
+cart.rose <- rpart(MR ~ ., data = train.rose[1:600,], method="class")
+cart.rose 
+rose.predictions = predict(cart.rose, train.rose[601:1000,],type="class")
+table(train.rose[601:1000,51], predicted = rose.predictions)
+rose.predictions = predict(cart.rose, train[1:1000,],type="class")
+table(train.rose[1:1000,51], predicted = rose.predictions)
+
+fit.pr = predict(cart.rose,newdata=train[1:1000,],type="prob")[,2]
+fit.pred = prediction(fit.pr,train[1:1000,51])
+fit.perf = performance(fit.pred,"tpr","fpr")
+plot(fit.perf,lwd=2,col="blue",
+     main="ROC:  Classification Trees on ROSE Data")
+abline(a=0,b=1)
+
+######################################################################################################
+
