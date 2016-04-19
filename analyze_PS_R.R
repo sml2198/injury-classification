@@ -32,7 +32,7 @@ ps_data[, "immediatenotificationclass"] = ifelse(ps_data[, "immediatenotificatio
 ps_data[, "natureofinjury"] = ifelse(ps_data[, "natureofinjury"] == "UNCLASSIFIED,NOT DETERMED", "NO VALUE FOUND", ps_data[, "natureofinjury"])
 ps_data[, "equipmanufacturer"] = ifelse(ps_data[, "equipmanufacturer"] == "Not Reported", "NO VALUE FOUND", ps_data[, "equipmanufacturer"])
 
-#Convert date variables. We drop date variables now, but eventually will make us of them. Nikhil 4/18/16
+#Convert date variables. We drop date variables now, but eventually will make use of them. Nikhil 4/18/16
 indices_with_date = grep("date", names(ps_data))
 for (i in indices_with_date) {
   ps_data[,i] = as.Date(ps_data[,i], "%m/%d/%Y")
@@ -45,8 +45,7 @@ names(ps_data) = gsub("\\.[x|y]", "", names(ps_data))
 
 ps_data[, "pinion"] = ifelse(grepl("(^| )pinion", ps_data[,"narrative"]), 1, 0)
 ps_data[, "pinner"] = ifelse(grepl("(^| )pinner", ps_data[,"narrative"]), 1, 0)
-#Exactly 1 observation is classf'd as a pin here that is not in STATA. All other counts are identical. Nikhil 4/18/16
-ps_data[, "pin"] = ifelse(grepl("(^| )pin(n*)(e|i)[a-z]+", ps_data[,"narrative"]) & (ps_data[, "pinion"] != 1 | ps_data[, "pinner"] != 1), 1, 0)
+ps_data[, "pin"] = ifelse(grepl("(^| )pin(n*)(e|i)[a-z]+", ps_data[,"narrative"]) & ps_data[, "pinion"] != 1 & ps_data[, "pinner"] != 1, 1, 0)
 ps_data[, "strike"] = ifelse(grepl("str(i|u)(.*)k[a-z]*", ps_data[,"narrative"]), 1, 0)
 ps_data[, "trap"] = ifelse(grepl("( )trap[a-z]*", ps_data[,"narrative"]), 1, 0)
 ps_data[, "keyword"] = ifelse((ps_data[, "trap"] == 1 | ps_data[, "pin"] == 1 | ps_data[, "strike"] == 1), 1, 0)
