@@ -90,6 +90,8 @@ require(zoo)
 mr.data[, "quarter"] = as.yearqtr(mr.data$accidentdate,"%Y-%m-%d")
 # now drop calendar year and quarter and accidentdate, all not needed anymore 
 mr.data = mr.data[, c(-grep("calendar", names(mr.data)), -grep("accidentdate", names(mr.data)))]
+# do we want to treat accidenttime a certain way?
+
 
 # REMOVE IRRELEVANT VARS: 24 OF 119 VARS 
 mr.data = mr.data[, c(-grep("directionstominemodified", names(mr.data)), -grep("minegascategorycode", names(mr.data)),
