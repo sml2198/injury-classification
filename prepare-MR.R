@@ -2,9 +2,12 @@ install.packages("eeptools")
 library(eeptools)
 install.packages("zoo")
 library(zoo)
+install.packages("dummies")
+library(dummies)
 
 setwd("X:/Projects/Mining/NIOSH/analysis/data/training/coded_sets/")
 mr.data = read.csv("Training_Set_Maintenance_And_Repair_Accidents_August_2015_2.csv", header = TRUE, sep = ",", nrows = 1001, stringsAsFactors = TRUE)
+imputation_method = 3
 
 # CLEAN NARRATIVE FIELDS: DROP REDUNDANT VARS AND KEEP LOWERCASE VERSION
 drops <- c("narrativemodified", "degreeofinjury", "accidentclassification", "accidenttype", "natureofinjury", "mineractivity")
@@ -131,9 +134,56 @@ mr.data = mr.data[, c(-grep("ai_dt_old", names(mr.data)), -grep("idesc", names(m
                       -grep("ai_time_old", names(mr.data)), -grep("ai_acty_cd_old", names(mr.data)),
                       -grep("portablefipsstatecode", names(mr.data)))]
 
+#We don't use date vars as of yet so no need to store a list of their names, "logical" class vars are missing all obsvtns
+var_classes = sapply(mr.data[,names(mr.data)], class)
+charac_vars = names(var_classes[c(grep("character", var_classes), grep("factor", var_classes))])
+num_vars = names(var_classes[c(grep("numeric", var_classes), grep("integer", var_classes))])
+mr.data = mr.data[, -grep("logical", var_classes)]
 
+for (i in 1:length(charac_vars)) {
+  mr.data[, charac_vars[i]] = ifelse((mr.data[,charac_vars[i]] == "NO VALUE FOUND" | mr.data[,charac_vars[i]] == "UNKNOWN" | 
+                                        mr.data[,charac_vars[i]] == "?" | mr.data[,charac_vars[i]] == ""), NA_character_, as.character(mr.data[,charac_vars[i]]))
+  mr.data[, charac_vars[i]] = factor(mr.data[, charac_vars[i]])
+}
+
+# DEFINE FUNCTION FOR MODES FOR IMPUTATION
+modus = function(x) {
+  uniqv = unique(x)
+  uniqv[which.max(tabulate(match(x, uniqv)))]
+}
+
+# IMPUTE MISSING VARS
+if (imputation_method == 1 | imputation_method == 2) {
+  for (i in 1:length(num_vars)) {
+    mr.data[, num_vars[i]] = ifelse(is.na(mr.data[, num_vars[i]]), mean(mr.data[, num_vars[i]]), mr.data[, num_vars[i]])
+  }
+  if (imputation_method == 2) {
+    for (i in 1:length(num_vars)) {
+      mr.data[, num_vars[i]] = ifelse(is.na(mr.data[, num_vars[i]]), median(mr.data[, num_vars[i]]), mr.data[, num_vars[i]])
+    }
+  }
+  for (i in 1:length(charac_vars)) {
+    mr.data[, charac_vars[i]] = ifelse(is.na(mr.data[, charac_vars[i]]), modus(mr.data[, charac_vars[i]]), mr.data[, charac_vars[i]])
+  }
+} else if (imputation_method == 3) {
+  for (i in 1:length(num_vars)) {
+    i_rowsmissing = row.names(mr.data)[is.na(mr.data[, num_vars[i]])]
+    while (sum(!complete.cases(mr.data[, num_vars[i]])) > 0) {
+      replace_rows = sample(setdiff(row.names(mr.data), i_rowsmissing), length(i_rowsmissing), replace = T)
+      mr.data[i_rowsmissing, num_vars[i]] = mr.data[replace_rows, num_vars[i]]
+    }
+  }
+  for (i in 1:length(charac_vars)) {
+    i_rowsmissing = row.names(mr.data)[is.na(mr.data[, charac_vars[i]])]
+    while (sum(!complete.cases(mr.data[, charac_vars[i]])) > 0) {
+      replace_rows = sample(setdiff(row.names(mr.data), i_rowsmissing), length(i_rowsmissing), replace = T)
+      mr.data[i_rowsmissing, charac_vars[i]] = mr.data[replace_rows, charac_vars[i]]
+    }
+  }
+} 
+
+# DUMMY-OUT FACTOR VARS WITH TOO MANY VALUES
+require(dummies)
 new_dummies = apply(cbind(dummy(mr.data$sourceofinjury), dummy(mr.data$occupation), dummy(mr.data$equipmentmodelno), dummy(mr.data$fipscountyname),
-                          dummy(mr.data$controllername), dummy(mr.data$operatorname)
-                    MARGIN = 2, FUN = function(x) factor(x))
-
+                          dummy(mr.data$controllername), dummy(mr.data$operatorname), MARGIN = 2, FUN = function(x) factor(x)))
 
