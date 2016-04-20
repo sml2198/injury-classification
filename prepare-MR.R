@@ -57,8 +57,8 @@ mr.data = mr.data[, c(-grep("repair", names(mr.data)), -grep("rplace", names(mr.
                       -grep("service", names(mr.data)), -grep("fix", names(mr.data)), 
                       -grep("upgrade", names(mr.data)), -grep("updte", names(mr.data)), 
                       -grep("servicing", names(mr.data)), -grep("keyword", names(mr.data)), 
-                      -grep("maintain", names(mr.data)), -grep("roof.bolt", names(mr.data)), 
-                      -grep("rib.hole", names(mr.data)), -grep("instal", names(mr.data)), 
+                      -grep("maintain", names(mr.data)), -grep("roof_bolt", names(mr.data)), 
+                      -grep("rib_hole", names(mr.data)), -grep("instal", names(mr.data)), 
                       -grep("pain", names(mr.data)), -grep("hoist", names(mr.data)),
                       -grep("insample", names(mr.data)), -grep("group", names(mr.data)),
                       -grep("changed", names(mr.data)), -grep("dup", names(mr.data)),
@@ -110,27 +110,27 @@ mr.data = mr.data[, c(-grep("directionstominemodified", names(mr.data)), -grep("
                       -grep("transferredorterminated", names(mr.data)), -grep("primarysiccodesuffix", names(mr.data)))]
 
 # REMOVE VARS UNIQUE AT OBS. LEVEL - 8 OF 95
-mr.data = mr.data[, c(-grep("documentno", names(mr.data)), -grep("narrative", names(mr.data)),
-                      -grep("accidenttime", names(mr.data)), -grep("date", names(mr.data)))]
+mr.data = mr.data[, c(-match("documentno", names(mr.data)), -match("narrative", names(mr.data)),
+                      -match("accidenttime", names(mr.data)), -grep("date", names(mr.data)))]
 
 # SHOULD NOW HAVE 87 VARS, NOW REMOVE REDUNDANT VARS (CODES/IDS WITH CORRESPONDING CLASSES - 26 VARS)
-mr.data = mr.data[, c(-grep("operatorid", names(mr.data)), -grep("controllerid", names(mr.data)), 
-                      -grep("contractorid", names(mr.data)), -grep("primarycanvasscode", names(mr.data)),
-                      -grep("subunitcode", names(mr.data)), -grep("inj_degr_cd_old", names(mr.data)),
-                      -grep("fipsstatecode", names(mr.data)), -grep("activitycode", names(mr.data)), 
-                      -grep("injurysourcecode", names(mr.data)), -grep("natureofinjurycode", names(mr.data)),
-                      -grep("bodypartcode", names(mr.data)), -grep("degreeofinjurycode", names(mr.data)),
-                      -grep("uglocationcode", names(mr.data)), -grep("ugminingmethodcode", names(mr.data)),
-                      -grep("classificationcode", names(mr.data)), -grep("accidenttypecode", names(mr.data)),
-                      -grep("equiptypecode", names(mr.data)), -grep("equipmanufacturercode", names(mr.data)),
-                      -grep("immediatenotificationcode", names(mr.data)), -grep("occupcode3digit", names(mr.data)),
-                      -grep("fipscountycode", names(mr.data)), -grep("officecode", names(mr.data)), 
-                      -grep("bomstatecode", names(mr.data)), -grep("primarysiccode", names(mr.data)), 
-                      -grep("primarysiccodegroup", names(mr.data)), -grep("oldoccupationcode", names(mr.data)),
-                      -grep("portablefipsstatecode", names(mr.data)))]
+mr.data = mr.data[, c(-match("operatorid", names(mr.data)), -match("controllerid", names(mr.data)), 
+                      -match("contractorid", names(mr.data)), -match("primarycanvasscode", names(mr.data)),
+                      -match("subunitcode", names(mr.data)), -match("inj_degr_cd_old", names(mr.data)),
+                      -match("fipsstatecode", names(mr.data)), -match("activitycode", names(mr.data)), 
+                      -match("injurysourcecode", names(mr.data)), -match("natureofinjurycode", names(mr.data)),
+                      -match("bodypartcode", names(mr.data)), -match("degreeofinjurycode", names(mr.data)),
+                      -match("uglocationcode", names(mr.data)), -match("ugminingmethodcode", names(mr.data)),
+                      -match("classificationcode", names(mr.data)), -match("accidenttypecode", names(mr.data)),
+                      -match("equiptypecode", names(mr.data)), -match("equipmanufacturercode", names(mr.data)),
+                      -match("immediatenotificationcode", names(mr.data)), -match("occupcode3digit", names(mr.data)),
+                      -match("fipscountycode", names(mr.data)), -match("officecode", names(mr.data)), 
+                      -match("bomstatecode", names(mr.data)), -match("primarysiccode", names(mr.data)), 
+                      -match("primarysiccodegroup", names(mr.data)), -match("oldoccupationcode", names(mr.data)),
+                      -match("portablefipsstatecode", names(mr.data)))]
 
 # SHOULD NOW HAVE 61 VARS, NOW REMOVE 5 OLD/UNKNOWN VARS 
-mr.data = mr.data[, c(-grep("ai_dt_old", names(mr.data)), -grep("idesc", names(mr.data)), 
+mr.data = mr.data[, c(-grep("ai_dt_old", names(mr.data)), -grep("idesc", names(mr.data)), -match("i", names(mr.data)), 
                       -grep("ai_time_old", names(mr.data)), -grep("ai_acty_cd_old", names(mr.data)),
                       -grep("portablefipsstatecode", names(mr.data)))]
 
