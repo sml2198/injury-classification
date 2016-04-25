@@ -1,21 +1,21 @@
-install.packages("eeptools")
-library(eeptools)
+# DROPBOX CODE
+# install packages
 install.packages("zoo")
 library(zoo)
-install.packages("dummies")
-library(dummies)
+
+######################################################################################################
 
 # SET PREFERENCES - IMPUTATION METHOD - METHOD 3 IS RANDOM DRAWS FROM DISTRIBUTION (OUR BEST METHOD)
+setwd("X:/Projects/Mining/NIOSH/analysis/data/training/coded_sets/")
 imputation_method = 3
 
 # LOAD IN CODED TRAINING SET (1000 OBSERVATIONS, CODED FOR "MR")
-setwd("X:/Projects/Mining/NIOSH/analysis/data/training/coded_sets/")
 mr.data = read.csv("Training_Set_Maintenance_And_Repair_Accidents_August_2015_2.csv", header = TRUE, sep = ",", nrows = 1001, stringsAsFactors = FALSE)
 
 # LOAD IN DATASET OF ADDITIONAL FATALITIES (FROM OPEN DATA) TO APPEND TO OUR TRAINING SET - ALL "MR"
-#setwd("X:/Projects/Mining/NIOSH/analysis/data/4_coded/")
 mr.fatalities = read.csv("X:/Projects/Mining/NIOSH/analysis/data/4_coded/coded_MR_fatalities.csv", header = TRUE, sep = ",", nrows = 24, stringsAsFactors = FALSE)
 
+######################################################################################################
 # MAKE SURE TRAINING SET AND FATALITIES DATASETS HAVE ALL THE SAME VAR NAMES BEFORE APPENDING
 mr.data$MR = as.factor(mr.data$M.R.)
 mr.data = mr.data[, c(-match("M.R.", names(mr.data)))]
@@ -45,6 +45,9 @@ mr.data$narrative = tolower(mr.data$narrative)
 
 # APPEND DATASET OF ADDITIONAL FATALITY OBSERVATIONS FOR TRAINING SET
 mr.data <- rbind(mr.data, mr.fatalities) 
+
+######################################################################################################
+# CLEAN UP ALL VARS 
 
 # DESTRING VARIABLES
 mr.data[,grep("numberofemployees", names(mr.data))] = gsub(pattern = ",",replacement =  "", mr.data[,grep("numberofemployees", names(mr.data))])
@@ -136,6 +139,9 @@ mr.data = mr.data[, c(-match("operatorid", names(mr.data)), -match("controllerid
 # SHOULD NOW HAVE 59 VARS, NOW REMOVE 2 OLD/UNKNOWN VARS 
 mr.data = mr.data[, c(-grep("idesc", names(mr.data)), -match("i", names(mr.data)))]
 
+######################################################################################################
+# PREP FINAL VARS FOR ANALYSIS
+
 # STORE THE TYPE OF ALL VARIABLES AND CREATE LISTS OF VARS BY TYPE
 var_classes = sapply(mr.data[,names(mr.data)], class)
 # "character" vars are factor variables
@@ -156,7 +162,9 @@ modus = function(x) {
   uniqv[which.max(tabulate(match(x, uniqv)))]
 }
 
+######################################################################################################
 # IMPUTE MISSING VARS
+
 if (imputation_method == 1 | imputation_method == 2) {
   for (i in 1:length(num_vars)) {
     mr.data[, num_vars[i]] = ifelse(is.na(mr.data[, num_vars[i]]), mean(mr.data[, num_vars[i]]), mr.data[, num_vars[i]])
@@ -195,16 +203,23 @@ datdum <- function(x, data, name){
   data <- cbind(data,mm)
   return(data)
 }
-test.data1 = datdum(x="sourceofinjury",data=mr.data,name="sourceofinjury")
-test.data2 = datdum(x="equipmentmodelno",data=test.data1,name="equipmentmodelno")
-test.data3 = datdum(x="minename",data=test.data2,name="minename")
-test.data4 = datdum(x="operatorname",data=test.data3,name="operatorname")
-test.data5 = datdum(x="fipscountyname",data=test.data4,name="fipscountyname")
-test.data6 = datdum(x="controllername",data=test.data5,name="controllername")
-mr.data = datdum(x="mineractivity",data=test.data5,name="mineractivity")
+test.data1 <- datdum(x="sourceofinjury",data=mr.data,name="sourceofinjury")
+test.data2 <- datdum(x="equipmentmodelno",data=test.data1,name="equipmentmodelno")
+test.data3 <- datdum(x="minename",data=test.data2,name="minename")
+test.data4 <- datdum(x="operatorname",data=test.data3,name="operatorname")
+test.data5 <- datdum(x="fipscountyname",data=test.data4,name="fipscountyname")
+test.data6 <- datdum(x="controllername",data=test.data5,name="controllername")
+test.data7 <- datdum(x="mineractivity",data=test.data6,name="mineractivity")
+mr.data = cbind(as.matrix(mr.data), test.data1, test.data2, test.data3, test.data4, test.data5, test.data6, test.data7)
 
-# home computer directory
+mr.data = mr.data[, c(-match("sourceofinjury", names(mr.data)), -match("equipmentmodelno", names(mr.data)),
+                      -match("fipscountyname", names(mr.data)), -match("controllername", names(mr.data)),
+                      -match("mineractivity", names(mr.data)), -match("minename", names(mr.data)),
+                      -match("operatorname", names(mr.data)))]
+
 # setwd("/Users/Sarah/Dropbox (SLS)/R-code")
 # office computer directory
 setwd("C:/Users/slevine2/Dropbox (Stanford Law School)/R-code")
 write.csv(mr.data, file = "prepped_MR_training_data.csv", row.names = FALSE)
+
+######################################################################################################
