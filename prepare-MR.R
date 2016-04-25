@@ -187,7 +187,24 @@ if (imputation_method == 1 | imputation_method == 2) {
 } 
 
 # DUMMY-OUT FACTOR VARS WITH TOO MANY VALUES
-require(dummies)
-new_dummies = apply(cbind(dummy(mr.data$sourceofinjury), dummy(mr.data$occupation), dummy(mr.data$equipmentmodelno), dummy(mr.data$fipscountyname),
-                          dummy(mr.data$controllername), dummy(mr.data$operatorname), MARGIN = 2, FUN = function(x) factor(x)))
+datdum <- function(x, data, name){
+  data$rv <- rnorm(dim(data)[1],1,1)
+  mm <- data.frame(model.matrix(lm(data$rv~-1+factor(data[,x]))))
+  names(mm) <- paste(name,1:dim(mm)[2],sep=".")
+  data$rv <- NULL
+  data <- cbind(data,mm)
+  return(data)
+}
+test.data1 = datdum(x="sourceofinjury",data=mr.data,name="sourceofinjury")
+test.data2 = datdum(x="equipmentmodelno",data=test.data1,name="equipmentmodelno")
+test.data3 = datdum(x="minename",data=test.data2,name="minename")
+test.data4 = datdum(x="operatorname",data=test.data3,name="operatorname")
+test.data5 = datdum(x="fipscountyname",data=test.data4,name="fipscountyname")
+test.data6 = datdum(x="controllername",data=test.data5,name="controllername")
+mr.data = datdum(x="mineractivity",data=test.data5,name="mineractivity")
 
+# home computer directory
+# setwd("/Users/Sarah/Dropbox (SLS)/R-code")
+# office computer directory
+setwd("C:/Users/slevine2/Dropbox (Stanford Law School)/R-code")
+write.csv(mr.data, file = "prepped_MR_training_data.csv", row.names = FALSE)
