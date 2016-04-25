@@ -16,10 +16,12 @@ library(bigrf)
 library(reshape2)
 library(pROC)
 library(ROSE)
+library(rpart)
+library(rpart.plot)
 
 ######################################################################################################
 # home computer directory
-setwd("/Users/Sarah/Dropbox (SLS)/R-code")
+# setwd("/Users/Sarah/Dropbox (SLS)/R-code")
 # work computer directory
 setwd("C:/Users/slevine2/Dropbox (Stanford Law School)/R-code")
 
@@ -38,10 +40,10 @@ train <- trainx[order(rand),]
 ######################################################################################################
 # DEFINE RANDOM FOREST (TRUE PROPORTION OF 0'S AND 1'S)
 set.seed(1)
-rf <- randomForest(MR ~ ., data = train[1:600,], mtry = 11,
+rf <- randomForest(MR ~ ., data = train[1:400,], mtry = 20,
                    keep.inbag = TRUE, 
                    importance = TRUE, 
-                   ntree = 400)
+                   ntree = 100)
 rf
 
 # INSPECT RANKED VARIABLES AND ERROR RATE
@@ -135,8 +137,8 @@ cart <- rpart(MR ~ ., data = train[1:600,], method="class")
 cart 
 
 # PREDICT ON REMAINING OBSERVATIONS & PLOT THE PREDICTIONS (TOP ROW) VS ACTUALS IN TABLE 
-cart.predictions = predict(cart, train[601:1000,],type="class")
-table(train[601:1000,54], predicted = cart.predictions)
+cart.predictions = predict(cart, train[601:1023,],type="class")
+table(train[601:1023,37], predicted = cart.predictions)
 #NO  230  23
 #YES  28 119
 
