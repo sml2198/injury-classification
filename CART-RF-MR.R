@@ -7,36 +7,33 @@ install.packages("randomForest")
 install.packages("ggplot2")
 install.packages("bigrf")
 install.packages("reshape2")
-install.packages("scales")
 install.packages("pROC")
 install.packages("ROSE")
-install.packages("ROCR")
-library(rpart)
-library(rpart.plot)
 library(tree)
 library(randomForest)
 library(ggplot2)
 library(bigrf)
 library(reshape2)
-library(scales)
 library(pROC)
-library(ROCR)
 library(ROSE)
 
 ######################################################################################################
+# home computer directory
 setwd("/Users/Sarah/Dropbox (SLS)/R-code")
-setwd("X:/Projects/Mining/NIOSH/analysis/data/4_coded")
-validatex = read.csv("coded_MR_validation_set.csv", header = T)
-trainx = read.csv("coded_MR_training_set.csv", header = T)
+# work computer directory
+setwd("C:/Users/slevine2/Dropbox (Stanford Law School)/R-code")
+
+# LOAD IN OLD DATA SETS - 1000 OBS - OBSOLETE (FOR NOW AT LEAST)
+#validatex = read.csv("coded_MR_validation_set.csv", header = T)
+#trainx = read.csv("coded_MR_training_set.csv", header = T)
+
+# LOAD IN DATA WITH 1023 CARS - ALL TRAINING SET PLUS FATALITIES OBSERVATIONS.
+trainx = read.csv("prepped_MR_training_data.csv", header = T)
 
 # RANDOMLY SORT DATA (IT WAS ORDERED IN STATA BEFORE THIS)
 set.seed(625)
 rand <- runif(nrow(trainx))
 train <- trainx[order(rand),]
-set.seed(508)
-rand2 <- runif(nrow(validatex))
-validate <- validatex[order(rand2),]
-#which( colnames(train)=="MR" )
 
 ######################################################################################################
 # DEFINE RANDOM FOREST (TRUE PROPORTION OF 0'S AND 1'S)
@@ -58,12 +55,17 @@ df.rf_imp <- data.frame(variable = names(rf$importance[,1]), importance = rf$imp
 df.rf_imp <- df.rfImportance[ order(-df.rfImportance[,2]),]
 
 # PREDICT ON REMAINING OBSERVATIONS & PLOT THE PREDICTIONS (TOP ROW) VS ACTUALS IN TABLE 
+which( colnames(train)=="MR" )
 rf.predictions = predict(rf, train[601:1000,],type="class")
-table(train[601:1000,55], predicted = rf.predictions)
+table(train[601:1000,54], predicted = rf.predictions)
+#NO  240   2
+#YES 137  21
 
 # PREDICT ON OUT OF BAG OBSERVATIONS 
 rf.oob.predictions = predict(rf, train[1:600,],type="class")
 table(train[1:600,55], predicted = rf.oob.predictions)
+#NO  393   0
+#YES 155  52
 
 # PLOT VARIABLE IMPORTANCE
 rf.imp.plot <- function(df.rf_imp, title='Variable importance for Random Forest model') {
@@ -79,13 +81,18 @@ rf.imp.plot
 
 ######################################################################################################
 # OVERSAMPLE POSITIVE OUTCOMES (MR=1)FOR RANDOM FOREST: JUST USING SAMPSIZE
+
 # PREDICT ON REMAINING
 rf.predictions = predict(rf.samp, train[601:1000,],type="class")
 table(train[601:1000,55], predicted = rf.predictions)
+#NO  242   0
+#YES 142  16
 
 # PREDICT ON OOB
 rf.oob.predictions = predict(rf.samp, train[1:600,],type="class")
 table(train[1:600,55], predicted = rf.oob.predictions)
+#NO  393   0
+#YES 177  30
 
 ######################################################################################################
 # OVERSAMPLE POSITIVE OUTCOMES (MR=1)FOR RANDOM FOREST: GENERATE BALANCED DATA W ROSE
@@ -104,6 +111,7 @@ rf.rose
 
 # INSPECT RANKED VARIABLES AND ERROR RATE
 plot(margin(rf.rose))
+# store variable importance
 round(importance(rf.rose),2)
 
 # PREDICT ON REMAINING OBSERVATIONS & PLOT THE PREDICTIONS (TOP ROW) VS ACTUALS IN TABLE 
@@ -118,11 +126,19 @@ rfDownsampled <- randomForest(MR ~ ., train[1:600,], ntree = 100, mtry = 11,
 rfDownsampled
 rf_down_predictions = predict(rfDownsampled, train[601:1000,],type="class")
 table(train[601:1000,55], predicted = rf_down_predictions)
+#NO  253   0
+#YES 122   25
 
 ######################################################################################################
 # CREATE CART FUNCTION WITH RPART AND EXECUTE ON 1ST 600 OBSERVATIONS
 cart <- rpart(MR ~ ., data = train[1:600,], method="class")
 cart 
+
+# PREDICT ON REMAINING OBSERVATIONS & PLOT THE PREDICTIONS (TOP ROW) VS ACTUALS IN TABLE 
+cart.predictions = predict(cart, train[601:1000,],type="class")
+table(train[601:1000,54], predicted = cart.predictions)
+#NO  230  23
+#YES  28 119
 
 # PLOT RESULTS & DETAILED PLOT OF SPLITS
 rpart.plot(cart, type=3, extra = 101, fallen.leaves=T)
@@ -130,19 +146,6 @@ printcp(cart)
 importance(cart)
 summary(cart)
 
-# PREDICT ON REMAINING OBSERVATIONS & PLOT THE PREDICTIONS (TOP ROW) VS ACTUALS IN TABLE 
-cart_predictions = predict(cart, train[601:1000,],type="class")
-table(train[601:1000,51], predicted = cart_predictions)
-
-# MAKE ROC PLOT FOR REGULAR CART 
-fit.pr = predict(cart,newdata=train[601:1000,],type="prob")[,2]
-fit.pred = prediction(fit.pr,train[601:1000,51])
-fit.perf = performance(fit.pred,"tpr","fpr")
-plot(fit.perf,lwd=2,col="blue",
-     main="ROC:  Classification Trees on Training Data")
-abline(a=0,b=1)
-
-######################################################################################################
 # OVERSAMPLE POSITIVE OUTCOMES (MR=1)FOR RANDOM FOREST: GENERATE BALANCED DATA W ROSE
 train.rosex <- ROSE(MR ~ ., data=train)$data
 
@@ -152,20 +155,15 @@ set.seed(836)
 rand3 <- runif(nrow(train.rosex))
 train.rose <- train.rosex[order(rand3),]
 
-# DO CART
-cart.rose <- rpart(MR ~ ., data = train.rose[1:600,], method="class")
-cart.rose 
-rose.predictions = predict(cart.rose, train.rose[601:1000,],type="class")
-table(train.rose[601:1000,51], predicted = rose.predictions)
-rose.predictions = predict(cart.rose, train[1:1000,],type="class")
-table(train.rose[1:1000,51], predicted = rose.predictions)
+# DEFINE CART ON ROSE OVERSAMPLED DATA
+set.seed(2)
+cart.rose <- rpart(MR ~ ., data = train.rose[1:300,], method="class")
+cart.rose
 
-fit.pr = predict(cart.rose,newdata=train[1:1000,],type="prob")[,2]
-fit.pred = prediction(fit.pr,train[1:1000,51])
-fit.perf = performance(fit.pred,"tpr","fpr")
-plot(fit.perf,lwd=2,col="blue",
-     main="ROC:  Classification Trees on ROSE Data")
-abline(a=0,b=1)
+# PREDICT CART.ROSE ON REMAINING OBSERVATIONS & PLOT THE PREDICTIONS (TOP ROW) VS ACTUALS IN TABLE 
+cart.rose.predictions = predict(cart.rose, train[301:1000,],type="class")
+table(train[301:1000,54], predicted = cart.rose.predictions)
+#NO  226  27
+#YES  39 108
 
 ######################################################################################################
-
