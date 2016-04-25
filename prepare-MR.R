@@ -204,13 +204,27 @@ datdum <- function(x, data, name){
   return(data)
 }
 test.data1 <- datdum(x="sourceofinjury",data=mr.data,name="sourceofinjury")
-test.data2 <- datdum(x="equipmentmodelno",data=test.data1,name="equipmentmodelno")
-test.data3 <- datdum(x="minename",data=test.data2,name="minename")
-test.data4 <- datdum(x="operatorname",data=test.data3,name="operatorname")
-test.data5 <- datdum(x="fipscountyname",data=test.data4,name="fipscountyname")
-test.data6 <- datdum(x="controllername",data=test.data5,name="controllername")
-test.data7 <- datdum(x="mineractivity",data=test.data6,name="mineractivity")
-mr.data = cbind(as.matrix(mr.data), test.data1, test.data2, test.data3, test.data4, test.data5, test.data6, test.data7)
+test.data1 <- test.data1 [, c(grep("sourceofinjury", names(test.data1)))]
+
+test.data2 <- datdum(x="equipmentmodelno",data=mr.data,name="equipmentmodelno")
+test.data2 <- test.data2 [, c(grep("equipmentmodelno", names(test.data2)))]
+
+test.data3 <- datdum(x="minename",data=mr.data,name="minename")
+test.data3 <- test.data3 [, c(grep("minename", names(test.data3)))]
+
+test.data4 <- datdum(x="operatorname",data=mr.data,name="operatorname")
+test.data4 <- test.data4 [, c(grep("operatorname", names(test.data4)))]
+
+test.data5 <- datdum(x="fipscountyname",data=mr.data,name="fipscountyname")
+test.data5 <- test.data5 [, c(grep("fipscountyname", names(test.data5)))]
+
+test.data6 <- datdum(x="controllername",data=mr.data,name="controllername")
+test.data6 <- test.data6 [, c(grep("controllername", names(test.data6)))]
+
+test.data7 <- datdum(x="mineractivity",data=mr.data,name="mineractivity")
+test.data7 <- test.data7 [, c(grep("mineractivity", names(test.data7)))]
+
+mr.data = cbind(mr.data, test.data1, test.data2, test.data3, test.data4, test.data5, test.data6, test.data7)
 
 mr.data = mr.data[, c(-match("sourceofinjury", names(mr.data)), -match("equipmentmodelno", names(mr.data)),
                       -match("fipscountyname", names(mr.data)), -match("controllername", names(mr.data)),
