@@ -46,6 +46,9 @@ mr.data$narrative = tolower(mr.data$narrative)
 # APPEND DATASET OF ADDITIONAL FATALITY OBSERVATIONS FOR TRAINING SET
 mr.data <- rbind(mr.data, mr.fatalities) 
 
+mr.data[, "MR"] = factor(ifelse(mr.data[, "MR"] == 1, "YES", "NO"))
+names(mr.data)[names(mr.data) == "MR"] = "MR"
+
 ######################################################################################################
 # CLEAN UP ALL VARS 
 
@@ -69,40 +72,57 @@ for (i in indices_with_date) {
   mr.data[,i] = as.Date(mr.data[,i], "%m/%d/%Y")
 }
 
-# MERGE IN OTHER VARIABLES FROM PROTO-ALGORITHM (LIKE KEYWORD FLAGS) CHANGE TO KEEP ANY OTHER ADDTL VARS
-#mr.pre.coding = read.csv("X:/Projects/Mining/NIOSH/analysis/data/training/training_set_2_internal.csv")
-#mr.data = merge(mr.data, mr.pre.coding, c("mineid", "documentno"))
-#remove(mr.pre.coding)
-#mr.data = mr.data[, c(-grep("\\.y", names(mr.data)))]
-#names(mr.data) = gsub("\\.[x]", "", names(mr.data))
-# THERE'S NO NEED TO DO THIS ANYMORE, WE'RE REMAKING ALL THE VARS ANYWAY. - SARAH ON 4/25/2016
-
+######################################################################################################
 # ADD NEW KEYWORD VARS: 11 NEW VARS (ADDED TO 106)
 mr.data[, "repair"] = ifelse(grepl("(^| )r(e|a)pa(i*)r[a-z]*", mr.data[,"narrative"]), 1, 0)
 mr.data[, "rplace"] = ifelse(grepl("(^| )replac(e|i)[a-z]*", mr.data[,"narrative"]), 1, 0)
 mr.data[, "service"] = ifelse(grepl("serviced", mr.data[,"narrative"]) | grepl("servicing", mr.data[,"narrative"]), 1, 0)
 mr.data[, "fix"] = ifelse(grepl("(^| )fix[a-z]*", mr.data[,"narrative"]) & !grepl("(^| )fixture", mr.data[,"narrative"]), 1, 0) 
 mr.data[, "maintain"] = ifelse(grepl("(^| )maintain[a-z]*", mr.data[,"narrative"]), 1, 0)
-mr.data[, "roof.bolt"] = ifelse(grepl("(roof|rib)*( )*(bolt)(er|ing| |$|.|,).?.?.?.?.?.?.?.?.?.?.?.?.?.?.?.?.?.?.?.?(^| |e|n)i(s|n|t)(s|n|t)(s|n|t)al[a-z]*", 
-  mr.data[,"narrative"]) | grepl("(roof|rib)*( )*(bolt)(er|ing| |$|.|,).?.?.?.?.?.?.?.?.?.?.?.?.?.?.?.?.?.?.?.?(^| |e|n)i(s|n|t)(s|n|t)(s|n|t)al[a-z]*", 
-  mr.data[,"narrative"]), 1, 0)  
-mr.data[, "rib.hole"] = ifelse(grepl("(rib)( )*(hole).?.?.?.?.?.?.?.?.?.?.?.?.?.?.?.?.?.?.?.?(^| |e|n)i(s|n|t)(s|n|t)(s|n|t)al[a-z]*", 
-  mr.data[,"narrative"]) | 
-    grepl("(^| |e|n)i(s|n|t)(s|n|t)(s|n|t)al[a-z]*.?.?.?.?.?.?.?.?.?.?.?.?.?.?.?.?.?.?.?.?(rib)( )*(hole)", mr.data[,"narrative"]), 1, 0)  
-mr.data[, "install"] = ifelse(grepl("(^| |e|n)i(s|n|t)(s|n|t)(s|n|t)al[a-z]*", mr.data[,"narrative"]) & (mr.data[, "rib.hole"] != 1 & mr.data[, "roof.bolt"] != 1), 1, 0) 
-mr.data[, "pain"] = ifelse(grepl("(^| )pain( |$|.|,|:|)", mr.data[,"narrative"]), 1, 0)
-mr.data[, "hoist"] = ifelse(((grepl("(^| )hoist[a-z]*", mr.data[,"narrative"]) | grepl("(^| )el(e|a|i)vat(o|e)r*", mr.data[,"narrative"])) & mr.data[, "pain"] == 0), 1, 0) 
-mr.data[, "surgery"] = ifelse((grepl("surger[a-z]*", mr.data[,"narrative"]) | grepl("surgic[a-z]*", mr.data[,"narrative"])) & mr.data[, "pain"] == 0, 1, 0)
+mr.data[, "changing"] = ifelse(grepl("chang(e|ing|ed)( )*out", mr.data[,"narrative"]), 1, 0)
+mr.data[, "cleaning"] = ifelse(grepl("clean", mr.data[,"narrative"]), 1, 0) 
+mr.data[, "retrack"] = ifelse(grepl("re(rail|track|trakc)(ed|ing)", mr.data[,"narrative"]), 1, 0)
+#mr.data[, "upgrade"] = ifelse(grepl("(^| )upgrad(e|i)[a-z]*", mr.data[,"narrative"]), 1, 0) 
+#mr.data[, "updte"] = ifelse(grepl("(^| )updat(e|i)[a-z]*", mr.data[,"narrative"]), 1, 0)
 
+mr.data[, "pullbelt"] = ifelse(grepl("pull( |ing|ed|s)*.?.?.?.?.?.?.?belt", mr.data[,"narrative"]), 1, 0)
+mr.data[, "remove"] = ifelse(grepl("remov(e|ed|ing)", mr.data[,"narrative"]) 
+                           & grepl("broken", mr.data[,"narrative"]) & grepl("flanged", mr.data[,"narrative"])
+                           & grepl("old", mr.data[,"narrative"]) & grepl("bent", mr.data[,"narrative"]) 
+                           & grepl("busted", mr.data[,"narrative"]) , 1, 0) 
+mr.data[, "reposition"] = ifelse(grepl("re( )*pos(i|t)(i|t)(i|o)(i|o)n", mr.data[,"narrative"]), 1, 0)
+mr.data[, "grease"] = ifelse(grepl("greas(ed|ing|e|er)", mr.data[,"narrative"]), 1, 0) 
+mr.data[, "rethread"] = ifelse(grepl("re( )*thr(ea|e)d", mr.data[,"narrative"]), 1, 0)
+mr.data[, "dismantl"] = ifelse(grepl("dismant(el|le|al|il|l)", mr.data[,"narrative"]), 1, 0) 
+#mr.data[, "trash"] = ifelse(grepl("trash", mr.data[,"narrative"]) | grepl("garbage", mr.data[,"narrative"]), 1, 0)
+
+mr.data[, "roof.bolt"] = ifelse(grepl("(roof|rib)*( )*(bolt)(er|ing| |$|.|,).?.?.?.?.?.?.?.?.?.?.?.?.?.?.?.?.?.?.?.?(^| |e|n)i(s|n|t)(s|n|t)(s|n|t)al[a-z]*", 
+       mr.data[,"narrative"]) | grepl("(roof|rib)*( )*(bolt)(er|ing| |$|.|,).?.?.?.?.?.?.?.?.?.?.?.?.?.?.?.?.?.?.?.?(^| |e|n)i(s|n|t)(s|n|t)(s|n|t)al[a-z]*", 
+       mr.data[,"narrative"]), 1, 0)  
+mr.data[, "rib.hole"] = ifelse(grepl("(rib)( )*(hole).?.?.?.?.?.?.?.?.?.?.?.?.?.?.?.?.?.?.?.?(^| |e|n)i(s|n|t)(s|n|t)(s|n|t)al[a-z]*", 
+       mr.data[,"narrative"]) | grepl("(^| |e|n)i(s|n|t)(s|n|t)(s|n|t)al[a-z]*.?.?.?.?.?.?.?.?.?.?.?.?.?.?.?.?.?.?.?.?(rib)( )*(hole)", 
+       mr.data[,"narrative"]), 1, 0)  
+mr.data[, "install"] = ifelse(grepl("(^| |e|n)i(s|n|t)(s|n|t)(s|n|t)al[a-z]*", mr.data[,"narrative"]) 
+                          & (mr.data[, "rib.hole"] != 1 & mr.data[, "roof.bolt"] != 1), 1, 0)
+
+#mr.data[, "waterline"] = ifelse(grepl("water( )*line", mr.data[,"narrative"]), 1, 0) 
+#mr.data[, "construction"] = ifelse(grepl("con(s|t|r)(s|t|r)(s|t|r)u(c|t)(c|t)i*", mr.data[,"narrative"]), 1, 0)
+#mr.data[, "diagnos"] = ifelse(grepl("diagnose", mr.data[,"narrative"]), 1, 0) 
+
+mr.data[, "pain"] = ifelse(grepl("(^| )pain( |$|.|,|:|)", mr.data[,"narrative"]), 1, 0)
+mr.data[, "hoist"] = ifelse(((grepl("(^| )hoist[a-z]*", mr.data[,"narrative"]) |
+                              grepl("(^| )el(e|a|i)vat(o|e)r*", mr.data[,"narrative"])) & mr.data[, "pain"] == 0), 1, 0) 
+mr.data[, "surgery"] = ifelse((grepl("surger[a-z]*", mr.data[,"narrative"]) | 
+                              grepl("surgic[a-z]*", mr.data[,"narrative"])) & mr.data[, "pain"] == 0, 1, 0)
+
+######################################################################################################
 # CREATE/PREP VARIOUS TIME AND DATE VARIABLES - YEAR AND QUARTER
 date <- strptime(mr.data$calendaryear, "%Y")
 format(date, "%Y")
 mr.data[, "year"] = format(date, "%Y")
-require(zoo)
 mr.data[, "quarter"] = as.yearqtr(mr.data$accidentdate,"%Y-%m-%d")
 # now drop calendar year and quarter and accidentdate, all not needed anymore 
 mr.data = mr.data[, c(-grep("calendar", names(mr.data)), -grep("accidentdate", names(mr.data)))]
-# do we want to treat accidenttime a certain way?
 
 # REMOVE IRRELEVANT VARS: 25 OF 116 VARS 
 mr.data = mr.data[, c(-match("directionstominemodified", names(mr.data)), -match("minegascategorycode", names(mr.data)),
@@ -110,6 +130,7 @@ mr.data = mr.data[, c(-match("directionstominemodified", names(mr.data)), -match
                       -match("longitude", names(mr.data)), -match("latitude", names(mr.data)),
                       -match("nearesttown", names(mr.data)), -match("minestatus", names(mr.data)),
                       -grep("secondary", names(mr.data)), -match("minetype", names(mr.data)), 
+                      -match("roof.bolt", names(mr.data)), -match("rib.hole", names(mr.data)), 
                       -match("milesfromoffice", names(mr.data)), -match("primarysiccodesuffix", names(mr.data)),
                       -match("portableoperationindicator", names(mr.data)), -match("roomandpillarindicator", names(mr.data)),
                       -match("highwallminerindicator", names(mr.data)), -match("multiplepitsindicator", names(mr.data)),
@@ -194,6 +215,7 @@ if (imputation_method == 1 | imputation_method == 2) {
   }
 } 
 
+######################################################################################################
 # DUMMY-OUT FACTOR VARS WITH TOO MANY VALUES
 datdum <- function(x, data, name){
   data$rv <- rnorm(dim(data)[1],1,1)
@@ -224,15 +246,52 @@ test.data6 <- test.data6 [, c(grep("controllername", names(test.data6)))]
 test.data7 <- datdum(x="mineractivity",data=mr.data,name="mineractivity")
 test.data7 <- test.data7 [, c(grep("mineractivity", names(test.data7)))]
 
-mr.data = cbind(mr.data, test.data1, test.data2, test.data3, test.data4, test.data5, test.data6, test.data7)
+test.data8 <- datdum(x="quarter",data=mr.data,name="quarter")
+test.data8 <- test.data8 [, c(grep("quarter", names(test.data8)))]
 
-mr.data = mr.data[, c(-match("sourceofinjury", names(mr.data)), -match("equipmentmodelno", names(mr.data)),
-                      -match("fipscountyname", names(mr.data)), -match("controllername", names(mr.data)),
-                      -match("mineractivity", names(mr.data)), -match("minename", names(mr.data)),
-                      -match("operatorname", names(mr.data)))]
+mr.data = cbind(mr.data, test.data1, test.data2, test.data3, test.data4, test.data5, test.data6, test.data7, test.data8)
 
-# setwd("/Users/Sarah/Dropbox (SLS)/R-code")
-# office computer directory
+######################################################################################################
+# CREATE SIMPLE DATA CONTAINING JUST THE VARS USED FOR SIMPLE ALGORITHM
+simple.data = mr.data[, c(match("MR", names(mr.data)), match("repair", names(mr.data)),
+                        match("rplace", names(mr.data)), match("service", names(mr.data)),
+                        match("fix", names(mr.data)), match("maintain", names(mr.data)),
+                        match("install", names(mr.data)), match("pain", names(mr.data)),
+                        match("changing", names(mr.data)), match("cleaning", names(mr.data)),
+                        match("retrack", names(mr.data)), match("pullbelt", names(mr.data)),
+                        match("remove", names(mr.data)), match("reposition", names(mr.data)),
+                        match("grease", names(mr.data)), match("rethread", names(mr.data)),
+                        match("dismantl", names(mr.data)), match("mineractivity", names(mr.data)),
+                        match("hoist", names(mr.data)), match("surgery", names(mr.data)),
+                        match("occupation", names(mr.data)), match("degreeofinjury", names(mr.data)),
+                        match("accidentclassification", names(mr.data)))]
+#simple.data = simple.data[ !(grepl("accident only", simple.data$degreeofinjury)) , ]
+
+simple.data[, "likely.occup"] = ifelse(grepl("maintenance", simple.data[,"occupation"]) | grepl("electrician", simple.data[,"occupation"]) , 1, 0)
+simple.data[, "likely.activy"] = ifelse(grepl("maintenance", simple.data[,"mineractivity"]), 1, 0)
+simple.data[, "maybe.activy"] = ifelse(match("handling supplies/materials", simple.data[,"mineractivity"]) |
+                                       match("hand tools (not powered)", simple.data[,"mineractivity"]) |
+                                       match("no value found", simple.data[,"mineractivity"]) |
+                                       match("unknown", simple.data[,"mineractivity"]) | match("clean up", simple.data[,"mineractivity"]) | 
+                                       match("wet down working place", simple.data[,"mineractivity"]) |
+                                       match("wet down inspect equipment place", simple.data[,"mineractivity"]), 1, 0)
+simple.data[, "likely.class"] = ifelse(match("handtools (nonpowered)", simple.data[,"accidentclassification"]) |
+                                       match("machinery", simple.data[,"accidentclassification"]) |
+                                       match("electrical", simple.data[,"accidentclassification"]), 1, 0)
+simple.data[, "unlikely.class"] = ifelse(grepl("fall of roof or back", simple.data[,"accidentclassification"]), 1, 0)
+
+simple.data = mr.data[, c(match("degreeofinjury", names(simple.data)), match("occupation", names(simple.data)),
+                          match("accidentclassification", names(simple.data)), match("mineractivity", names(simple.data)))]
+
+write.csv(simple.data, file = "prepped_MR_simple_data.csv", row.names = FALSE)
+
+######################################################################################################
+# SAVE DATA FOR CART AND RF ANALYSIS
+drops <- c("sourceofinjury", "equipmentmodelno", "fipscountyname", "controllername", "mineractivity", "minename", "operatorname", "quarter")
+mr.data = mr.data[, !(names(mr.data) %in% drops)]
+
+#setwd("/Users/Sarah/Dropbox (SLS)/R-code")
+#office computer directory
 setwd("C:/Users/slevine2/Dropbox (Stanford Law School)/R-code")
 write.csv(mr.data, file = "prepped_MR_training_data.csv", row.names = FALSE)
 
