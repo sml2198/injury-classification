@@ -1,10 +1,14 @@
-# DROPBOX CODE
-# install packages
+# This code pulls in 1000 observations from the manually coded training set for maintenance and repair (MR)
+# injuries. It then appends 23 MR fatalities that were scraped from MSHA: http://arlweb.msha.gov/fatals/coal/2014/
+# It then prepares all variables for analyses in CART-RF-MR.R by formatting, imputing missing values, 
+# dropping extraneous parameters, and dummying out large factor variables. We produce two datasets: A "training"
+# set contianing all potentially relevant variables, and a "simple" dataset, containing only those variables
+# used in the "simple-algorithm."
+
 install.packages("zoo")
 library(zoo)
 
 ######################################################################################################
-
 # SET PREFERENCES - IMPUTATION METHOD - METHOD 3 IS RANDOM DRAWS FROM DISTRIBUTION (OUR BEST METHOD)
 setwd("X:/Projects/Mining/NIOSH/analysis/data/training/coded_sets/")
 imputation_method = 3
@@ -46,6 +50,7 @@ mr.data$narrative = tolower(mr.data$narrative)
 # APPEND DATASET OF ADDITIONAL FATALITY OBSERVATIONS FOR TRAINING SET
 mr.data <- rbind(mr.data, mr.fatalities) 
 
+# MAKE MR A FACTOR VARIABLE
 mr.data[, "MR"] = factor(ifelse(mr.data[, "MR"] == 1, "YES", "NO"))
 names(mr.data)[names(mr.data) == "MR"] = "MR"
 
@@ -77,11 +82,15 @@ for (i in indices_with_date) {
 # an acident-only observation as positive for MR, so we enforce this change.  
 mr.data$accident.only = ifelse(mr.data$degreeofinjury == "accident only" | mr.data$accidenttype == "acc type, without injuries", 1, 0)
 mr.data$MR = ifelse(mr.data$MR == "YES" & mr.data$accident.only == 0, 1, 0)
-mr.data$MR[mr.data$MR == "YES" & accident.only == 1] = 0
+mr.data$MR[mr.data$MR == "YES" & mr.data$accident.only == 1] = 0
+
+# MAKE SURE MR IS STILL A FACTOR VARIABLE
+mr.data[, "MR"] = factor(ifelse(mr.data[, "MR"] == 1, "YES", "NO"))
+names(mr.data)[names(mr.data) == "MR"] = "MR"
 
 ######################################################################################################
 # STILL NEED TO TRANSLATE THIS INTO R CODE TO CLEAN UP NARRATIVE.
-mr.data[, "repair"] = ifelse(grepl("\|[0-9]*[0-9]*[0-9]*\|", mr.data[,"narrative"]), 1, 0)
+mr.data[, "messy"] = ifelse(grepl("\\|[0-9]*[0-9]*[0-9]*\\|", mr.data[,"narrative"]), 1, 0)
     #split narrative if messy, generate(split_) limit(4) parse(|)
     #replace narrative = split_1 if messy
     #replace occupcode3digit = split_2 if messy
@@ -100,7 +109,7 @@ mr.data[, "changing"] = ifelse(grepl("chang(e|ing|ed)( )*out", mr.data[,"narrati
 mr.data[, "cleaning"] = ifelse(grepl("clean", mr.data[,"narrative"]), 1, 0) 
 mr.data[, "retrack"] = ifelse(grepl("re(rail|track|trakc)(ed|ing)", mr.data[,"narrative"]), 1, 0)
 #Try to avoid inspection/inspector
-mr.data[, "inspect"] = ifelse(grepl("inspect( |ed|s|ing|\.|,|$)", mr.data[,"narrative"]), 1, 0)
+mr.data[, "inspect"] = ifelse(grepl("inspect( |ed|s|ing|\\.|,|$)", mr.data[,"narrative"]), 1, 0)
 mr.data[, "pullbelt"] = ifelse(grepl("pull( |ing|ed|s)*.?.?.?.?.?.?.?belt", mr.data[,"narrative"]), 1, 0)
 mr.data[, "remove"] = ifelse(grepl("remov(e|ed|ing)", mr.data[,"narrative"]) 
                            & grepl("broken", mr.data[,"narrative"]) & grepl("flanged", mr.data[,"narrative"])
@@ -127,7 +136,7 @@ mr.data[, "install"] = ifelse(grepl("(^| |e|n)i(s|n|t)(s|n|t)(s|n|t)al[a-z]*", m
                           & (mr.data[, "rib.hole"] != 1 & mr.data[, "roof.bolt"] != 1), 1, 0)
 mr.data[, "pain"] = ifelse(grepl("(^| )pain( |$|.|,|:|)", mr.data[,"narrative"]), 1, 0)
 #Make sure "hoisting" or "hoisted" aren't grabbed
-mr.data[, "hoist"] = ifelse(((grepl("(^| )hoist(s| |$|\.|,|:)", mr.data[,"narrative"]) |
+mr.data[, "hoist"] = ifelse(((grepl("(^| )hoist(s| |$|\\.|,|:)", mr.data[,"narrative"]) |
                               grepl("(^| )el(e|a|i)vat(o|e)r*", mr.data[,"narrative"])) & mr.data[, "pain"] == 0), 1, 0) 
 mr.data[, "surgery"] = ifelse((grepl("surger[a-z]*", mr.data[,"narrative"]) | 
                               grepl("surgic[a-z]*", mr.data[,"narrative"])) & mr.data[, "pain"] == 0, 1, 0)
@@ -175,10 +184,12 @@ simple.data$maybe.keyword = ifelse( (simple.data$remove == 1 | simple.data$pullb
                                      simple.data$rethread == 1 | simple.data$dismantl == 1 |
                                      simple.data$oil == 1 | simple.data$check == 1 ) & simple.data$false.keyword == 0, 1, 0)
 
-simple.data = mr.data[, c(match("degreeofinjury", names(simple.data)), match("occupation", names(simple.data)),
-                          match("accidentclassification", names(simple.data)), match("mineractivity", names(simple.data)),
-                          match("accidenttype", names(simple.data)))]
+simple.data = simple.data[, c(-match("degreeofinjury", names(simple.data)), -match("occupation", names(simple.data)),
+                          -match("accidentclassification", names(simple.data)), -match("mineractivity", names(simple.data)),
+                          -match("accidenttype", names(simple.data)))]
 
+#office computer directory
+setwd("C:/Users/slevine2/Dropbox (Stanford Law School)/R-code")
 write.csv(simple.data, file = "prepped_MR_simple_data.csv", row.names = FALSE)
 
 ######################################################################################################
