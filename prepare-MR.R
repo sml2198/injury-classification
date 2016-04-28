@@ -91,12 +91,15 @@ names(mr.data)[names(mr.data) == "MR"] = "MR"
 ######################################################################################################
 # STILL NEED TO TRANSLATE THIS INTO R CODE TO CLEAN UP NARRATIVE.
 mr.data[, "messy"] = ifelse(grepl("\\|[0-9]*[0-9]*[0-9]*\\|", mr.data[,"narrative"]), 1, 0)
-    #split narrative if messy, generate(split_) limit(4) parse(|)
-    #replace narrative = split_1 if messy
-    #replace occupcode3digit = split_2 if messy
-    #replace occupation = split_3 if messy
-    #replace returntoworkdate = split_4 if messy
-    #drop messy split_*
+narrative.split = strsplit(mr.data[mr.data$messy == 1, "narrative"], "|", fixed = T)
+for (i in 1:nrow(mr.data)) {
+  narrative.split[i] = unlist(narrative.split[i])
+}
+mr.data[mr.data$messy == 1, "narrative"] = narrative_split[1]
+mr.data[mr.data$messy == 1, "occupcode3digit"] = narrative_split[2]
+mr.data[mr.data$messy == 1, "occupation"] = narrative_split[3]
+mr.data[mr.data$messy == 1, "returntoworkdate"] = narrative_split[4]
+mr.data = mr.data[, c(-match("narrative_split", names(mr.data)), -match("messy", names(mr.data)))]
 
 # ADD NEW KEYWORD VARS: 11 NEW VARS (ADDED TO 106)
 mr.data[, "repair"] = ifelse(grepl("(^| )r(e|a)pa(i*)r[a-z]*", mr.data[,"narrative"]), 1, 0)
