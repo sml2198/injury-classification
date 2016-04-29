@@ -51,8 +51,8 @@ table(simple[801:1023,1], predicted = cart.predictions)
 # PLOT RESULTS & DETAILED PLOT OF SPLITS
 rpart.plot(cart, type=3, extra = 101, fallen.leaves=T)
 printcp(cart) 
-importance(cart)
-summary(cart)
+#importance(cart)
+#summary(cart)
 
 ######################################################################################################
 # DEFINE RANDOM FOREST (ON TRUE PROPORTION OF NO'S AND YES'S)
@@ -70,13 +70,13 @@ round(importance(rf),2)
 df.rf_imp <- data.frame(variable = names(rf$importance[,1]), importance = rf$importance[,1])
 df.rf_imp <- df.rfImportance[ order(-df.rfImportance[,2]),]
 
+# PREDICT ON OUT-OF-BAG (OOB) OBSERVATIONS 
+rf.oob.predictions = predict(rf, simple[1:700,],type="class")
+table(simple[1:700,1], predicted = rf.oob.predictions)
+
 # PREDICT ON REMAINING OBSERVATIONS & PLOT THE PREDICTIONS (TOP ROW) VS ACTUALS IN TABLE 
 rf.predictions = predict(rf, simple[701:1023,],type="class")
 table(simple[701:1023,1], predicted = rf.predictions)
-
-# PREDICT ON OUT OF BAG OBSERVATIONS 
-rf.oob.predictions = predict(rf, simple[1:700,],type="class")
-table(simple[1:700,1], predicted = rf.oob.predictions)
 
 ######################################################################################################
 # DOWNSAMPLE NEGATIVE OUTCOMES (MR=NO) FOR RANDOM FOREST
@@ -123,8 +123,8 @@ table(simple.rose[601:1023,1], predicted = rf_rose_predictions)
 
 ######################################################################################################
 # USE ADABOOST TO IMPLEMENT BOOSTING ALGORITHM 
-mr.adaboost = boosting(MR ~ ., data = simple[1:400,], boos = F, mfinal = 100, coeflearn = 'Freund')
-adaboost.pred = predict.boosting(mr.adaboost, newdata = simple[401:1023,])
+mr.adaboost = boosting(MR ~ ., data = simple[1:800,], boos = F, mfinal = 100, coeflearn = 'Freund')
+adaboost.pred = predict.boosting(mr.adaboost, newdata = simple[801:1023,])
 adaboost.pred$confusion
 
 ######################################################################################################
