@@ -71,12 +71,6 @@ mr.data[, "immediatenotificationclass"] = ifelse(mr.data[, "immediatenotificatio
 mr.data[, "natureofinjury"] = ifelse(mr.data[, "natureofinjury"] == "UNCLASSIFIED,NOT DETERMED", "NO VALUE FOUND", mr.data[, "natureofinjury"])
 mr.data[, "equipmanufacturer"] = ifelse(mr.data[, "equipmanufacturer"] == "Not Reported", "NO VALUE FOUND", mr.data[, "equipmanufacturer"])
 
-# CONVERT DATES
-indices_with_date = grep("date", names(mr.data))
-for (i in indices_with_date) {
-  mr.data[,i] = as.Date(mr.data[,i], "%m/%d/%Y")
-}
-
 # We decided to recode three observations in our data that were coded as MR, but are apparently non-injury accidents. 
 # It's apparent that whoever did the coding didn't look at this field. We don't ever want our algorithm to classify 
 # an acident-only observation as positive for MR, so we enforce this change.  
@@ -89,18 +83,25 @@ mr.data[, "MR"] = factor(ifelse(mr.data[, "MR"] == 1, "YES", "NO"))
 names(mr.data)[names(mr.data) == "MR"] = "MR"
 
 ######################################################################################################
-# STILL NEED TO TRANSLATE THIS INTO R CODE TO CLEAN UP NARRATIVE.
+# 60 NARRATIVE FIELDS ARE POLLUTED WITH OTHER COLUMNS - SPLIT AND REPLACE THESE 
 mr.data[, "messy"] = ifelse(grepl("\\|[0-9]*[0-9]*[0-9]*\\|", mr.data[,"narrative"]), 1, 0)
-narrative.split = strsplit(mr.data[mr.data$messy == 1, "narrative"], "|", fixed = T)
-for (i in 1:nrow(mr.data)) {
-  narrative.split[i] = unlist(narrative.split[i])
+narrative_split = strsplit(mr.data[mr.data$messy == 1, "narrative"], "|", fixed = T)
+messy_rows = row.names(mr.data[mr.data$messy == 1, ])
+for (i in 1:length(messy_rows)) {
+  mr.data[messy_rows[i], "narrative"] = unlist(narrative_split[i])[1]
+  mr.data[messy_rows[i], "occupcode3digit"] = unlist(narrative_split[i])[2]
+  mr.data[messy_rows[i], "occupation"] = unlist(narrative_split[i])[3]
+  mr.data[messy_rows[i], "returntoworkdate"] = unlist(narrative_split[i])[4]
 }
-mr.data[mr.data$messy == 1, "narrative"] = narrative_split[1]
-mr.data[mr.data$messy == 1, "occupcode3digit"] = narrative_split[2]
-mr.data[mr.data$messy == 1, "occupation"] = narrative_split[3]
-mr.data[mr.data$messy == 1, "returntoworkdate"] = narrative_split[4]
-mr.data = mr.data[, c(-match("narrative_split", names(mr.data)), -match("messy", names(mr.data)))]
+mr.data = mr.data[, -match("messy", names(mr.data))]
 
+# CONVERT DATES - THIS NEEDS TO HAPPEN AFTER REPLACING RETURNTOWORKDATE WITH EXTRACTS FROM NARRATIVE FIELDS
+indices_with_date = grep("date", names(mr.data))
+for (i in indices_with_date) {
+  mr.data[,i] = as.Date(mr.data[,i], "%m/%d/%Y")
+}
+
+######################################################################################################
 # ADD NEW KEYWORD VARS: 11 NEW VARS (ADDED TO 106)
 mr.data[, "repair"] = ifelse(grepl("(^| )r(e|a)pa(i*)r[a-z]*", mr.data[,"narrative"]), 1, 0)
 mr.data[, "rplace"] = ifelse(grepl("(^| )replac(e|i)[a-z]*", mr.data[,"narrative"]), 1, 0)
