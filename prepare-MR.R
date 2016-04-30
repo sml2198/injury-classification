@@ -11,6 +11,7 @@ library(zoo)
 ######################################################################################################
 # SET PREFERENCES - IMPUTATION METHOD - METHOD 3 IS RANDOM DRAWS FROM DISTRIBUTION (OUR BEST METHOD)
 setwd("X:/Projects/Mining/NIOSH/analysis/data/training/coded_sets/")
+
 imputation_method = 3
 
 # LOAD IN CODED TRAINING SET (1000 OBSERVATIONS, CODED FOR "MR")
@@ -203,6 +204,8 @@ mr.data[, "surgery"] = ifelse((grepl("surger[a-z]*", mr.data[,"narrative"]) |
 # miner sprays 
 # add "testing' to checking
 mr.data[, "trash"] = ifelse(grepl("(trash|garbage)", mr.data[,"narrative"]), 1, 0)
+mr.data[, "roller"] = ifelse(grepl("roller", mr.data[,"narrative"]), 1, 0)
+
 # tightening bolts, tightening conveyor chain, tightening cables 
 # batteries 
 # repair a wound, repair a hernia, repair an injury, repair 
