@@ -34,7 +34,7 @@ set.seed(625)
 rand <- runif(nrow(trainx))
 train <- trainx[order(rand),]
 rand2 <- runif(nrow(simplex))
-simple <- simplex[order(rand),]
+simple <- simplex[order(rand2),]
 # just to find out which col # MR is
 which( colnames(train)=="MR" )
 which( colnames(simple)=="MR" )
@@ -46,7 +46,7 @@ cart
 
 # PREDICT ON REMAINING OBSERVATIONS 
 cart.predictions = predict(cart, simple[801:1023,],type="class")
-table(simple[801:1023,1], predicted = cart.predictions)
+table(simple[801:1019,1], predicted = cart.predictions)
 
 # PLOT RESULTS & DETAILED PLOT OF SPLITS
 rpart.plot(cart, type=3, extra = 101, fallen.leaves=T)
@@ -57,7 +57,7 @@ printcp(cart)
 ######################################################################################################
 # DEFINE RANDOM FOREST (ON TRUE PROPORTION OF NO'S AND YES'S)
 rf <- randomForest(MR ~ ., data = simple[1:700,], mtry = 8, importance=TRUE, type="class",
-                   ntree = 600)
+                   ntree = 1000)
 rf
 
 # INSPECT RANKED VARIABLES AND ERROR RATE
@@ -76,7 +76,11 @@ table(simple[1:700,1], predicted = rf.oob.predictions)
 
 # PREDICT ON REMAINING OBSERVATIONS & PLOT THE PREDICTIONS (TOP ROW) VS ACTUALS IN TABLE 
 rf.predictions = predict(rf, simple[701:1023,],type="class")
-table(simple[701:1023,1], predicted = rf.predictions)
+table(simple[701:1019,1], predicted = rf.predictions)
+
+#      NO YES
+# NO  202  12
+# YES  23  82
 
 ######################################################################################################
 # DOWNSAMPLE NEGATIVE OUTCOMES (MR=NO) FOR RANDOM FOREST
@@ -93,10 +97,10 @@ rf.baseline = train(MR ~ ., data = simple[1:700,], method = "rf", ntree = 800,
                        tuneLength = 10, metric = "ROC", trControl = ctrl)
 
 down.prob = predict(rf.downsampled, simple[701:1023,], type = "prob")[,1]
-down.ROC = roc(response = simple[701:1023,1], predictor = down.prob, levels = rev(levels(simple[701:1023,1])))
+down.ROC = roc(response = simple[701:1019,1], predictor = down.prob, levels = rev(levels(simple[701:1019,1])))
 
 base.prob = predict(rf.baseline, simple[701:1023,], type = "prob")[,1]
-base.ROC = roc(response = simple[701:1023,1], predictor = base.prob, levels = rev(levels(simple[701:1023,1])))
+base.ROC = roc(response = simple[701:1019,1], predictor = base.prob, levels = rev(levels(simple[701:1019,1])))
 
 plot(down.ROC, col = rgb(1, 0, 0, .5), lwd = 2)
 plot(base.ROC, col = rgb(0, 0, 1, .5), lwd = 2, add = TRUE)
@@ -118,13 +122,18 @@ rf.rose <- randomForest(MR ~ ., data = simple.rose[1:600,], mtry = 8, ntree = 60
 rf.rose
 
 # PREDICT ON REMAINING OBSERVATIONS & PLOT THE PREDICTIONS (TOP ROW) VS ACTUALS IN TABLE 
-rf_rose_predictions = predict(rf.rose, simple.rose[601:1023,],type="class")
-table(simple.rose[601:1023,1], predicted = rf_rose_predictions)
+rf_rose_predictions = predict(rf.rose, simple.rose[601:1019,],type="class")
+table(simple.rose[601:1019,1], predicted = rf_rose_predictions)
+
+simple$MR.prediction = rf_rose_predictions
 
 ######################################################################################################
 # USE ADABOOST TO IMPLEMENT BOOSTING ALGORITHM 
 mr.adaboost = boosting(MR ~ ., data = simple[1:800,], boos = F, mfinal = 100, coeflearn = 'Freund')
-adaboost.pred = predict.boosting(mr.adaboost, newdata = simple[801:1023,])
+adaboost.pred = predict.boosting(mr.adaboost, newdata = simple[801:1019,])
 adaboost.pred$confusion
+
+# NO  137  12
+# YES  12  58
 
 ######################################################################################################
