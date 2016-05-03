@@ -17,14 +17,8 @@ imputation_method = 3
 # LOAD IN CODED TRAINING SET (1000 OBSERVATIONS, CODED FOR "MR")
 mr.data = read.csv("Training_Set_Maintenance_And_Repair_Accidents_August_2015_2.csv", header = TRUE, sep = ",", nrows = 1001, stringsAsFactors = FALSE)
 
-# (LOAD IN SAVED .CSV IF WORKING REMOTELY)
-#mr.data = read.csv("/Users/Sarah/Dropbox (Stanford Law School)/R-code/Injury-Classification/data/raw_MR_training_data.csv", header = TRUE, sep = ",", nrows = 1001, stringsAsFactors = FALSE)
-
 # LOAD IN DATASET OF ADDITIONAL FATALITIES (FROM OPEN DATA) TO APPEND TO OUR TRAINING SET - ALL "MR"
 mr.fatalities = read.csv("X:/Projects/Mining/NIOSH/analysis/data/4_coded/coded_MR_fatalities.csv", header = TRUE, sep = ",", nrows = 24, stringsAsFactors = FALSE)
-
-# (LOAD IN SAVED .CSV IF WORKING REMOTELY)
-#mr.fatalities = read.csv("/Users/Sarah/Dropbox (Stanford Law School)/R-code/Injury-Classification/data/raw_fatalities_data.csv", header = TRUE, sep = ",", nrows = 1001, stringsAsFactors = FALSE)
 
 ######################################################################################################
 # MAKE SURE TRAINING SET AND FATALITIES DATASETS HAVE ALL THE SAME VAR NAMES BEFORE APPENDING
@@ -88,7 +82,7 @@ mr.data[, "equipmanufacturer"] = ifelse(mr.data[, "equipmanufacturer"] == "Not R
 
 # We decided to recode three observations in our data that were coded as MR, but are apparently non-injury accidents. 
 # It's apparent that whoever did the coding didn't look at this field. We don't ever want our algorithm to classify 
-# an acident-only observation as positive for MR, so we enforce this change.  
+# an accident-only observation as positive for MR, so we enforce this change.  
 mr.data$accident.only = ifelse(mr.data$degreeofinjury == "accident only" | mr.data$accidenttype == "acc type, without injuries", 1, 0)
 mr.data$MR = ifelse(mr.data$MR == "YES" & mr.data$accident.only == 0, 1, 0)
 mr.data$MR[mr.data$MR == "YES" & mr.data$accident.only == 1] = 0
@@ -288,6 +282,8 @@ simple.data[, "falling.word"] = ifelse(grepl("rock( )*fell", simple.data[,"narra
                                !grepl("fell.{1,20}roof", simple.data[,"narrative"]) |
                                !grepl("roof( )*f(a|e)ll", simple.data[,"narrative"]), 1, 0)
 simple.data$falling.accident = ifelse(simple.data$falling.class == 1 | simple.data$falling.word == 1, 1, 0)
+
+simple.data$accident.only = ifelse( (simple.data$degreeofinjury == "accident only" | simple.data$accidenttype == "acc type, without injuries"), 1, 0)
 
 simple.data = simple.data[, c(-match("degreeofinjury", names(simple.data)), -match("occupation", names(simple.data)),
                               -match("falling.class", names(simple.data)), -match("falling.word", names(simple.data)),
