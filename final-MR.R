@@ -5,6 +5,7 @@ install.packages("zoo")
 library(zoo)
 
 setwd("X:/Projects/Mining/NIOSH/analysis/data/training/coded_sets/")
+mines.accidents = read.csv("C:/Users/slevine2/Dropbox (Stanford Law School)/R-code/prepped_mines_accidents.csv", header = TRUE, sep = ",", nrows = 1001, stringsAsFactors = FALSE)
 
 imputation_method = 3
 
@@ -34,13 +35,13 @@ mines.accidents[, "equipmanufacturer"] = ifelse(mines.accidents[, "equipmanufact
 ######################################################################################################
 # 60 NARRATIVE FIELDS ARE POLLUTED WITH OTHER COLUMNS - SPLIT AND REPLACE THESE 
 mines.accidents[, "messy"] = ifelse(grepl("\\|[0-9]*[0-9]*[0-9]*\\|", mines.accidents[,"narrative"]), 1, 0)
-narrative.split = strsplit(mines.accidents[mines.accidents$messy == 1, "narrative"], "|", fixed = T)
-messy.rows = row.names(mines.accidents[mines.accidents$messy == 1, ])
-for (i in 1:length(messy.rows)) {
-  mines.accidents[messy.rows[i], "narrative"] = unlist(narrative.split[i])[1]
-  mines.accidents[messy.rows[i], "occupcode3digit"] = unlist(narrative.split[i])[2]
-  mines.accidents[messy.rows[i], "occupation"] = unlist(narrative.split[i])[3]
-  mines.accidents[messy.rows[i], "returntoworkdate"] = unlist(narrative.split[i])[4]
+narrative_split = strsplit(mines.accidents[mines.accidents$messy == 1, "narrative"], "|", fixed = T)
+messy_rows = row.names(mines.accidents[mines.accidents$messy == 1, ])
+for (i in 1:length(messy_rows)) {
+  mines.accidents[messy_rows[i], "narrative"] = unlist(narrative_split[i])[1]
+  mines.accidents[messy_rows[i], "occupcode3digit"] = unlist(narrative_split[i])[2]
+  mines.accidents[messy_rows[i], "occupation"] = unlist(narrative_split[i])[3]
+  mines.accidents[messy_rows[i], "returntoworkdate"] = unlist(narrative_split[i])[4]
 }
 mines.accidents = mines.accidents[, c(-match("messy", names(mines.accidents)))]
 
