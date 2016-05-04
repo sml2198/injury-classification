@@ -212,4 +212,7 @@ mines.accidents = mines.accidents[!(is.na(mines.accidents$mineid) | mines.accide
 mines.accidents = mines.accidents[mines.accidents$problem!=1, ]
 mines.accidents = mines.accidents[, c(-match("problem", names(mines.accidents)))]
 
+# office computer directory
+write.csv(mines.accidents, file = "C:/Users/slevine2/Dropbox (Stanford Law School)/R-code/prepped_mines_accidents.csv", row.names = FALSE)
+
 ######################################################################################################
