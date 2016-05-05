@@ -49,6 +49,12 @@ ps_data[, "pin"] = ifelse(grepl("(^| )pin(n*)(e|i)[a-z]+", ps_data[,"narrative"]
 ps_data[, "strike"] = ifelse(grepl("str(i|u)(.*)k[a-z]*", ps_data[,"narrative"]), 1, 0)
 ps_data[, "trap"] = ifelse(grepl("( )trap[a-z]*", ps_data[,"narrative"]), 1, 0)
 ps_data[, "keyword"] = ifelse((ps_data[, "trap"] == 1 | ps_data[, "pin"] == 1 | ps_data[, "strike"] == 1), 1, 0)
+ps_data[, "between"] = ifelse(grepl("between", ps_data[,"narrative"]), 1, 0)
+vehcl_equip_codes = c("06", "09", "13", "15", "16", "20", "28", "29", "53", "?")
+ps_data[, "struck_by_vehcl"] = ifelse(grepl("by", ps_data[,"narrative"]) & !(ps_data[, "equiptypecode"] %in% vehcl_equip_codes), 1, 0)
+ps_data[, "driving_vehcl"] = ifelse(grepl("was", ps_data[,"narrative"]) & grepl("driv(e|ing)", ps_data[, "narrative"]) & !(ps_data[, "equiptypecode"] %in% vehcl_equip_codes), 1, 0)
+ps_data[, "rocks"] = ifelse(grepl("(rock(s)*)*.+(str(i|u)(.*)k[a-z]*)+|(( )trap[a-z]*)+|((^| )pin(n*)(e|i)[a-z]+)+.+(rock(s)*)*", ps_data[, "narrative"]), 1, 0)
+ps_data[, "holistic"] = ifelse(ps_data[, "between"] == 1 | (ps_data[, "struck_by_vehcl"] == 1 & ps_data[, "rocks"] == 0), 1, 0)
 ps_data = ps_data[, c(-grep("pinner", names(ps_data)), -grep("pinion", names(ps_data)))]
 
 #Drop variables with redundant or no information
