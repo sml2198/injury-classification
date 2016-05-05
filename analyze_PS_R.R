@@ -14,6 +14,24 @@ ps_data = read.csv("X:/Projects/Mining/NIOSH/analysis/data/training/coded_sets/T
 
 ps_data = ps_data[!is.na(ps_data$mineid),]
 names(ps_data)[names(ps_data) == 'narrativemodified'] = 'narrative'
+ps_data[, "narrative"] = tolower(ps_data[, "narrative"])
+
+# 23 NARRATIVE FIELDS ARE POLLUTED WITH OTHER COLUMNS - SPLIT AND REPLACE THESE 
+ps_data[, "narrative"] = as.character(ps_data[, "narrative"])
+ps_data[, "occupcode3digit"] = as.character(ps_data[, "occupcode3digit"])
+ps_data[, "occupation"] = as.character(ps_data[, "occupation"])
+ps_data[, "returntoworkdate"] = as.character(ps_data[, "returntoworkdate"])
+ps_data[, "messy"] = ifelse(grepl("\\|[0-9]*[0-9]*[0-9]*\\|", ps_data[,"narrative"]), 1, 0)
+narrative_split = strsplit(ps_data[ps_data$messy == 1, "narrative"], "|", fixed = T)
+messy_rows = row.names(ps_data[ps_data$messy == 1, ])
+for (i in 1:length(messy_rows)) {
+  ps_data[messy_rows[i], "narrative"] = unlist(narrative_split[i])[1]
+  ps_data[messy_rows[i], "occupcode3digit"] = unlist(narrative_split[i])[2]
+  ps_data[messy_rows[i], "occupation"] = unlist(narrative_split[i])[3]
+  ps_data[messy_rows[i], "returntoworkdate"] = unlist(narrative_split[i])[4]
+}
+ps_data = ps_data[, c(-match("messy", names(ps_data)))]
+
 ps_data[, "X"] = factor(ifelse(ps_data[, "X"] == 1, "YES", "NO"))
 names(ps_data)[names(ps_data) == "X"] = "PS"
 
