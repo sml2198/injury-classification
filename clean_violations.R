@@ -1,0 +1,62 @@
+##HEADER##
+
+#Coded by Nikhil Saifullah
+
+#Load in CSV from STATA conversion
+early_viols = read.csv("X:/Projects/Mining/NIOSH/analysis/data/1_converted/MSHA/violations_fromText.csv")
+#This works
+open_data_viols = read.table("X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA/open_data/Violations.txt", header = T, sep = "|")
+
+#Renaming for MSHA Open Data
+names(open_data_viols)[names(open_data_viols) == "VIOLATION_NO"] = "violationno"
+names(open_data_viols)[names(open_data_viols) == "VIOLATION_ID"] = "violationid"
+names(open_data_viols)[names(open_data_viols) == "EVENT_NO"] = "eventno"
+names(open_data_viols)[names(open_data_viols) == "CONTRACTOR_ID"] = "contractorid"
+names(open_data_viols)[names(open_data_viols) == "CONTROLLER_NAME"] = "controllername"
+names(open_data_viols)[names(open_data_viols) == "FISCAL_YR"] = "fiscalyear"
+names(open_data_viols)[names(open_data_viols) == "CAL_QTR"] = "calendarquarter"
+names(open_data_viols)[names(open_data_viols) == "FISCAL_QTR"] = "fiscalquarter"
+names(open_data_viols)[names(open_data_viols) == "CAL_YR"] = "calendaryear"
+names(open_data_viols)[names(open_data_viols) == "COAL_METAL_IND"] = "coalcormetalm"
+names(open_data_viols)[names(open_data_viols) == "INJ_ILLNESS"] = "injuryillness"
+names(open_data_viols)[names(open_data_viols) == "SIG_SUB"] = "sigandsubdesignation"
+names(open_data_viols)[names(open_data_viols) == "PRIMARY_OR_MILL"] = "primarymill"
+names(open_data_viols)[names(open_data_viols) == "NO_AFFECTED"] = "numberaffected"
+names(open_data_viols)[names(open_data_viols) == "SPECIAL_ASSESS"] = "specialassessment"
+names(open_data_viols)[names(open_data_viols) == "MINE_ID"] = "mineid"
+names(open_data_viols)[names(open_data_viols) == "RIGHT_TO_CONF_DT"] = "righttoconferencedate"
+names(open_data_viols)[names(open_data_viols) == "VIOLATOR_TYPE_CD"] = "violatortypecode"
+names(open_data_viols)[names(open_data_viols) == "TERMINATION_TYPE"] = "typeoftermination"
+names(open_data_viols)[names(open_data_viols) == "TERMINATION_DT"] = "dateterminated"
+names(open_data_viols)[names(open_data_viols) == "TERMINATION_TIME"] = "timeterminated"
+names(open_data_viols)[names(open_data_viols) == "VACATE_TIME"] = "timevacated"
+names(open_data_viols)[names(open_data_viols) == "WRITTEN_NOTICE"] = "writtennotice"
+names(open_data_viols)[names(open_data_viols) == "ASMT_GENERATED_IND"] = "generatedbyassessmt"
+names(open_data_viols)[names(open_data_viols) == "SECTION_OF_ACT_1"] = "typeaction1"
+names(open_data_viols)[names(open_data_viols) == "SECTION_OF_ACT_2"] = "typeaction2"
+names(open_data_viols)[names(open_data_viols) == "LATEST_TERM_DUE_DT"] = "latesttermduedate"
+names(open_data_viols)[names(open_data_viols) == "VACATE_DT"] = "datevacated"
+names(open_data_viols)[names(open_data_viols) == "VIOLATION_ISSUE_DT"] = "dateissued"
+names(open_data_viols)[names(open_data_viols) == "CONTESTED_IND"] = "contestedindicator"
+names(open_data_viols)[names(open_data_viols) == "MINE_NAME"] = "minename"
+names(open_data_viols)[names(open_data_viols) == "MINE_TYPE"] = "minetype"
+names(open_data_viols) = tolower(names(open_data_viols))
+
+#Flag and drop duplicates on violation number
+open_data_viols[, "dup"] = duplicated(open_data_viols$violationno)
+table(open_data_viols$dup) #Same duplicates as in the STATA version of the code so no testing here.
+open_data_viols = open_data_viols[open_data_viols$dup == F,]
+
+open_data_viols[, "violationno"] = as.character(open_data_viols[, "violationno"])
+open_data_viols[, "eventno"] = as.character(open_data_viols[, "eventno"])
+
+#Keep only observations from Carolyn Stasik's data in years prior to the Open Data's time range
+early_viols = early_viols[early_viols$calendaryear <= 1999 & early_viols$calendaryear >= 1983,]
+
+clean_violations = merge(early_viols, open_data_viols, by = "violationno", all = T)
+clean_violations[, "merge"] = ifelse(!is.na(clean_violations$eventno.y) & !is.na(clean_violations$eventno.x), 3, 0)
+clean_violations[, "merge"] = ifelse(is.na(clean_violations$eventno.x) & !is.na(clean_violations$eventno.y), 2, clean_violations[, "merge"])
+clean_violations[, "merge"] = ifelse(is.na(clean_violations$eventno.y) & !is.na(clean_violations$eventno.x), 1, clean_violations[, "merge"])
+table(clean_violations$merge)
+
+save(clean_violations, file = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_violations.RData")
