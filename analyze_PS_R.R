@@ -314,17 +314,31 @@ ps_data$accident.only = ifelse( (ps_data$degreeofinjury == "accident only" | ps_
 # SIMPLE ALGORITHM
 ps_data[, "holistic"] = ifelse((((ps_data$accidenttypecode %in% likely_acc_type) | (ps_data$accidenttypecode %in% maybe_likely_acc_type)) & (ps_data$likely_actvty == 1 | ps_data$maybe_likely_actvty == 1) & (ps_data$accidentclassification %in% likely_classfctn) & ps_data$moving_vehcl == 1), 1, 0)
 
+# DUMMY-OUT FACTOR VARS WITH TOO MANY VALUES FOR RANDOM FOREST - MAYBE BETTER THAN THE ABOVE
+datdum <- function(x, data, name){
+  data$rv <- rnorm(dim(data)[1],1,1)
+  mm <- data.frame(model.matrix(lm(data$rv~-1+factor(data[,x]))))
+  names(mm) <- paste(name,1:dim(mm)[2],sep=".")
+  data$rv <- NULL
+  data <- cbind(data,mm)
+  return(data)
+}
+test.data1 <- datdum(x="injurysourcecode",data=ps_data,name="injurysourcecode")
+test.data1 <- test.data1 [, c(grep("injurysourcecode", names(test.data1)))]
+ps_data = cbind(ps_data, test.data1)
+rm(test.data1)
+
 ##################################################################################################
-#Drop variables with redundant or no information
+#Drop variables with redundant or no information while keeping codes used in the algorithms below
 ps_data = ps_data[, c(-match("primarycanvasscodedesc", names(ps_data)), -match("primarycanvasscode", names(ps_data)), -match("primarysicdesc", names(ps_data))
                       , -match("primarysiccode", names(ps_data)), -match("minetype", names(ps_data)), -match("coalcormetalmmine", names(ps_data))
-                      , -match("primarysiccodegroup", names(ps_data)), -match("primarysiccodesuffix", names(ps_data)), -match("equiptypecode", names(ps_data))
+                      , -match("primarysiccodegroup", names(ps_data)), -match("primarysiccodesuffix", names(ps_data))
                       , -match("immediatenotificationcode", names(ps_data)), -match("secondarysiccode", names(ps_data)), -match("secondarysicdesc", names(ps_data))
                       , -match("secondarysiccodegroup", names(ps_data)), -match("secondarysiccodesuffix", names(ps_data)), -match("secondarycanvasscode", names(ps_data))
                       , -match("secondarycanvasscodedesc", names(ps_data)), -match("minegascategorycode", names(ps_data)), -match("noofproducingpits", names(ps_data))
                       , -match("nooftailingponds", names(ps_data)), -match("roomandpillarindicator", names(ps_data)), -match("highwallminerindicator", names(ps_data))
-                      , -match("multiplepitsindicator", names(ps_data)), -match("minersrepindicator", names(ps_data)), -match("activitycode", names(ps_data))
-                      , -match("injurysourcecode", names(ps_data)), -match("natureofinjurycode", names(ps_data)), -match("bodypartcode", names(ps_data)), -match("subunitcode", names(ps_data))
+                      , -match("multiplepitsindicator", names(ps_data)), -match("minersrepindicator", names(ps_data))
+                      , -match("injurysourcecode", names(ps_data)), -match("natureofinjurycode", names(ps_data)), -match("subunitcode", names(ps_data))
                       , -match("degreeofinjurycode", names(ps_data)), -match("uglocationcode", names(ps_data)), -match("ugminingmethodcode", names(ps_data)), -match("classificationcode", names(ps_data))
                       , -match("accidenttypecode", names(ps_data)), -match("inj_degr_cd_old", names(ps_data)), -match("dup", names(ps_data)), -match("changed", names(ps_data))
                       , -match("narrativemodified", names(ps_data)), -match("narrative_old", names(ps_data)), -match("equipment", names(ps_data)), -match("date_old", names(ps_data))
@@ -394,17 +408,9 @@ if (imputation_method == 1 | imputation_method == 2) {
   #Not to be implemented as of now. 4/15/16
 }
 
-##Dummying-Out Factors with more than 53 categories (An issue for RF analysis)
-
-new_dummies = apply(cbind(dummy(ps_data$sourceofinjury), dummy(ps_data$occupation), dummy(ps_data$equipmentmodelno), dummy(ps_data$fipscountyname),
-                          dummy(ps_data$controllername), dummy(ps_data$operatorname), dummy(ps_data$controllerid), dummy(ps_data$operatorid)),
-                    MARGIN = 2, FUN = function(x) factor(x))
-#Memory issues with the next line so, for now, this is mostly to outline what ideally should happen at this stage. 4/16/16
-#ps_data = merge(ps_data, data.frame(new_dummies))
-
 ##################################################################################################
-# PRODUCE DATASET WITH ONLY VARS OF INTEREST FOR RF/BOOSTING ANALYSIS
-simple.data = ps_data[, c(match("PS", names(ps_data)), match("pin", names(ps_data)),
+# PRODUCE DATASETS WITH ONLY VARS OF INTEREST FOR RF/BOOSTING ANALYSIS
+simple.data.grouped1 = ps_data[, c(match("PS", names(ps_data)), match("pin", names(ps_data)),
                           match("strike", names(ps_data)), match("strikerib", names(ps_data)),
                           match("trap", names(ps_data)),  match("collided", names(ps_data)),
                           match("hit", names(ps_data)), match("ranover", names(ps_data)),
@@ -423,11 +429,122 @@ simple.data = ps_data[, c(match("PS", names(ps_data)), match("pin", names(ps_dat
                           match("unlikely_nature", names(ps_data)), match("likely_source", names(ps_data)),                          
                           match("unlikely_source", names(ps_data)), match("likely_actvty", names(ps_data)), 
                           match("unlikely_activity", names(ps_data)), 
-                          match("unlikely_occup", names(ps_data)), 
                           match("unlikely_body", names(ps_data)),
                           match("falling.accident", names(ps_data)), match("accident.only", names(ps_data)))]
 
-write.csv(simple.data, file = "C:/Users/slevine2/Dropbox (Stanford Law School)/R-code/prepped_PS_training_data.csv", row.names = FALSE)
+write.csv(simple.data.grouped1, file = "C:/Users/nsaifull/Dropbox/R-Code/prepped_PS_training_data_grouped1.csv", row.names = FALSE)
+
+simple.data.grouped2 = ps_data[, c(match("PS", names(ps_data)), match("pin", names(ps_data)),
+                                   match("strike", names(ps_data)), match("strikerib", names(ps_data)),
+                                   match("trap", names(ps_data)),  match("collided", names(ps_data)),
+                                   match("hit", names(ps_data)), match("ranover", names(ps_data)),
+                                   match("rolled", names(ps_data)), match("caught", names(ps_data)),
+                                   match("between", names(ps_data)), match("by", names(ps_data)),
+                                   match("brakes", names(ps_data)),
+                                   match("jarring", names(ps_data)), match("bounced", names(ps_data)),
+                                   match("hole", names(ps_data)), match("roofbolt", names(ps_data)),
+                                   match("rock", names(ps_data)), match("driving", names(ps_data)),
+                                   match("operating", names(ps_data)),
+                                   match("riding", names(ps_data)), match("passenger", names(ps_data)),
+                                   match("keyword", names(ps_data)), match("false_keyword", names(ps_data)),
+                                   match("likely_equip", names(ps_data)), match("unlikely_equip", names(ps_data)),
+                                   match("likely_class", names(ps_data)), match("unlikely_class", names(ps_data)),
+                                   match("likely_type", names(ps_data)), match("unlikely_type", names(ps_data)),
+                                   match("unlikely_nature", names(ps_data)), match("likely_source", names(ps_data)),                          
+                                   match("unlikely_source", names(ps_data)), match("likely_actvty", names(ps_data)), 
+                                   match("unlikely_activity", names(ps_data)), match("uncertain_activity", names(ps_data)),
+                                  match("uncertain_class", names(ps_data)),
+                                   match("unlikely_body", names(ps_data)), match("uncertain_type", names(ps_data)),
+                                   match("uncertain_equip", names(ps_data)), match("uncertain_source", names(ps_data)),
+                                   match("uncertain_nature", names(ps_data)),
+                                   match("falling.accident", names(ps_data)), match("accident.only", names(ps_data)))]
+
+write.csv(simple.data.grouped2, file = "C:/Users/nsaifull/Dropbox/R-Code/prepped_PS_training_data_grouped2.csv", row.names = FALSE)
+
+#Conversion done here to not foul up any pre-processing above.
+ps_data[, "accidentclassification"] = factor(ps_data[, "accidentclassification"])
+ps_data[, "accidenttype"] = factor(ps_data[, "accidenttype"])
+ps_data[, "natureofinjury"] = factor(ps_data[, "natureofinjury"])
+ps_data[, "occupcode3digit"] = factor(ps_data[, "occupcode3digit"])
+
+simple.data.raw.grouped1 = ps_data[, c(match("PS", names(ps_data)), match("pin", names(ps_data)),
+                          match("strike", names(ps_data)), match("strikerib", names(ps_data)),
+                          match("trap", names(ps_data)),  match("collided", names(ps_data)),
+                          match("hit", names(ps_data)), match("ranover", names(ps_data)),
+                          match("rolled", names(ps_data)), match("caught", names(ps_data)),
+                          match("between", names(ps_data)), match("by", names(ps_data)),
+                          match("brakes", names(ps_data)),
+                          match("jarring", names(ps_data)), match("bounced", names(ps_data)),
+                          match("hole", names(ps_data)), match("roofbolt", names(ps_data)),
+                          match("rock", names(ps_data)), match("driving", names(ps_data)),
+                          match("operating", names(ps_data)),
+                          match("riding", names(ps_data)), match("passenger", names(ps_data)),
+                          match("keyword", names(ps_data)), match("false_keyword", names(ps_data)),
+                          match("likely_equip", names(ps_data)), match("unlikely_equip", names(ps_data)),
+                          match("likely_class", names(ps_data)), match("unlikely_class", names(ps_data)),
+                          match("likely_type", names(ps_data)), match("unlikely_type", names(ps_data)),
+                          match("unlikely_nature", names(ps_data)), match("likely_source", names(ps_data)),                          
+                          match("unlikely_source", names(ps_data)), match("likely_actvty", names(ps_data)), 
+                          match("unlikely_activity", names(ps_data)), 
+                          match("unlikely_body", names(ps_data)),
+                          match("falling.accident", names(ps_data)), match("accident.only", names(ps_data)),
+                          match("accidentclassification", names(ps_data)), match("accidenttype", names(ps_data)),
+                          match("equiptypecode", names(ps_data)), grep("injurysourcecode\\.", names(ps_data)),
+                          match("natureofinjury", names(ps_data)), match("activitycode", names(ps_data)),
+                          match("occupcode3digit", names(ps_data)), match("bodypartcode", names(ps_data)))]
+
+write.csv(simple.data.raw.grouped1, file = "C:/Users/nsaifull/Dropbox/R-Code/prepped_PS_training_data_raw_grouped1.csv", row.names = FALSE)
+
+simple.data.raw.grouped2 = ps_data[, c(match("PS", names(ps_data)), match("pin", names(ps_data)),
+                                   match("strike", names(ps_data)), match("strikerib", names(ps_data)),
+                                   match("trap", names(ps_data)),  match("collided", names(ps_data)),
+                                   match("hit", names(ps_data)), match("ranover", names(ps_data)),
+                                   match("rolled", names(ps_data)), match("caught", names(ps_data)),
+                                   match("between", names(ps_data)), match("by", names(ps_data)),
+                                   match("brakes", names(ps_data)),
+                                   match("jarring", names(ps_data)), match("bounced", names(ps_data)),
+                                   match("hole", names(ps_data)), match("roofbolt", names(ps_data)),
+                                   match("rock", names(ps_data)), match("driving", names(ps_data)),
+                                   match("operating", names(ps_data)),
+                                   match("riding", names(ps_data)), match("passenger", names(ps_data)),
+                                   match("keyword", names(ps_data)), match("false_keyword", names(ps_data)),
+                                   match("likely_equip", names(ps_data)), match("unlikely_equip", names(ps_data)),
+                                   match("likely_class", names(ps_data)), match("unlikely_class", names(ps_data)),
+                                   match("likely_type", names(ps_data)), match("unlikely_type", names(ps_data)),
+                                   match("unlikely_nature", names(ps_data)), match("likely_source", names(ps_data)),                          
+                                   match("unlikely_source", names(ps_data)), match("likely_actvty", names(ps_data)), 
+                                   match("unlikely_activity", names(ps_data)), match("uncertain_activity", names(ps_data)),
+                                   match("uncertain_class", names(ps_data)),
+                                   match("unlikely_body", names(ps_data)), match("uncertain_type", names(ps_data)),
+                                   match("uncertain_equip", names(ps_data)), match("uncertain_source", names(ps_data)),
+                                   match("uncertain_nature", names(ps_data)),
+                                   match("falling.accident", names(ps_data)), match("accident.only", names(ps_data)),
+                                   match("accidentclassification", names(ps_data)), match("accidenttype", names(ps_data)),
+                                   match("equiptypecode", names(ps_data)), grep("injurysourcecode\\.", names(ps_data)),
+                                   match("natureofinjury", names(ps_data)), match("activitycode", names(ps_data)),
+                                   match("occupcode3digit", names(ps_data)), match("bodypartcode", names(ps_data)))]
+
+write.csv(simple.data.raw.grouped2, file = "C:/Users/nsaifull/Dropbox/R-Code/prepped_PS_training_data_raw_grouped2.csv", row.names = FALSE)
+
+simple.data.raw = ps_data[, c(match("PS", names(ps_data)), match("pin", names(ps_data)),
+                                       match("strike", names(ps_data)), match("strikerib", names(ps_data)),
+                                       match("trap", names(ps_data)),  match("collided", names(ps_data)),
+                                       match("hit", names(ps_data)), match("ranover", names(ps_data)),
+                                       match("rolled", names(ps_data)), match("caught", names(ps_data)),
+                                       match("between", names(ps_data)), match("by", names(ps_data)),
+                                       match("brakes", names(ps_data)),
+                                       match("jarring", names(ps_data)), match("bounced", names(ps_data)),
+                                       match("hole", names(ps_data)), match("roofbolt", names(ps_data)),
+                                       match("rock", names(ps_data)), match("driving", names(ps_data)),
+                                       match("operating", names(ps_data)),
+                                       match("riding", names(ps_data)), match("passenger", names(ps_data)),
+                                       match("keyword", names(ps_data)), match("false_keyword", names(ps_data)),
+                                       match("accidentclassification", names(ps_data)), match("accidenttype", names(ps_data)),
+                                       match("equiptypecode", names(ps_data)), grep("injurysourcecode\\.", names(ps_data)),
+                                       match("natureofinjury", names(ps_data)), match("activitycode", names(ps_data)),
+                                       match("occupcode3digit", names(ps_data)), match("bodypartcode", names(ps_data)))]
+
+write.csv(simple.data.raw, file = "C:/Users/nsaifull/Dropbox/R-Code/prepped_PS_training_data_raw.csv", row.names = FALSE)
 
 ##################################################################################################
 # ALGORITHM
