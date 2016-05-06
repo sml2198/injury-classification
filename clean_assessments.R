@@ -8,7 +8,7 @@ open_data_assessments = read.table("X:/Projects/Mining/NIOSH/analysis/data/0_ori
 early_assessments[, "dup"] = duplicated(early_assessments) #Checks out with total number of duplicates implied by STATA's "duplicates" command
 early_assessments = early_assessments[early_assessments$dup == F,]
 
-names(early_assessments)[names(early_assessments) == "Ã.Ã.violationno"] = "violationno"
+names(early_assessments)[names(early_assessments) == "Ãƒ.Ãƒ.violationno"] = "violationno"
 
 names(open_data_assessments)[names(open_data_assessments) == "VIOLATION_NO"] = "violationno"
 names(open_data_assessments)[names(open_data_assessments) == "VIOLATION_ID"] = "violationid"
