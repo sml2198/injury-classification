@@ -398,3 +398,22 @@ simple.data = ps_data[, c(match("PS", names(ps_data)), match("pin", names(ps_dat
                           match("falling.accident", names(ps_data)), match("accident.only", names(ps_data)))]
 
 write.csv(simple.data, file = "C:/Users/slevine2/Dropbox (Stanford Law School)/R-code/prepped_PS_training_data.csv", row.names = FALSE)
+
+################################################################################################################
+# ALGORITHM
+
+#simplex = read.csv("C:/Users/slevine2/Dropbox (Stanford Law School)/R-code/prepped_PS_simple_data.csv", header = T)
+
+# RANDOMLY SORT DATA (IT WAS ORDERED IN STATA BEFORE THIS)
+set.seed(625)
+rand <- runif(nrow(simple.data))
+simple.ps <- simple.data[order(rand),]
+remove(rand)
+# just to find out which col # MR is
+which( colnames(simple.ps)=="PS" )
+
+ps.adaboost = boosting(PS ~ ., data = simple.ps[1:700,], boos = T, mfinal = 100, coeflearn = 'Freund')
+adaboost.pred = predict.boosting(ps.adaboost, newdata = simple.ps[701:1019,])
+adaboost.pred$confusion
+
+
