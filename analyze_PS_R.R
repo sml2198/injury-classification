@@ -163,6 +163,13 @@ ps_data$unlikely_class = ifelse((ps_data$accidentclassification == "disorders (r
                                  ps_data$accidentclassification == "explosives and breaking agents" | 
                                  ps_data$accidentclassification == "stepping or kneeling on object" | 
                                  ps_data$accidentclassification == "ignition or explosion of gas or dust"), 1, 0)
+ps_data$uncertain_class = ifelse((ps_data$accidentclassification == "fall of roof or back" |
+                                    ps_data$accidentclassification == "handling of materials" |
+                                    ps_data$accidentclassification == "slip or fall of person" |
+                                    ps_data$accidentclassification == "fall of face/rib/pillar/side/highwall" |
+                                    ps_data$accidentclassification == "handtools (nonpowered)" |
+                                    ps_data$accidentclassification == "no value found" |
+                                    ps_data$accidentclassification == "other"), 1, 0)
 
 # GENERATE LIKELY TYPES
 
@@ -193,23 +200,33 @@ ps_data$unlikely_type = ifelse((ps_data$accidenttype == "fall from ladders" |
                                 ps_data$accidenttype == "absrtn rad caust txc & nox sbs" |
                                 ps_data$accidenttype == "flash burns (electric)" |
                                 ps_data$accidenttype == "over-exertion, nec"), 1, 0)
+ps_data$uncertain_type = ifelse((ps_data$accidenttype == "acc type, without injuries" |
+                                   ps_data$accidenttype == "struck against stationary obj" |
+                                   ps_data$accidenttype == "fall frm mach, vehicle, equip" |
+                                   ps_data$accidenttype == "struck by falling object" |
+                                   ps_data$accidenttype == "struck by flying object" |
+                                   ps_data$accidenttype == "no value found" |
+                                   ps_data$accidenttype == "not elsewhere classified"), 1, 0)
 
 # GENERATE LIKELY EQUIPMENT
 
 vehcl_equip_codes = c("06", "13", "28", "53", "?")
 ps_data[, "moving_vehcl"] = ifelse(!(ps_data$equiptypecode %in% vehcl_equip_codes), 1, 0)
 
-ps_data$likely_equip = ifelse((ps_data$accidenttype == "12" |  ps_data$accidenttype == "23" |
-                                 ps_data$accidenttype == "33" |  ps_data$accidenttype == "34" |
-                                 ps_data$accidenttype == "35" |  ps_data$accidenttype == "37" |
-                                 ps_data$accidenttype == "41" |  ps_data$accidenttype == "44" |
-                                 ps_data$accidenttype == "60" |  ps_data$accidenttype == "61" |
-                                 ps_data$accidenttype == "66" |  ps_data$accidenttype == "67"), 1, 0)
-ps_data$unlikely_equip = ifelse((ps_data$accidenttype == "06" |  ps_data$accidenttype == "09" |
-                                   ps_data$accidenttype == "15" |  ps_data$accidenttype == "16" |
-                                   ps_data$accidenttype == "20" |  ps_data$accidenttype == "28" |
-                                   ps_data$accidenttype == "29" |  ps_data$accidenttype == "53" |
-                                   ps_data$accidenttype == "55"), 1, 0)
+ps_data$likely_equip = ifelse((ps_data$equiptypecode == "12" |  ps_data$equiptypecode == "23" |
+                                 ps_data$equiptypecode == "33" |  ps_data$equiptypecode == "34" |
+                                 ps_data$equiptypecode == "35" |  ps_data$equiptypecode == "37" |
+                                 ps_data$equiptypecode == "41" |  ps_data$equiptypecode == "44" |
+                                 ps_data$equiptypecode == "60" |  ps_data$equiptypecode == "61" |
+                                 ps_data$equiptypecode == "66" |  ps_data$equiptypecode == "67"), 1, 0)
+ps_data$unlikely_equip = ifelse((ps_data$equiptypecode == "06" |  ps_data$equiptypecode == "09" |
+                                   ps_data$equiptypecode == "15" |  ps_data$equiptypecode == "16" |
+                                   ps_data$equiptypecode == "20" |  ps_data$equiptypecode == "28" |
+                                   ps_data$equiptypecode == "29" |  ps_data$equiptypecode == "53" |
+                                   ps_data$equiptypecode == "55"), 1, 0)
+ps_data$uncertain_equip = ifelse((ps_data$equiptypecode == "?" |  ps_data$equiptypecode == "54" |
+                                  ps_data$equiptypecode == "71" |  ps_data$equiptypecode == "25" |
+                                  ps_data$equiptypecode == "13" |  ps_data$equiptypecode == "14"), 1, 0)
 
 # GENERATE LIKELY SOURCES
 
@@ -231,6 +248,7 @@ ps_data$unlikely_source = ifelse((ps_data$injurysourcecode == "003" | ps_data$in
                                  ps_data$injurysourcecode == "093" | ps_data$injurysourcecode == "096" | 
                                  ps_data$injurysourcecode == "098" | ps_data$injurysourcecode == "112" |
                                  ps_data$injurysourcecode == "116" | ps_data$injurysourcecode == "125"), 1, 0)
+ps_data$uncertain_source = ifelse((ps_data$likely_source == 0 & ps_data$unlikely_source == 0), 1, 0)
 
 # GENERATE LIKELY NATURES
 
@@ -241,6 +259,18 @@ ps_data$unlikely_nature = ifelse((ps_data$natureofinjury == "burn or scald (heat
                                   ps_data$natureofinjury == "hearing loss or impairmnt" |
                                   ps_data$natureofinjury == "dust in eyes" |
                                   ps_data$natureofinjury == "elect.arc burn-not contac"), 1, 0)
+ps_data$uncertain_nature = ifelse((ps_data$natureofinjury == "no value found" |
+                                     ps_data$natureofinjury == "sprain,strain rupt disc" |
+                                     ps_data$natureofinjury == "cut,lacer,punct-opn wound" |
+                                     ps_data$natureofinjury == "contusn,bruise,intac skin" |
+                                     ps_data$natureofinjury == "fracture,chip" |
+                                     ps_data$natureofinjury == "multiple injuries" |
+                                     ps_data$natureofinjury == "amputation or enucleation" |
+                                     ps_data$natureofinjury == "dislocation" |
+                                     ps_data$natureofinjury == "other injury,nec" |
+                                     ps_data$natureofinjury == "scratch,abrasion,superfcl" |
+                                     ps_data$natureofinjury == "concussion-brain,cerebral" |
+                                     ps_data$natureofinjury == "joint,tendon,muscl inflam"), 1, 0)
 
 # GENERATE LIKELY ACTIVITIES
 
@@ -255,10 +285,12 @@ ps_data$unlikely_activity = ifelse((ps_data$activitycode == "009" | ps_data$acti
                                     ps_data$activitycode == "034" | ps_data$activitycode == "036" |
                                     ps_data$activitycode == "075" | ps_data$activitycode == "066" | 
                                     ps_data$activitycode == "065" | ps_data$activitycode == "056"), 1, 0)
+#Not sure this is mutually exclusive AND exhaustive
+ps_data$uncertain_activity = ifelse((ps_data$likely_actvty == 0 & ps_data$maybe_likely_actvty == 0 & ps_data$unlikely_activity == 0), 1, 0)
 
 # GENERATE LIKELY OCCUPATIONS
 
-ps_data$unlikely_occup = ifelse((ps_data$occupcode3digit == "050" | ps_data$occupcode3digit == "046" | 
+ps_data$likely_occup = ifelse((ps_data$occupcode3digit == "050" | ps_data$occupcode3digit == "046" | 
                                  ps_data$occupcode3digit == "028" | ps_data$occupcode3digit == "016" | 
                                  ps_data$occupcode3digit == "036"), 1, 0)
 
