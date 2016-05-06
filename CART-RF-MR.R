@@ -130,10 +130,14 @@ prop.table(table(simple$MR))
 # 0.626104 0.373896 
 
 splitIndex = createDataPartition(simple$MR, p =.50, list = FALSE, times = 1)
-smote.train = simple[splitIndex,]
+smote.trainx = simple[splitIndex,]
 smote.test = simple[-splitIndex,]
 prop.table(table(smote.train$MR))
 # 0.6254902 0.3745098 
+
+# USE SMOTE TO OVERSAMPLE DATA
+smote.train <- SMOTE(MR ~ ., smote.trainx, perc.over = 600,perc.under=100)
+table(smote.train$MR)
 
 # DEFINE RF ON SMOTE OVERSAMPLED DATA
 rf.smote <- randomForest(MR ~ ., data = smote.train, mtry = 10, ntree = 1000)
