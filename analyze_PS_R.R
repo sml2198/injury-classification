@@ -116,11 +116,12 @@ ps_data[, "riding"] = ifelse(grepl("was.{1,5}rid(e|ing)( )*in(side)*", ps_data[,
 ps_data[, "passenger"] = ifelse(grepl("passenger", ps_data[,"narrative"]), 1, 0)
 
 # GENERATE KEYWORD FLAGS
+
 ps_data$keyword = ifelse( ps_data$pin == 1 | ps_data$strike == 1 |
                           ps_data$trap == 1 | ps_data$collided == 1 |
                           ps_data$hit == 1 | ps_data$ranover == 1 |
                           ps_data$rolled == 1 | ps_data$between == 1, 1, 0)
-ps_data$falsekeyword = ifelse( ps_data$jarring == 1 | ps_data$hole == 1 |
+ps_data$false_keyword = ifelse( ps_data$jarring == 1 | ps_data$hole == 1 |
                           ps_data$roofbolt == 1 | ps_data$rock == 1 |
                           ps_data$driving == 1 | ps_data$riding == 1 |
                           ps_data$passenger == 1 | ps_data$brakes == 1 |
@@ -186,6 +187,17 @@ ps_data$unlikely_equip = ifelse((ps_data$accidenttype == "06" |  ps_data$acciden
                                  ps_data$accidenttype == "55"), 1, 0)
 
 # GENERATE LIKELY SOURCES
+
+ps_data$likely_source = ifelse(ps_data$injurysourcecode == "074" | 
+                               ps_data$injurysourcecode == "077" | 
+                               ps_data$injurysourcecode == "081" | 
+                               ps_data$injurysourcecode == "087" | 
+                               ps_data$injurysourcecode == "104" |
+                               ps_data$injurysourcecode == "105" |
+                               ps_data$injurysourcecode == "106" | 
+                               ps_data$injurysourcecode == "107" | 
+                               ps_data$injurysourcecode == "108" | 
+                               ps_data$injurysourcecode == "110", 1, 0)
 
 # GENERATE LIKELY NATURES
 
@@ -301,28 +313,28 @@ new_dummies = apply(cbind(dummy(ps_data$sourceofinjury), dummy(ps_data$occupatio
 #ps_data = merge(ps_data, data.frame(new_dummies))
 
 # PRODUCE DATASET WITH ONLY VARS OF INTEREST FOR RF/BOOSTING ANALYSIS
-simple.data = ps_data[, c(match("MR", names(ps_data)), match("repair", names(ps_data)),
-                          match("rplace", names(ps_data)), match("service", names(ps_data)),
-                          match("fix", names(ps_data)),  match("changing", names(ps_data)),
-                          match("retrack", names(ps_data)), match("pullbelt", names(ps_data)),
-                          match("reposition", names(ps_data)), match("mrworker", names(ps_data)),
-                          match("cover", names(ps_data)), match("toolbox", names(ps_data)),
-                          match("cleaning", names(ps_data)),
-                          match("maintain", names(ps_data)), match("inspect", names(ps_data)),
-                          match("shovel", names(ps_data)), match("washingdown", names(ps_data)),
-                          match("grease", names(ps_data)), match("check", names(ps_data)),
-                          match("tests", names(ps_data)),
-                          match("oil", names(ps_data)), match("dismantl", names(ps_data)),
-                          match("rethread", names(ps_data)), match("remove", names(ps_data)),
-                          match("bits", names(ps_data)), match("conveyor", names(ps_data)),
-                          match("helping", names(ps_data)), match("belt", names(ps_data)),
-                          match("tighten", names(ps_data)), match("battery", names(ps_data)),
-                          match("install", names(ps_data)),
-                          match("hoist", names(ps_data)), match("surgery", names(ps_data)),                          
-                          match("pain", names(ps_data)), match("trash", names(ps_data)), 
-                          match("roller", names(ps_data)), 
-                          match("mineractivity", names(ps_data)),
-                          match("occupation", names(ps_data)), match("degreeofinjury", names(ps_data)),
-                          match("accidentclassification", names(ps_data)), match("accidenttype", names(ps_data)),
-                          match("falling.accident", names(ps_data)), match("accident.only", names(ps_data)),
-                          match("narrative", names(ps_data)))]
+simple.data = ps_data[, c(match("PS", names(ps_data)), match("pin", names(ps_data)),
+                          match("strike", names(ps_data)), match("strikerib", names(ps_data)),
+                          match("trap", names(ps_data)),  match("collided", names(ps_data)),
+                          match("hit", names(ps_data)), match("ranover", names(ps_data)),
+                          match("rolled", names(ps_data)), match("caught", names(ps_data)),
+                          match("between", names(ps_data)), match("by", names(ps_data)),
+                          match("brakes", names(ps_data)),
+                          match("jarring", names(ps_data)), match("bounced", names(ps_data)),
+                          match("hole", names(ps_data)), match("roofbolt", names(ps_data)),
+                          match("rock", names(ps_data)), match("driving", names(ps_data)),
+                          match("operating", names(ps_data)),
+                          match("riding", names(ps_data)), match("passenger", names(ps_data)),
+                          match("keyword", names(ps_data)), match("false_keyword", names(ps_data)),
+                          match("likely_equip", names(ps_data)), match("unlikely_equip", names(ps_data)),
+                          match("likely_class", names(ps_data)), match("unlikely_class", names(ps_data)),
+                          match("likely_type", names(ps_data)), match("unlikely_type", names(ps_data)),
+                          match("likely_nature", names(ps_data)),
+                          match("unlikely_nature", names(ps_data)), match("likely_source", names(ps_data)),                          
+                          match("unlikely_source", names(ps_data)), match("likely_activity", names(ps_data)), 
+                          match("unlikely_activity", names(ps_data)), 
+                          match("likely_occup", names(ps_data)),
+                          match("unlikely_occup", names(ps_data)), match("likely_body", names(ps_data)),
+                          match("unlikely_body", names(ps_data)),
+                          match("falling.accident", names(ps_data)), match("accident.only", names(ps_data)))]
+
