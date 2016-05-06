@@ -390,12 +390,10 @@ simple.data = ps_data[, c(match("PS", names(ps_data)), match("pin", names(ps_dat
                           match("likely_equip", names(ps_data)), match("unlikely_equip", names(ps_data)),
                           match("likely_class", names(ps_data)), match("unlikely_class", names(ps_data)),
                           match("likely_type", names(ps_data)), match("unlikely_type", names(ps_data)),
-                          match("likely_nature", names(ps_data)),
                           match("unlikely_nature", names(ps_data)), match("likely_source", names(ps_data)),                          
-                          match("unlikely_source", names(ps_data)), match("likely_activity", names(ps_data)), 
+                          match("unlikely_source", names(ps_data)), match("likely_actvty", names(ps_data)), 
                           match("unlikely_activity", names(ps_data)), 
-                          match("likely_occup", names(ps_data)),
-                          match("unlikely_occup", names(ps_data)), match("likely_body", names(ps_data)),
+                          match("unlikely_occup", names(ps_data)), 
                           match("unlikely_body", names(ps_data)),
                           match("falling.accident", names(ps_data)), match("accident.only", names(ps_data)))]
 
