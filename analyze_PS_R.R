@@ -198,17 +198,78 @@ ps_data$likely_source = ifelse(ps_data$injurysourcecode == "074" |
                                ps_data$injurysourcecode == "107" | 
                                ps_data$injurysourcecode == "108" | 
                                ps_data$injurysourcecode == "110", 1, 0)
+ps_data$unlikely_source = ifelse(ps_data$injurysourcecode == "003" | 
+                                 ps_data$injurysourcecode == "004" | 
+                                 ps_data$injurysourcecode == "006" | 
+                                 ps_data$injurysourcecode == "007" | 
+                                 ps_data$injurysourcecode == "008" |
+                                 ps_data$injurysourcecode == "009" |
+                                 ps_data$injurysourcecode == "012" | 
+                                 ps_data$injurysourcecode == "051" | 
+                                 ps_data$injurysourcecode == "057" | 
+                                 ps_data$injurysourcecode == "063" | 
+                                 ps_data$injurysourcecode == "067" |
+                                 ps_data$injurysourcecode == "068" |
+                                 ps_data$injurysourcecode == "078" | 
+                                 ps_data$injurysourcecode == "079" | 
+                                 ps_data$injurysourcecode == "080" |   
+                                 ps_data$injurysourcecode == "083" | 
+                                 ps_data$injurysourcecode == "084" |
+                                 ps_data$injurysourcecode == "089" |
+                                 ps_data$injurysourcecode == "090" | 
+                                 ps_data$injurysourcecode == "092" | 
+                                 ps_data$injurysourcecode == "093" | 
+                                 ps_data$injurysourcecode == "096" | 
+                                 ps_data$injurysourcecode == "098" |
+                                 ps_data$injurysourcecode == "112" |
+                                 ps_data$injurysourcecode == "116" | 
+                                 ps_data$injurysourcecode == "125", 1, 0)
 
 # GENERATE LIKELY NATURES
+
+ps_data$likely_nature = ifelse(ps_data$natureofinjury == "crushing", 1, 0)
+ps_data$unlikely_nature = ifelse((ps_data$natureofinjury == "burn or scald (heat)" |
+                                  ps_data$natureofinjury == "burn,chemicl-fume,compoun" |
+                                  ps_data$natureofinjury == "elect shock,electrocution" |
+                                  ps_data$natureofinjury == "hearing loss or impairmnt" |
+                                  ps_data$natureofinjury == "dust in eyes" |
+                                  ps_data$natureofinjury == "elect.arc burn-not contac"), 1, 0)
 
 # GENERATE LIKELY ACTIVITIES
 
 ps_data[, "likely_actvty"] = ifelse(grepl("operate", ps_data$mineractivity) | grepl("roof", ps_data$mineractivity), 1, 0)
 ps_data[, "maybe_likely_actvty"] = ifelse(grepl("move/reel", ps_data$mineractivity) | grepl("handling supplies/materials", ps_data$mineractivity), 1, 0)
 
+ps_data$unlikely_activity = ifelse((ps_data$activitycode == "009" | 
+                                    ps_data$activitycode == "016" | 
+                                    ps_data$activitycode == "020" | 
+                                    ps_data$activitycode == "022" | 
+                                    ps_data$activitycode == "025" |
+                                    ps_data$activitycode == "026" |
+                                    ps_data$activitycode == "027" | 
+                                    ps_data$activitycode == "029" | 
+                                    ps_data$activitycode == "030" |
+                                    ps_data$activitycode == "032" | 
+                                    ps_data$activitycode == "034" | 
+                                    ps_data$activitycode == "036" |
+                                    ps_data$activitycode == "075" |
+                                    ps_data$activitycode == "066" | 
+                                    ps_data$activitycode == "065" | 
+                                    ps_data$activitycode == "056"), 1, 0)
+
 # GENERATE LIKELY OCCUPATIONS
 
+ps_data$unlikely_occup = ifelse((ps_data$occupcode3digit == "050" | 
+                                 ps_data$occupcode3digit == "046" | 
+                                 ps_data$occupcode3digit == "028" | 
+                                 ps_data$occupcode3digit == "016" | 
+                                 ps_data$occupcode3digit == "036"), 1, 0)
+
 # GENERATE LIKELY BODY PARTS
+
+ps_data$unlikely_body = ifelse((ps_data$bodypartcode == "200" | 
+                                ps_data$bodypartcode == "340" | 
+                                ps_data$bodypartcode == "420"), 1, 0)
 
 # GENERATE LIKELY CIRCUMSTANCES
 
@@ -338,3 +399,4 @@ simple.data = ps_data[, c(match("PS", names(ps_data)), match("pin", names(ps_dat
                           match("unlikely_body", names(ps_data)),
                           match("falling.accident", names(ps_data)), match("accident.only", names(ps_data)))]
 
+write.csv(simple.data, file = "C:/Users/slevine2/Dropbox (Stanford Law School)/R-code/prepped_PS_training_data.csv", row.names = FALSE)
