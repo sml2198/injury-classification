@@ -99,13 +99,13 @@ names(ps_data) = gsub("\\.[x|y]", "", names(ps_data))
 
 # Pin but not pinion, pinner, pinning top, or pinned himself
 ps_data[, "pin"] = ifelse(grepl("(^| )pin(n*)(e|i)[a-z]+", ps_data[,"narrative"]) &
-                            !grepl("(^| )pinion", ps_data[,"narrative"]) &
-                            !grepl("(^| )pinner", ps_data[,"narrative"]) &
-                            !grepl("pinn(ing|ed)( ).{1,5}top", ps_data[,"narrative"]) &
-                            !grepl("pinn(ing|ed).{1,5}(him|her)self", ps_data[,"narrative"]), 1, 0)
+                         !grepl("(^| )pinion", ps_data[,"narrative"]) &
+                         !grepl("(^| )pinner", ps_data[,"narrative"]) &
+                         !grepl("pinn(ing|ed)( ).{1,5}top", ps_data[,"narrative"]) &
+                         !grepl("pinn(ing|ed).{1,5}(him|her)self", ps_data[,"narrative"]), 1, 0)
 ps_data[, "strike"] = ifelse(grepl("str(i|u)(.*)k[a-z]*", ps_data[,"narrative"]) &
-                               !grepl("str(i|u)(.*)k[a-z]*.{1,6}head", ps_data[,"narrative"]) &
-                               !grepl("head.{1,6}str(i|u)(.*)k[a-z]*", ps_data[,"narrative"]), 1, 0)
+                            !grepl("str(i|u)(.*)k[a-z]*.{1,6}head", ps_data[,"narrative"]) &
+                            !grepl("head.{1,6}str(i|u)(.*)k[a-z]*", ps_data[,"narrative"]), 1, 0)
 ps_data[, "strikerib"] = ifelse(grepl("str(i|u)(.*)k[a-z]*.{1,15} rib", ps_data[,"narrative"]), 1, 0)
 ps_data[, "trap"] = ifelse(grepl("( )trap[a-z]*", ps_data[,"narrative"]), 1, 0)
 ps_data[, "collided"] = ifelse(grepl("collided", ps_data[,"narrative"]), 1, 0)
@@ -116,7 +116,7 @@ ps_data[, "hit"] = ifelse(grepl("( |^)hit( )*(by|him|his|her|employee|ee)", ps_d
 ps_data[, "between"] = ifelse(grepl("between", ps_data[,"narrative"]), 1, 0)
 ps_data[, "ranover"] = ifelse(grepl("( |^)r(a|u)n( )*(over|into)", ps_data[,"narrative"]), 1, 0)
 ps_data[, "rolled"] = ifelse(grepl("rolled( )*(over|into|onto)", ps_data[,"narrative"]), 1, 0)
-ps_data[, "caught"] = ifelse(grepl("caught", ps_data[,"narrative"]), 1, 0)
+ps_data[, "caught"] = ifelse(grepl("caught.{1,15}between", ps_data[,"narrative"]), 1, 0)
 ps_data[, "by"] = ifelse(grepl("by", ps_data[,"narrative"]), 1, 0)
 
 # GENERATE NEGATIVE KEYWORDS
@@ -125,7 +125,7 @@ ps_data[, "brakes"] = ifelse(grepl("brakes.{1,10}(off|lost|not engage|did not|we
                                grepl("lost.{1,10}brakes", ps_data[,"narrative"]), 1, 0)
 ps_data[, "jarring"] = ifelse(grepl("jar(r)*(ed|ing)", ps_data[,"narrative"]) |
                                 grepl("jolt(ed|ing)", ps_data[,"narrative"]), 1, 0)
-ps_data[, "bounced"] = ifelse(grepl("bounc(e|ing)", ps_data[,"narrative"]), 1, 0)
+ps_data[, "bounced"] = ifelse(grepl("boun(c)*( )*(e|ing)", ps_data[,"narrative"]), 1, 0)
 ps_data[, "hole"] = ifelse(grepl("hit.{1,6}head", ps_data[,"narrative"]) |
                              grepl("head.{1,6}hit", ps_data[,"narrative"]) |
                              grepl("hit.{1,6}(rock|hole|bump)", ps_data[,"narrative"]), 1, 0)
@@ -143,6 +143,7 @@ ps_data[, "passenger"] = ifelse(grepl("passenger", ps_data[,"narrative"]), 1, 0)
 ps_data$keyword = ifelse((ps_data$pin == 1 | ps_data$strike == 1 |
                           ps_data$trap == 1 | ps_data$collided == 1 |
                           ps_data$hit == 1 | ps_data$ranover == 1 |
+                          ps_data$caught == 1 |
                           ps_data$rolled == 1 | ps_data$between == 1), 1, 0)
 ps_data$false_keyword = ifelse((ps_data$jarring == 1 | ps_data$hole == 1 |
                                 ps_data$roofbolt == 1 | ps_data$rock == 1 |
