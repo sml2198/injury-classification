@@ -940,5 +940,3 @@ table(smote.test$PS, predicted = rf.smote.pred)
 # NO  354  10
 # YES  46  89
 
-
->>>>>>> 5fc7575c281dc8d79c70e5c5eddd6a9d9ccc0f63
