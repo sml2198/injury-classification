@@ -326,21 +326,21 @@ datdum <- function(x, data, name){
 test.data1 <- datdum(x="injurysourcecode",data=ps_data,name="injurysourcecode")
 test.data1 <- test.data1 [, c(grep("injurysourcecode", names(test.data1)))]
 test.data2 <- datdum(x="accidentclassification",data=ps_data,name="accidentclassification")
-test.data2 <- test.data2 [, c(grep("accidentclassification", names(test.data1)))]
+test.data2 <- test.data2 [, c(grep("accidentclassification", names(test.data2)))]
 test.data3 <- datdum(x="accidenttype",data=ps_data,name="accidenttype")
-test.data3 <- test.data3 [, c(grep("accidenttype", names(test.data1)))]
+test.data3 <- test.data3 [, c(grep("accidenttype", names(test.data3)))]
 test.data4 <- datdum(x="equiptypecode",data=ps_data,name="equiptypecode")
-test.data4 <- test.data4 [, c(grep("equiptypecode", names(test.data1)))]
+test.data4 <- test.data4 [, c(grep("equiptypecode", names(test.data4)))]
 test.data5 <- datdum(x="natureofinjury",data=ps_data,name="natureofinjury")
-test.data5 <- test.data5 [, c(grep("natureofinjury", names(test.data1)))]
+test.data5 <- test.data5 [, c(grep("natureofinjury", names(test.data5)))]
 test.data6 <- datdum(x="activitycode",data=ps_data,name="activitycode")
-test.data6 <- test.data6 [, c(grep("activitycode", names(test.data1)))]
+test.data6 <- test.data6 [, c(grep("activitycode", names(test.data6)))]
 test.data7 <- datdum(x="occupcode3digit",data=ps_data,name="occupcode3digit")
-test.data7 <- test.data7 [, c(grep("occupcode3digit", names(test.data1)))]
+test.data7 <- test.data7 [, c(grep("occupcode3digit", names(test.data7)))]
 test.data8 <- datdum(x="bodypartcode",data=ps_data,name="bodypartcode")
-test.data8 <- test.data8 [, c(grep("bodypartcode", names(test.data1)))]
+test.data8 <- test.data8 [, c(grep("bodypartcode", names(test.data8)))]
 ps_data = cbind(ps_data, test.data1, test.data2, test.data3, test.data4, test.data5, test.data6, test.data7, test.data8)
-rm(test.data1)
+rm(test.data1, test.data2, test.data3, test.data4, test.data5, test.data6, test.data7, test.data8)
 
 ##################################################################################################
 #Drop variables with redundant or no information while keeping codes used in the algorithms below
@@ -359,8 +359,8 @@ ps_data = ps_data[, c(-match("primarycanvasscodedesc", names(ps_data)), -match("
                       , -match("date_new", names(ps_data)), -match("directionstominemodified", names(ps_data)), -grep("insample", names(ps_data))
                       , -grep("group", names(ps_data)), -grep("random", names(ps_data)))]
 
-#Drop totally irrelevant variables
-ps_data = ps_data[, c(-match("documentno", names(ps_data)), -match("accidenttime", names(ps_data)), -grep("date", names(ps_data))
+#Drop totally irrelevant variables, but keeping document number to reference prediction results with narrative fields downstream
+ps_data = ps_data[, c( -match("accidenttime", names(ps_data)), -grep("date", names(ps_data))
                       , -match("longitude", names(ps_data)), -match("latitude", names(ps_data)), -match("bomstatecode", names(ps_data))
                       , -match("nearesttown", names(ps_data)), -match("narrative", names(ps_data)), -match("minestatus", names(ps_data))
                       , -match("minename", names(ps_data)))]
@@ -424,7 +424,7 @@ if (imputation_method == 1 | imputation_method == 2) {
 
 ##################################################################################################
 # PRODUCE DATASETS WITH ONLY VARS OF INTEREST FOR RF/BOOSTING ANALYSIS
-simple.data.grouped1 = ps_data[, c(match("PS", names(ps_data)), match("pin", names(ps_data)),
+simple.data.grouped1 = ps_data[, c(match("documentno", names(ps_data)), match("PS", names(ps_data)), match("pin", names(ps_data)),
                           match("strike", names(ps_data)), match("strikerib", names(ps_data)),
                           match("trap", names(ps_data)),  match("collided", names(ps_data)),
                           match("hit", names(ps_data)), match("ranover", names(ps_data)),
@@ -448,7 +448,7 @@ simple.data.grouped1 = ps_data[, c(match("PS", names(ps_data)), match("pin", nam
 
 write.csv(simple.data.grouped1, file = "C:/Users/nsaifull/Dropbox/R-Code/prepped_PS_training_data_grouped1.csv", row.names = FALSE)
 
-simple.data.grouped2 = ps_data[, c(match("PS", names(ps_data)), match("pin", names(ps_data)),
+simple.data.grouped2 = ps_data[, c(match("documentno", names(ps_data)), match("PS", names(ps_data)), match("pin", names(ps_data)),
                                    match("strike", names(ps_data)), match("strikerib", names(ps_data)),
                                    match("trap", names(ps_data)),  match("collided", names(ps_data)),
                                    match("hit", names(ps_data)), match("ranover", names(ps_data)),
@@ -481,7 +481,7 @@ ps_data[, "accidenttype"] = factor(ps_data[, "accidenttype"])
 ps_data[, "natureofinjury"] = factor(ps_data[, "natureofinjury"])
 ps_data[, "occupcode3digit"] = factor(ps_data[, "occupcode3digit"])
 
-simple.data.raw.grouped1 = ps_data[, c(match("PS", names(ps_data)), match("pin", names(ps_data)),
+simple.data.raw.grouped1 = ps_data[, c(match("documentno", names(ps_data)), match("PS", names(ps_data)), match("pin", names(ps_data)),
                           match("strike", names(ps_data)), match("strikerib", names(ps_data)),
                           match("trap", names(ps_data)),  match("collided", names(ps_data)),
                           match("hit", names(ps_data)), match("ranover", names(ps_data)),
@@ -509,7 +509,7 @@ simple.data.raw.grouped1 = ps_data[, c(match("PS", names(ps_data)), match("pin",
 
 write.csv(simple.data.raw.grouped1, file = "C:/Users/nsaifull/Dropbox/R-Code/prepped_PS_training_data_raw_grouped1.csv", row.names = FALSE)
 
-simple.data.raw.grouped2 = ps_data[, c(match("PS", names(ps_data)), match("pin", names(ps_data)),
+simple.data.raw.grouped2 = ps_data[, c(match("documentno", names(ps_data)), match("PS", names(ps_data)), match("pin", names(ps_data)),
                                    match("strike", names(ps_data)), match("strikerib", names(ps_data)),
                                    match("trap", names(ps_data)),  match("collided", names(ps_data)),
                                    match("hit", names(ps_data)), match("ranover", names(ps_data)),
@@ -540,7 +540,7 @@ simple.data.raw.grouped2 = ps_data[, c(match("PS", names(ps_data)), match("pin",
 
 write.csv(simple.data.raw.grouped2, file = "C:/Users/nsaifull/Dropbox/R-Code/prepped_PS_training_data_raw_grouped2.csv", row.names = FALSE)
 
-simple.data.raw = ps_data[, c(match("PS", names(ps_data)), match("pin", names(ps_data)),
+simple.data.raw = ps_data[, c(match("documentno", names(ps_data)), match("PS", names(ps_data)), match("pin", names(ps_data)),
                                        match("strike", names(ps_data)), match("strikerib", names(ps_data)),
                                        match("trap", names(ps_data)),  match("collided", names(ps_data)),
                                        match("hit", names(ps_data)), match("ranover", names(ps_data)),
@@ -560,8 +560,7 @@ simple.data.raw = ps_data[, c(match("PS", names(ps_data)), match("pin", names(ps
 
 write.csv(simple.data.raw, file = "C:/Users/nsaifull/Dropbox/R-Code/prepped_PS_training_data_raw.csv", row.names = FALSE)
 
-#Use dummied-out versions of the raw vars.
-simple.data.raw2 = ps_data[, c(match("PS", names(ps_data)), match("pin", names(ps_data)),
+simple.data.raw2 = ps_data[, c(match("documentno", names(ps_data)), match("PS", names(ps_data)), match("pin", names(ps_data)),
                               match("strike", names(ps_data)), match("strikerib", names(ps_data)),
                               match("trap", names(ps_data)),  match("collided", names(ps_data)),
                               match("hit", names(ps_data)), match("ranover", names(ps_data)),
@@ -574,12 +573,71 @@ simple.data.raw2 = ps_data[, c(match("PS", names(ps_data)), match("pin", names(p
                               match("operating", names(ps_data)),
                               match("riding", names(ps_data)), match("passenger", names(ps_data)),
                               match("keyword", names(ps_data)), match("false_keyword", names(ps_data)),
-                              match("accidentclassification", names(ps_data)), match("accidenttype", names(ps_data)),
-                              match("equiptypecode", names(ps_data)), grep("injurysourcecode\\.", names(ps_data)),
-                              match("natureofinjury", names(ps_data)), match("activitycode", names(ps_data)),
-                              match("occupcode3digit", names(ps_data)), match("bodypartcode", names(ps_data)))]
+                              grep("accidentclassification\\.", names(ps_data)), grep("accidenttype\\.", names(ps_data)),
+                              grep("equiptypecode\\.", names(ps_data)), grep("injurysourcecode\\.", names(ps_data)),
+                              grep("natureofinjury\\.", names(ps_data)), grep("activitycode\\.", names(ps_data)),
+                              grep("occupcode3digit\\.", names(ps_data)), grep("bodypartcode\\.", names(ps_data)))]
 
 write.csv(simple.data.raw2, file = "C:/Users/nsaifull/Dropbox/R-Code/prepped_PS_training_data_raw2.csv", row.names = FALSE)
+
+simple.data.raw2.grouped1 = ps_data[, c(match("documentno", names(ps_data)), match("PS", names(ps_data)), match("pin", names(ps_data)),
+                               match("strike", names(ps_data)), match("strikerib", names(ps_data)),
+                               match("trap", names(ps_data)),  match("collided", names(ps_data)),
+                               match("hit", names(ps_data)), match("ranover", names(ps_data)),
+                               match("rolled", names(ps_data)), match("caught", names(ps_data)),
+                               match("between", names(ps_data)), match("by", names(ps_data)),
+                               match("brakes", names(ps_data)),
+                               match("jarring", names(ps_data)), match("bounced", names(ps_data)),
+                               match("hole", names(ps_data)), match("roofbolt", names(ps_data)),
+                               match("rock", names(ps_data)), match("driving", names(ps_data)),
+                               match("operating", names(ps_data)),
+                               match("riding", names(ps_data)), match("passenger", names(ps_data)),
+                               match("keyword", names(ps_data)), match("false_keyword", names(ps_data)),
+                               match("likely_equip", names(ps_data)), match("unlikely_equip", names(ps_data)),
+                               match("likely_class", names(ps_data)), match("unlikely_class", names(ps_data)),
+                               match("likely_type", names(ps_data)), match("unlikely_type", names(ps_data)),
+                               match("unlikely_nature", names(ps_data)), match("likely_source", names(ps_data)),                          
+                               match("unlikely_source", names(ps_data)), match("likely_actvty", names(ps_data)), 
+                               match("unlikely_activity", names(ps_data)), 
+                               match("unlikely_body", names(ps_data)),
+                               match("falling.accident", names(ps_data)), match("accident.only", names(ps_data)),
+                               grep("accidentclassification\\.", names(ps_data)), grep("accidenttype\\.", names(ps_data)),
+                               grep("equiptypecode\\.", names(ps_data)), grep("injurysourcecode\\.", names(ps_data)),
+                               grep("natureofinjury\\.", names(ps_data)), grep("activitycode\\.", names(ps_data)),
+                               grep("occupcode3digit\\.", names(ps_data)), grep("bodypartcode\\.", names(ps_data)))]
+
+write.csv(simple.data.raw2.grouped1, file = "C:/Users/nsaifull/Dropbox/R-Code/prepped_PS_training_data_raw2_grouped1.csv", row.names = FALSE)
+
+simple.data.raw2.grouped2 = ps_data[, c(match("documentno", names(ps_data)), match("PS", names(ps_data)), match("pin", names(ps_data)),
+                                        match("strike", names(ps_data)), match("strikerib", names(ps_data)),
+                                        match("trap", names(ps_data)),  match("collided", names(ps_data)),
+                                        match("hit", names(ps_data)), match("ranover", names(ps_data)),
+                                        match("rolled", names(ps_data)), match("caught", names(ps_data)),
+                                        match("between", names(ps_data)), match("by", names(ps_data)),
+                                        match("brakes", names(ps_data)),
+                                        match("jarring", names(ps_data)), match("bounced", names(ps_data)),
+                                        match("hole", names(ps_data)), match("roofbolt", names(ps_data)),
+                                        match("rock", names(ps_data)), match("driving", names(ps_data)),
+                                        match("operating", names(ps_data)),
+                                        match("riding", names(ps_data)), match("passenger", names(ps_data)),
+                                        match("keyword", names(ps_data)), match("false_keyword", names(ps_data)),
+                                        match("likely_equip", names(ps_data)), match("unlikely_equip", names(ps_data)),
+                                        match("likely_class", names(ps_data)), match("unlikely_class", names(ps_data)),
+                                        match("likely_type", names(ps_data)), match("unlikely_type", names(ps_data)),
+                                        match("unlikely_nature", names(ps_data)), match("likely_source", names(ps_data)),                          
+                                        match("unlikely_source", names(ps_data)), match("likely_actvty", names(ps_data)), 
+                                        match("unlikely_activity", names(ps_data)), match("uncertain_activity", names(ps_data)),
+                                        match("uncertain_class", names(ps_data)),
+                                        match("unlikely_body", names(ps_data)), match("uncertain_type", names(ps_data)),
+                                        match("uncertain_equip", names(ps_data)), match("uncertain_source", names(ps_data)),
+                                        match("uncertain_nature", names(ps_data)),
+                                        match("falling.accident", names(ps_data)), match("accident.only", names(ps_data)),
+                                        grep("accidentclassification\\.", names(ps_data)), grep("accidenttype\\.", names(ps_data)),
+                                        grep("equiptypecode\\.", names(ps_data)), grep("injurysourcecode\\.", names(ps_data)),
+                                        grep("natureofinjury\\.", names(ps_data)), grep("activitycode\\.", names(ps_data)),
+                                        grep("occupcode3digit\\.", names(ps_data)), grep("bodypartcode\\.", names(ps_data)))]
+
+write.csv(simple.data.raw2.grouped2, file = "C:/Users/nsaifull/Dropbox/R-Code/prepped_PS_training_data_raw2_grouped2.csv", row.names = FALSE)
 
 ##################################################################################################
 # ALGORITHM
@@ -596,11 +654,11 @@ remove(rand)
 which( colnames(simple.ps)=="PS" )
 
 # CART
-cart <- rpart(PS ~ ., data = simple.ps[1:600,], method="class")
+cart <- rpart(PS ~ . -documentno, data = simple.ps[1:600,], method="class")
 cart 
 
 # RANDOM FOREST
-rf <- randomForest(PS ~ ., data = simple.ps[1:600,], mtry = 8, importance=TRUE, type="class",
+rf <- randomForest(PS ~ . -documentno, data = simple.ps[1:600,], mtry = 8, importance=TRUE, type="class",
                    ntree = 200)
 rf
 
@@ -612,21 +670,21 @@ prop.table(table(smote.trainx$PS))
 
 smote.ps <- SMOTE(PS ~ ., simple.ps, perc.over = 600,perc.under=100)
 table(smote.ps$PS)
-rf.smote <- randomForest(PS ~ ., data = smote.ps, mtry = 10, ntree = 1000)
+rf.smote <- randomForest(PS ~ . -documentno, data = smote.ps, mtry = 10, ntree = 1000)
 rf.smote
 
 # BOOSTING
-ps.adaboost = boosting(PS ~ ., data = simple.ps[1:600,], boos = T, mfinal = 100, coeflearn = 'Freund')
+ps.adaboost = boosting(PS ~ . -documentno, data = simple.ps[1:600,], boos = T, mfinal = 100, coeflearn = 'Freund')
 adaboost.pred = predict.boosting(ps.adaboost, newdata = simple.ps[601:1000,])
 
 ##################################################################################################
 # MODEL PERFORMANCE
 
 cart.predictions = predict(cart, simple.ps[601:1000,],type="class")
-table(simple.ps[601:1000,1], predicted = cart.predictions)
+table(simple.ps[601:1000,2], predicted = cart.predictions)
 
 rf.predictions = predict(rf, simple.ps[601:1000,],type="class")
-table(simple.ps[601:1000,1], predicted = rf.predictions)
+table(simple.ps[601:1000,2], predicted = rf.predictions)
 
 adaboost.pred$confusion
 
