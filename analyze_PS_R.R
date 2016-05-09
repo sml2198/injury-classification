@@ -139,14 +139,14 @@ ps_data[, "riding"] = ifelse(grepl("was.{1,5}rid(e|ing)( )*in(side)*", ps_data[,
 ps_data[, "passenger"] = ifelse(grepl("passenger", ps_data[,"narrative"]), 1, 0)
 
 # USE BODY/SEAT TO REMOVE FALSE POSITIVE ACCIDENTS OF SOMEONE BEING JOSTLED AGAINST THE SEAT
-ps_data[, "bodyseat"] = ifelse(grepl("(back|head|neck).{1,10}seat", ps_data[,"narrative"])
-                               !grepl("backward.{1,10}seat", ps_data[,"narrative"])
+ps_data[, "bodyseat"] = ifelse(grepl("(back|head|neck).{1,10}seat", ps_data[,"narrative"]) &
+                               !grepl("backward.{1,10}seat", ps_data[,"narrative"]) &
                                !grepl("(bolt|over|drill)( )*head.{1,10}seat", ps_data[,"narrative"]), 1, 0) 
 # USE HEAD/ROOF TO REMOVE DRIVER HITTING HEAD AGAINST VEHICLE ROOF
-ps_data[, "headroof"] = ifelse(grepl("(head|neck).{1,5}(on|struck|hit|against).{1,5}roof", ps_data[,"narrative"])
-                               !grepl("drill( )*head.{1,10}roof", ps_data[,"narrative"])
-                               !grepl("over( )*head.{1,10}roof", ps_data[,"narrative"])
-                               !grepl("head(ing|er|ed).{1,10}roof", ps_data[,"narrative"])
+ps_data[, "headroof"] = ifelse(grepl("(head|neck).{1,5}(on|struck|hit|against).{1,5}roof", ps_data[,"narrative"]) &
+                               !grepl("drill( )*head.{1,10}roof", ps_data[,"narrative"]) &
+                               !grepl("over( )*head.{1,10}roof", ps_data[,"narrative"]) &
+                               !grepl("head(ing|er|ed).{1,10}roof", ps_data[,"narrative"]) &
                                !grepl("head.{1,10}roof.{1,5}bolt", ps_data[,"narrative"]), 1, 0) 
 ps_data[, "hole"] = ifelse(grepl("(hit|strike|ran over|struck|went over).{1,6}(rock|hole|bump|depression)", ps_data[,"narrative"]), 1, 0)
 ps_data[, "handcaught"] = ifelse(grepl("(hand|finger|thumb|digit|pinky|glove)(s)*.{1,5}(c(a|u)(a|u)ght|pinned|between)", ps_data[,"narrative"]), 1, 0)
@@ -186,7 +186,7 @@ ps_data$narrative <- gsub("scoop", "VEHICLE", ps_data$narrative)
 ps_data$narrative <- gsub("(rock|roof)( )*bolter", "VEHICLE", ps_data$narrative)
 ps_data$narrative <- gsub("( |^)truck", " VEHICLE", ps_data$narrative)
 ps_data$narrative <- gsub("buggy", "VEHICLE", ps_data$narrative)
-ps_data$narrative <- gsub("(cont.{1,8}min(r|er|ing machine)", "VEHICLE", ps_data$narrative)
+ps_data$narrative <- gsub("(cont.{1,8}min(r|er|ing) machine)", "VEHICLE", ps_data$narrative)
 ps_data$narrative <- gsub("long( )*wall", "VEHICLE", ps_data$narrative)
 ps_data$narrative <- gsub("load( |-)haul(-| )dump( |-)", "VEHICLE", ps_data$narrative)
 ps_data$narrative <- gsub("(mining|loading) machine", "VEHICLE", ps_data$narrative)
@@ -220,7 +220,7 @@ ps_data$narrative <- gsub("c(a|u)(a|u)ght", "PINNED/STRUCK", ps_data$narrative)
 # ps_data$narrative <- gsub("( |^)hit( |$|\\.|,)", "PINNED/STRUCK", ps_data$narrative) if !headroof & !bodyseat
 # replace narrative = subinstr(narrative ," hit "," PINNED/STRUCK ",.) if hit & !hole
 
-* PERSON FLAGS
+# PERSON FLAGS
 ps_data$narrative <- gsub("( |^)e(e|mp|mpl|mployee)( |$|,|\\.)", " PERSON ", ps_data$narrative)
 ps_data$narrative <- gsub("( |^)i(,|\\.| )*name", " PERSON", ps_data$narrative)
 ps_data$narrative <- gsub("injured person", "PERSON", ps_data$narrative)
@@ -249,7 +249,7 @@ ps_data$narrative <- gsub("driver", "PERSON", ps_data$narrative)
 ps_data$narrative <- gsub("hand(s| |\\.|,|$)", "BODY ", ps_data$narrative)
 ps_data$narrative <- gsub("finger(s)*", "BODY", ps_data$narrative)
 ps_data$narrative <- gsub("thumb", "BODY", ps_data$narrative)
-ps_data$narrative <- gsub("feet", "BODY", ps_data$narrative) * MAYBE DO SOMETHING FOR UNIT OF MEASUREMENT
+ps_data$narrative <- gsub("feet", "BODY", ps_data$narrative) # MAYBE DO SOMETHING FOR UNIT OF MEASUREMENT
 ps_data$narrative <- gsub("ankle(s)*", "BODY", ps_data$narrative)
 ps_data$narrative <- gsub("shoulder(s)*", "BODY", ps_data$narrative)
 ps_data$narrative <- gsub("knee( |s|\\.|,|$)", "BODY ", ps_data$narrative) 		# AVOID "KNEEL"
@@ -272,7 +272,7 @@ ps_data$narrative <- gsub("fibia", "BODY", ps_data$narrative)
 ps_data$narrative <- gsub("spine", "BODY", ps_data$narrative)
 ps_data$narrative <- gsub("elbow(s)*", "BODY", ps_data$narrative)
 ps_data$narrative <- gsub("testicle(s)*", "BODY", ps_data$narrative)
-ps_data$narrative <- gsub("t(ee|oo)th", "BODY", ps_data$narrative) * CHECK TO MAKE SURE NO EQUIPMENT HAS TEETH/TOOTH
+ps_data$narrative <- gsub("t(ee|oo)th", "BODY", ps_data$narrative) # CHECK TO MAKE SURE NO EQUIPMENT HAS TEETH/TOOTH
 ps_data$narrative <- gsub("(right|left|his|her|both)( )*(foot|feet)", "BODY", ps_data$narrative)
 ps_data$narrative <- gsub("( |^)hip(s)*", " BODY", ps_data$narrative)
 
@@ -291,7 +291,7 @@ ps_data$num.person <- str_count(ps_data$narrative, "PERSON")
 ps_data$num.body <- str_count(ps_data$narrative, "BODY")
 
 # DEAL WITH MESSY NUMBER TYPOS
-ps_data[, "numbertypo"] = ifelse(grepl("[a-z][0-9][a-z]", ps_data[,"narrative"], 1, 0)
+ps_data[, "numbertypo"] = ifelse(grepl("[a-z][0-9][a-z]", ps_data[,"narrative"]), 1, 0)
                                  for (i in 0:9) {
                                    ps_data$narrative <- gsub("i", "", ps_data$narrative)
                                  }
@@ -569,26 +569,30 @@ if (imputation_method == 1 | imputation_method == 2) {
 ##################################################################################################
 # PRODUCE DATASETS WITH ONLY VARS OF INTEREST FOR RF/BOOSTING ANALYSIS
 simple.data.grouped1 = ps_data[, c(match("documentno", names(ps_data)), match("PS", names(ps_data)), match("pin", names(ps_data)),
-                          match("strike", names(ps_data)), match("strikerib", names(ps_data)),
-                          match("trap", names(ps_data)),  match("collided", names(ps_data)),
-                          match("hit", names(ps_data)), match("ranover", names(ps_data)),
-                          match("rolled", names(ps_data)), match("caught", names(ps_data)),
-                          match("between", names(ps_data)), match("by", names(ps_data)),
-                          match("brakes", names(ps_data)),
-                          match("jarring", names(ps_data)), match("bounced", names(ps_data)),
-                          match("hole", names(ps_data)), match("roofbolt", names(ps_data)),
-                          match("rock", names(ps_data)), match("driving", names(ps_data)),
-                          match("operating", names(ps_data)),
-                          match("riding", names(ps_data)), match("passenger", names(ps_data)),
-                          match("keyword", names(ps_data)), match("false_keyword", names(ps_data)),
-                          match("likely_equip", names(ps_data)), match("unlikely_equip", names(ps_data)),
-                          match("likely_class", names(ps_data)), match("unlikely_class", names(ps_data)),
-                          match("likely_type", names(ps_data)), match("unlikely_type", names(ps_data)),
-                          match("unlikely_nature", names(ps_data)), match("likely_source", names(ps_data)),                          
-                          match("unlikely_source", names(ps_data)), match("likely_actvty", names(ps_data)), 
-                          match("unlikely_activity", names(ps_data)), 
-                          match("unlikely_body", names(ps_data)),
-                          match("falling.accident", names(ps_data)), match("accident.only", names(ps_data)))]
+                                   match("strike", names(ps_data)), match("strikerib", names(ps_data)),
+                                   match("trap", names(ps_data)),  match("collided", names(ps_data)),
+                                   match("hit", names(ps_data)), match("ranover", names(ps_data)),
+                                   match("rolled", names(ps_data)), match("caught", names(ps_data)),
+                                   match("between", names(ps_data)), match("by", names(ps_data)),
+                                   match("brakes", names(ps_data)),
+                                   match("jarring", names(ps_data)), match("bounced", names(ps_data)),
+                                   match("hole", names(ps_data)), match("roofbolt", names(ps_data)),
+                                   match("rock", names(ps_data)), match("driving", names(ps_data)),
+                                   match("operating", names(ps_data)),
+                                   match("riding", names(ps_data)), match("passenger", names(ps_data)),
+                                   match("keyword", names(ps_data)), match("false_keyword", names(ps_data)),
+                                   match("bodyseat", names(ps_data)), match("headroof", names(ps_data)),
+                                   match("handcaught", names(ps_data)),
+                                   match("drillsteel", names(ps_data)), match("outsidevehicle", names(ps_data)),
+                                   match("bumped", names(ps_data)),
+                                   match("likely_equip", names(ps_data)), match("unlikely_equip", names(ps_data)),
+                                   match("likely_class", names(ps_data)), match("unlikely_class", names(ps_data)),
+                                   match("likely_type", names(ps_data)), match("unlikely_type", names(ps_data)),
+                                   match("unlikely_nature", names(ps_data)), match("likely_source", names(ps_data)),                          
+                                   match("unlikely_source", names(ps_data)), match("likely_actvty", names(ps_data)), 
+                                   match("unlikely_activity", names(ps_data)), 
+                                   match("unlikely_body", names(ps_data)),
+                                   match("falling.accident", names(ps_data)), match("accident.only", names(ps_data)))]
 
 write.csv(simple.data.grouped1, file = "C:/Users/nsaifull/Dropbox/R-Code/prepped_PS_training_data_grouped1.csv", row.names = FALSE)
 
@@ -605,13 +609,17 @@ simple.data.grouped2 = ps_data[, c(match("documentno", names(ps_data)), match("P
                                    match("operating", names(ps_data)),
                                    match("riding", names(ps_data)), match("passenger", names(ps_data)),
                                    match("keyword", names(ps_data)), match("false_keyword", names(ps_data)),
+                                   match("bodyseat", names(ps_data)), match("headroof", names(ps_data)),
+                                   match("handcaught", names(ps_data)),
+                                   match("drillsteel", names(ps_data)), match("outsidevehicle", names(ps_data)),
+                                   match("bumped", names(ps_data)),
                                    match("likely_equip", names(ps_data)), match("unlikely_equip", names(ps_data)),
                                    match("likely_class", names(ps_data)), match("unlikely_class", names(ps_data)),
                                    match("likely_type", names(ps_data)), match("unlikely_type", names(ps_data)),
                                    match("unlikely_nature", names(ps_data)), match("likely_source", names(ps_data)),                          
                                    match("unlikely_source", names(ps_data)), match("likely_actvty", names(ps_data)), 
                                    match("unlikely_activity", names(ps_data)), match("uncertain_activity", names(ps_data)),
-                                  match("uncertain_class", names(ps_data)),
+                                   match("uncertain_class", names(ps_data)),
                                    match("unlikely_body", names(ps_data)), match("uncertain_type", names(ps_data)),
                                    match("uncertain_equip", names(ps_data)), match("uncertain_source", names(ps_data)),
                                    match("uncertain_nature", names(ps_data)),
@@ -626,18 +634,22 @@ ps_data[, "natureofinjury"] = factor(ps_data[, "natureofinjury"])
 ps_data[, "occupcode3digit"] = factor(ps_data[, "occupcode3digit"])
 
 simple.data.raw.grouped1 = ps_data[, c(match("documentno", names(ps_data)), match("PS", names(ps_data)), match("pin", names(ps_data)),
-                          match("strike", names(ps_data)), match("strikerib", names(ps_data)),
-                          match("trap", names(ps_data)),  match("collided", names(ps_data)),
-                          match("hit", names(ps_data)), match("ranover", names(ps_data)),
-                          match("rolled", names(ps_data)), match("caught", names(ps_data)),
-                          match("between", names(ps_data)), match("by", names(ps_data)),
-                          match("brakes", names(ps_data)),
-                          match("jarring", names(ps_data)), match("bounced", names(ps_data)),
-                          match("hole", names(ps_data)), match("roofbolt", names(ps_data)),
-                          match("rock", names(ps_data)), match("driving", names(ps_data)),
-                          match("operating", names(ps_data)),
-                          match("riding", names(ps_data)), match("passenger", names(ps_data)),
-                          match("keyword", names(ps_data)), match("false_keyword", names(ps_data)),
+                                       match("strike", names(ps_data)), match("strikerib", names(ps_data)),
+                                       match("trap", names(ps_data)),  match("collided", names(ps_data)),
+                                       match("hit", names(ps_data)), match("ranover", names(ps_data)),
+                                       match("rolled", names(ps_data)), match("caught", names(ps_data)),
+                                       match("between", names(ps_data)), match("by", names(ps_data)),
+                                       match("brakes", names(ps_data)),
+                                       match("jarring", names(ps_data)), match("bounced", names(ps_data)),
+                                       match("hole", names(ps_data)), match("roofbolt", names(ps_data)),
+                                       match("rock", names(ps_data)), match("driving", names(ps_data)),
+                                       match("operating", names(ps_data)),
+                                       match("riding", names(ps_data)), match("passenger", names(ps_data)),
+                                       match("keyword", names(ps_data)), match("false_keyword", names(ps_data)),
+                                       match("bodyseat", names(ps_data)), match("headroof", names(ps_data)),
+                                       match("handcaught", names(ps_data)),
+                                       match("drillsteel", names(ps_data)), match("outsidevehicle", names(ps_data)),
+                                       match("bumped", names(ps_data)),
                           match("likely_equip", names(ps_data)), match("unlikely_equip", names(ps_data)),
                           match("likely_class", names(ps_data)), match("unlikely_class", names(ps_data)),
                           match("likely_type", names(ps_data)), match("unlikely_type", names(ps_data)),
@@ -654,18 +666,22 @@ simple.data.raw.grouped1 = ps_data[, c(match("documentno", names(ps_data)), matc
 write.csv(simple.data.raw.grouped1, file = "C:/Users/nsaifull/Dropbox/R-Code/prepped_PS_training_data_raw_grouped1.csv", row.names = FALSE)
 
 simple.data.raw.grouped2 = ps_data[, c(match("documentno", names(ps_data)), match("PS", names(ps_data)), match("pin", names(ps_data)),
-                                   match("strike", names(ps_data)), match("strikerib", names(ps_data)),
-                                   match("trap", names(ps_data)),  match("collided", names(ps_data)),
-                                   match("hit", names(ps_data)), match("ranover", names(ps_data)),
-                                   match("rolled", names(ps_data)), match("caught", names(ps_data)),
-                                   match("between", names(ps_data)), match("by", names(ps_data)),
-                                   match("brakes", names(ps_data)),
-                                   match("jarring", names(ps_data)), match("bounced", names(ps_data)),
-                                   match("hole", names(ps_data)), match("roofbolt", names(ps_data)),
-                                   match("rock", names(ps_data)), match("driving", names(ps_data)),
-                                   match("operating", names(ps_data)),
-                                   match("riding", names(ps_data)), match("passenger", names(ps_data)),
-                                   match("keyword", names(ps_data)), match("false_keyword", names(ps_data)),
+                                       match("strike", names(ps_data)), match("strikerib", names(ps_data)),
+                                       match("trap", names(ps_data)),  match("collided", names(ps_data)),
+                                       match("hit", names(ps_data)), match("ranover", names(ps_data)),
+                                       match("rolled", names(ps_data)), match("caught", names(ps_data)),
+                                       match("between", names(ps_data)), match("by", names(ps_data)),
+                                       match("brakes", names(ps_data)),
+                                       match("jarring", names(ps_data)), match("bounced", names(ps_data)),
+                                       match("hole", names(ps_data)), match("roofbolt", names(ps_data)),
+                                       match("rock", names(ps_data)), match("driving", names(ps_data)),
+                                       match("operating", names(ps_data)),
+                                       match("riding", names(ps_data)), match("passenger", names(ps_data)),
+                                       match("keyword", names(ps_data)), match("false_keyword", names(ps_data)),
+                                       match("bodyseat", names(ps_data)), match("headroof", names(ps_data)),
+                                       match("handcaught", names(ps_data)),
+                                       match("drillsteel", names(ps_data)), match("outsidevehicle", names(ps_data)),
+                                       match("bumped", names(ps_data)),
                                    match("likely_equip", names(ps_data)), match("unlikely_equip", names(ps_data)),
                                    match("likely_class", names(ps_data)), match("unlikely_class", names(ps_data)),
                                    match("likely_type", names(ps_data)), match("unlikely_type", names(ps_data)),
@@ -685,26 +701,6 @@ simple.data.raw.grouped2 = ps_data[, c(match("documentno", names(ps_data)), matc
 write.csv(simple.data.raw.grouped2, file = "C:/Users/nsaifull/Dropbox/R-Code/prepped_PS_training_data_raw_grouped2.csv", row.names = FALSE)
 
 simple.data.raw = ps_data[, c(match("documentno", names(ps_data)), match("PS", names(ps_data)), match("pin", names(ps_data)),
-                                       match("strike", names(ps_data)), match("strikerib", names(ps_data)),
-                                       match("trap", names(ps_data)),  match("collided", names(ps_data)),
-                                       match("hit", names(ps_data)), match("ranover", names(ps_data)),
-                                       match("rolled", names(ps_data)), match("caught", names(ps_data)),
-                                       match("between", names(ps_data)), match("by", names(ps_data)),
-                                       match("brakes", names(ps_data)),
-                                       match("jarring", names(ps_data)), match("bounced", names(ps_data)),
-                                       match("hole", names(ps_data)), match("roofbolt", names(ps_data)),
-                                       match("rock", names(ps_data)), match("driving", names(ps_data)),
-                                       match("operating", names(ps_data)),
-                                       match("riding", names(ps_data)), match("passenger", names(ps_data)),
-                                       match("keyword", names(ps_data)), match("false_keyword", names(ps_data)),
-                                       match("accidentclassification", names(ps_data)), match("accidenttype", names(ps_data)),
-                                       match("equiptypecode", names(ps_data)), grep("injurysourcecode\\.", names(ps_data)),
-                                       match("natureofinjury", names(ps_data)), match("activitycode", names(ps_data)),
-                                       match("occupcode3digit", names(ps_data)), match("bodypartcode", names(ps_data)))]
-
-write.csv(simple.data.raw, file = "C:/Users/nsaifull/Dropbox/R-Code/prepped_PS_training_data_raw.csv", row.names = FALSE)
-
-simple.data.raw2 = ps_data[, c(match("documentno", names(ps_data)), match("PS", names(ps_data)), match("pin", names(ps_data)),
                               match("strike", names(ps_data)), match("strikerib", names(ps_data)),
                               match("trap", names(ps_data)),  match("collided", names(ps_data)),
                               match("hit", names(ps_data)), match("ranover", names(ps_data)),
@@ -717,14 +713,18 @@ simple.data.raw2 = ps_data[, c(match("documentno", names(ps_data)), match("PS", 
                               match("operating", names(ps_data)),
                               match("riding", names(ps_data)), match("passenger", names(ps_data)),
                               match("keyword", names(ps_data)), match("false_keyword", names(ps_data)),
-                              grep("accidentclassification\\.", names(ps_data)), grep("accidenttype\\.", names(ps_data)),
-                              grep("equiptypecode\\.", names(ps_data)), grep("injurysourcecode\\.", names(ps_data)),
-                              grep("natureofinjury\\.", names(ps_data)), grep("activitycode\\.", names(ps_data)),
-                              grep("occupcode3digit\\.", names(ps_data)), grep("bodypartcode\\.", names(ps_data)))]
+                              match("bodyseat", names(ps_data)), match("headroof", names(ps_data)),
+                              match("handcaught", names(ps_data)),
+                              match("drillsteel", names(ps_data)), match("outsidevehicle", names(ps_data)),
+                              match("bumped", names(ps_data)),
+                                       match("accidentclassification", names(ps_data)), match("accidenttype", names(ps_data)),
+                                       match("equiptypecode", names(ps_data)), grep("injurysourcecode\\.", names(ps_data)),
+                                       match("natureofinjury", names(ps_data)), match("activitycode", names(ps_data)),
+                                       match("occupcode3digit", names(ps_data)), match("bodypartcode", names(ps_data)))]
 
-write.csv(simple.data.raw2, file = "C:/Users/nsaifull/Dropbox/R-Code/prepped_PS_training_data_raw2.csv", row.names = FALSE)
+write.csv(simple.data.raw, file = "C:/Users/nsaifull/Dropbox/R-Code/prepped_PS_training_data_raw.csv", row.names = FALSE)
 
-simple.data.raw2.grouped1 = ps_data[, c(match("documentno", names(ps_data)), match("PS", names(ps_data)), match("pin", names(ps_data)),
+simple.data.raw2 = ps_data[, c(match("documentno", names(ps_data)), match("PS", names(ps_data)), match("pin", names(ps_data)),
                                match("strike", names(ps_data)), match("strikerib", names(ps_data)),
                                match("trap", names(ps_data)),  match("collided", names(ps_data)),
                                match("hit", names(ps_data)), match("ranover", names(ps_data)),
@@ -737,6 +737,34 @@ simple.data.raw2.grouped1 = ps_data[, c(match("documentno", names(ps_data)), mat
                                match("operating", names(ps_data)),
                                match("riding", names(ps_data)), match("passenger", names(ps_data)),
                                match("keyword", names(ps_data)), match("false_keyword", names(ps_data)),
+                               match("bodyseat", names(ps_data)), match("headroof", names(ps_data)),
+                               match("handcaught", names(ps_data)),
+                               match("drillsteel", names(ps_data)), match("outsidevehicle", names(ps_data)),
+                               match("bumped", names(ps_data)),
+                              grep("accidentclassification\\.", names(ps_data)), grep("accidenttype\\.", names(ps_data)),
+                              grep("equiptypecode\\.", names(ps_data)), grep("injurysourcecode\\.", names(ps_data)),
+                              grep("natureofinjury\\.", names(ps_data)), grep("activitycode\\.", names(ps_data)),
+                              grep("occupcode3digit\\.", names(ps_data)), grep("bodypartcode\\.", names(ps_data)))]
+
+write.csv(simple.data.raw2, file = "C:/Users/nsaifull/Dropbox/R-Code/prepped_PS_training_data_raw2.csv", row.names = FALSE)
+
+simple.data.raw2.grouped1 = ps_data[, c(match("documentno", names(ps_data)), match("PS", names(ps_data)), match("pin", names(ps_data)),
+                                        match("strike", names(ps_data)), match("strikerib", names(ps_data)),
+                                        match("trap", names(ps_data)),  match("collided", names(ps_data)),
+                                        match("hit", names(ps_data)), match("ranover", names(ps_data)),
+                                        match("rolled", names(ps_data)), match("caught", names(ps_data)),
+                                        match("between", names(ps_data)), match("by", names(ps_data)),
+                                        match("brakes", names(ps_data)),
+                                        match("jarring", names(ps_data)), match("bounced", names(ps_data)),
+                                        match("hole", names(ps_data)), match("roofbolt", names(ps_data)),
+                                        match("rock", names(ps_data)), match("driving", names(ps_data)),
+                                        match("operating", names(ps_data)),
+                                        match("riding", names(ps_data)), match("passenger", names(ps_data)),
+                                        match("keyword", names(ps_data)), match("false_keyword", names(ps_data)),
+                                        match("bodyseat", names(ps_data)), match("headroof", names(ps_data)),
+                                        match("handcaught", names(ps_data)),
+                                        match("drillsteel", names(ps_data)), match("outsidevehicle", names(ps_data)),
+                                        match("bumped", names(ps_data)),
                                match("likely_equip", names(ps_data)), match("unlikely_equip", names(ps_data)),
                                match("likely_class", names(ps_data)), match("unlikely_class", names(ps_data)),
                                match("likely_type", names(ps_data)), match("unlikely_type", names(ps_data)),
@@ -765,6 +793,10 @@ simple.data.raw2.grouped2 = ps_data[, c(match("documentno", names(ps_data)), mat
                                         match("operating", names(ps_data)),
                                         match("riding", names(ps_data)), match("passenger", names(ps_data)),
                                         match("keyword", names(ps_data)), match("false_keyword", names(ps_data)),
+                                        match("bodyseat", names(ps_data)), match("headroof", names(ps_data)),
+                                        match("handcaught", names(ps_data)),
+                                        match("drillsteel", names(ps_data)), match("outsidevehicle", names(ps_data)),
+                                        match("bumped", names(ps_data)),
                                         match("likely_equip", names(ps_data)), match("unlikely_equip", names(ps_data)),
                                         match("likely_class", names(ps_data)), match("unlikely_class", names(ps_data)),
                                         match("likely_type", names(ps_data)), match("unlikely_type", names(ps_data)),
