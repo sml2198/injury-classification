@@ -151,7 +151,18 @@ ps_data[, "headroof"] = ifelse(grepl("(head|neck).{1,5}(on|struck|hit|against).{
 ps_data[, "hole"] = ifelse(grepl("(hit|strike|ran over|struck|went over).{1,6}(rock|hole|bump|depression)", ps_data[,"narrative"]), 1, 0)
 ps_data[, "handcaught"] = ifelse(grepl("(hand|finger|thumb|digit|pinky|glove)(s)*.{1,5}(c(a|u)(a|u)ght|pinned|between)", ps_data[,"narrative"]), 1, 0)
 ps_data[, "drillsteel"] = ifelse(grepl("(hand|finger|thumb|digit|pinky|glove)(s)*.{1,5}drill(ing)*.{1,4}(hole|steel|head)", ps_data[,"narrative"]), 1, 0)
-ps_data[, "outsidevehicle"] = ifelse(grepl("(arm|hand|leg|foot).{1,6}(resting on|trailing|hanging).{1,6}(rail|out of)", ps_data[,"narrative"]), 1, 0) 
+ps_data[, "outsidevehicle"] = ifelse(grepl("(arm|hand|leg|foot).{1,6}(resting on|trailing|hanging).{1,6}(rail|out of)", ps_data[,"narrative"]), 1, 0)
+
+ps_data[, "vcomp_test"] = ifelse(grepl("(seat|rail|canopy|battery|drill|steel|chain|cable)+.{1,20}VEHICLE", ps_data[,"narrative"]) | grepl("VEHICLE.{1,20}(seat|rail|canopy|battery|drill|steel|chain|cable)+", ps_data[,"narrative"]), 1, 0)
+ps_data[, "psobject_test"] = ifelse(grepl("(corner|beam|overcast|rib|wall|coal|rock|header|top|seat|canopy)+.{1,20}PINNED/STRUCK", ps_data[,"narrative"]) | grepl("PINNED/STRUCK.{1,20}(corner|beam|overcast|rib|wall|coal|rock|header|top|seat|canopy)+", ps_data[,"narrative"]), 1, 0)
+ps_data[, "wrench"] = ifelse(grepl("wrench", ps_data[,"narrative"]), 1, 0)
+ps_data[, "controls"] = ifelse(grepl("(lever|stick)", ps_data[,"narrative"]), 1, 0)
+ps_data[, "loose_rbolting"] = ifelse(grepl("(plate|bit|bolt)+.{1,10}PINNED/STRUCK", ps_data[,"narrative"]), 1, 0)
+ps_data[, "flew"] = ifelse(grepl("fl(ew|y|ing)", ps_data[,"narrative"]), 1, 0)
+ps_data[, "loose"] = ifelse(grepl("loose", ps_data[,"narrative"]), 1, 0)
+ps_data[, "broke"] = ifelse(grepl("broke", ps_data[,"narrative"]), 1, 0)
+ps_data[, "digit"] = ifelse(grepl("(finger(s)*|pinky|hand(s)*|thumb|hand( |\\.|,|$))", ps_data[,"narrative"]), 1, 0)
+ps_data[, "derail"] = ifelse(grepl("(left|off|jumped).{1,15}track", ps_data[,"narrative"]) | grepl("derai", ps_data[,"narrative"]), 1, 0)
 
 # GENERATE KEYWORD FLAGS
 
@@ -183,7 +194,7 @@ ps_data$narrative <- gsub("wheeler", "VEHICLE", ps_data$narrative)
 ps_data$narrative <- gsub("trolley", "VEHICLE", ps_data$narrative)
 ps_data$narrative <- gsub("scooter", "VEHICLE", ps_data$narrative)
 ps_data$narrative <- gsub("scoop", "VEHICLE", ps_data$narrative)
-ps_data$narrative <- gsub("(rock|roof)( )*bolter", "VEHICLE", ps_data$narrative)
+ps_data$narrative <- gsub("(rock|roof)*( )*bolt(er|ing)", "VEHICLE", ps_data$narrative)
 ps_data$narrative <- gsub("( |^)truck", " VEHICLE", ps_data$narrative)
 ps_data$narrative <- gsub("buggy", "VEHICLE", ps_data$narrative)
 ps_data$narrative <- gsub("(cont.{1,8}min(r|er|ing) machine)", "VEHICLE", ps_data$narrative)
@@ -289,7 +300,9 @@ ps_data$num.vehicles <- str_count(ps_data$narrative, "VEHICLE")
 ps_data$num.pinstrike <- str_count(ps_data$narrative, "PINNED/STRUCK")
 ps_data$num.person <- str_count(ps_data$narrative, "PERSON")
 ps_data$num.body <- str_count(ps_data$narrative, "BODY")
-
+ps_data[, "no_vehcl"] = ifelse(!grepl("VEHICLE", ps_data[, "narrative"]), 1, 0)
+ps_data[, "v_to_v"] = ifelse(!grepl("VEHICLE.{1,35}PINNED/STRUCK.{1,35}VEHICLE", ps_data[, "narrative"]), 1, 0)
+ps_data[, "v_to_p"] = ifelse(!grepl("VEHICLE.{1,35}PINNED/STRUCK.{1,35}(PERSON|BODY)", ps_data[, "narrative"]), 1, 0)
 # DEAL WITH MESSY NUMBER TYPOS
 ps_data[, "numbertypo"] = ifelse(grepl("[a-z][0-9][a-z]", ps_data[,"narrative"]), 1, 0)
                                  for (i in 0:9) {
@@ -584,7 +597,13 @@ simple.data.grouped1 = ps_data[, c(match("documentno", names(ps_data)), match("P
                                    match("bodyseat", names(ps_data)), match("headroof", names(ps_data)),
                                    match("handcaught", names(ps_data)),
                                    match("drillsteel", names(ps_data)), match("outsidevehicle", names(ps_data)),
-                                   match("bumped", names(ps_data)),
+                                   match("bumped", names(ps_data)), match("no_vehcl", names(ps_data)),
+                                   match("vcomp_test", names(ps_data)), match("psobject_test", names(ps_data)),
+                                   match("wrench", names(ps_data)), match("controls", names(ps_data)),
+                                   match("loose_rbolting", names(ps_data)), match("flew", names(ps_data)),
+                                   match("loose", names(ps_data)), match("broke", names(ps_data)),
+                                   match("digit", names(ps_data)), match("derail", names(ps_data)),
+                                   match("v_to_v", names(ps_data)), match("v_to_p", names(ps_data)),                                   
                                    match("likely_equip", names(ps_data)), match("unlikely_equip", names(ps_data)),
                                    match("likely_class", names(ps_data)), match("unlikely_class", names(ps_data)),
                                    match("likely_type", names(ps_data)), match("unlikely_type", names(ps_data)),
@@ -612,7 +631,13 @@ simple.data.grouped2 = ps_data[, c(match("documentno", names(ps_data)), match("P
                                    match("bodyseat", names(ps_data)), match("headroof", names(ps_data)),
                                    match("handcaught", names(ps_data)),
                                    match("drillsteel", names(ps_data)), match("outsidevehicle", names(ps_data)),
-                                   match("bumped", names(ps_data)),
+                                   match("bumped", names(ps_data)), match("no_vehcl", names(ps_data)),
+                                   match("vcomp_test", names(ps_data)), match("psobject_test", names(ps_data)),
+                                   match("wrench", names(ps_data)), match("controls", names(ps_data)),
+                                   match("loose_rbolting", names(ps_data)), match("flew", names(ps_data)),
+                                   match("loose", names(ps_data)), match("broke", names(ps_data)),
+                                   match("digit", names(ps_data)), match("derail", names(ps_data)),
+                                   match("v_to_v", names(ps_data)), match("v_to_p", names(ps_data)),
                                    match("likely_equip", names(ps_data)), match("unlikely_equip", names(ps_data)),
                                    match("likely_class", names(ps_data)), match("unlikely_class", names(ps_data)),
                                    match("likely_type", names(ps_data)), match("unlikely_type", names(ps_data)),
@@ -649,7 +674,13 @@ simple.data.raw.grouped1 = ps_data[, c(match("documentno", names(ps_data)), matc
                                        match("bodyseat", names(ps_data)), match("headroof", names(ps_data)),
                                        match("handcaught", names(ps_data)),
                                        match("drillsteel", names(ps_data)), match("outsidevehicle", names(ps_data)),
-                                       match("bumped", names(ps_data)),
+                                       match("bumped", names(ps_data)), match("no_vehcl", names(ps_data)),
+                                       match("vcomp_test", names(ps_data)), match("psobject_test", names(ps_data)),
+                                       match("wrench", names(ps_data)), match("controls", names(ps_data)),
+                                       match("loose_rbolting", names(ps_data)), match("flew", names(ps_data)),
+                                       match("loose", names(ps_data)), match("broke", names(ps_data)),
+                                       match("digit", names(ps_data)), match("derail", names(ps_data)),
+                                       match("v_to_v", names(ps_data)), match("v_to_p", names(ps_data)),
                           match("likely_equip", names(ps_data)), match("unlikely_equip", names(ps_data)),
                           match("likely_class", names(ps_data)), match("unlikely_class", names(ps_data)),
                           match("likely_type", names(ps_data)), match("unlikely_type", names(ps_data)),
@@ -681,7 +712,13 @@ simple.data.raw.grouped2 = ps_data[, c(match("documentno", names(ps_data)), matc
                                        match("bodyseat", names(ps_data)), match("headroof", names(ps_data)),
                                        match("handcaught", names(ps_data)),
                                        match("drillsteel", names(ps_data)), match("outsidevehicle", names(ps_data)),
-                                       match("bumped", names(ps_data)),
+                                       match("bumped", names(ps_data)), match("no_vehcl", names(ps_data)),
+                                       match("vcomp_test", names(ps_data)), match("psobject_test", names(ps_data)),
+                                       match("wrench", names(ps_data)), match("controls", names(ps_data)),
+                                       match("loose_rbolting", names(ps_data)), match("flew", names(ps_data)),
+                                       match("loose", names(ps_data)), match("broke", names(ps_data)),
+                                       match("digit", names(ps_data)), match("derail", names(ps_data)),
+                                       match("v_to_v", names(ps_data)), match("v_to_p", names(ps_data)),
                                    match("likely_equip", names(ps_data)), match("unlikely_equip", names(ps_data)),
                                    match("likely_class", names(ps_data)), match("unlikely_class", names(ps_data)),
                                    match("likely_type", names(ps_data)), match("unlikely_type", names(ps_data)),
@@ -716,7 +753,13 @@ simple.data.raw = ps_data[, c(match("documentno", names(ps_data)), match("PS", n
                               match("bodyseat", names(ps_data)), match("headroof", names(ps_data)),
                               match("handcaught", names(ps_data)),
                               match("drillsteel", names(ps_data)), match("outsidevehicle", names(ps_data)),
-                              match("bumped", names(ps_data)),
+                              match("bumped", names(ps_data)), match("no_vehcl", names(ps_data)),
+                              match("vcomp_test", names(ps_data)), match("psobject_test", names(ps_data)),
+                              match("wrench", names(ps_data)), match("controls", names(ps_data)),
+                              match("loose_rbolting", names(ps_data)), match("flew", names(ps_data)),
+                              match("loose", names(ps_data)), match("broke", names(ps_data)),
+                              match("digit", names(ps_data)), match("derail", names(ps_data)),
+                              match("v_to_v", names(ps_data)), match("v_to_p", names(ps_data)),
                                        match("accidentclassification", names(ps_data)), match("accidenttype", names(ps_data)),
                                        match("equiptypecode", names(ps_data)), grep("injurysourcecode\\.", names(ps_data)),
                                        match("natureofinjury", names(ps_data)), match("activitycode", names(ps_data)),
@@ -740,7 +783,13 @@ simple.data.raw2 = ps_data[, c(match("documentno", names(ps_data)), match("PS", 
                                match("bodyseat", names(ps_data)), match("headroof", names(ps_data)),
                                match("handcaught", names(ps_data)),
                                match("drillsteel", names(ps_data)), match("outsidevehicle", names(ps_data)),
-                               match("bumped", names(ps_data)),
+                               match("bumped", names(ps_data)), match("no_vehcl", names(ps_data)),
+                               match("vcomp_test", names(ps_data)), match("psobject_test", names(ps_data)),
+                               match("wrench", names(ps_data)), match("controls", names(ps_data)),
+                               match("loose_rbolting", names(ps_data)), match("flew", names(ps_data)),
+                               match("loose", names(ps_data)), match("broke", names(ps_data)),
+                               match("digit", names(ps_data)), match("derail", names(ps_data)),
+                               match("v_to_v", names(ps_data)), match("v_to_p", names(ps_data)),
                               grep("accidentclassification\\.", names(ps_data)), grep("accidenttype\\.", names(ps_data)),
                               grep("equiptypecode\\.", names(ps_data)), grep("injurysourcecode\\.", names(ps_data)),
                               grep("natureofinjury\\.", names(ps_data)), grep("activitycode\\.", names(ps_data)),
@@ -764,7 +813,13 @@ simple.data.raw2.grouped1 = ps_data[, c(match("documentno", names(ps_data)), mat
                                         match("bodyseat", names(ps_data)), match("headroof", names(ps_data)),
                                         match("handcaught", names(ps_data)),
                                         match("drillsteel", names(ps_data)), match("outsidevehicle", names(ps_data)),
-                                        match("bumped", names(ps_data)),
+                                        match("bumped", names(ps_data)), match("no_vehcl", names(ps_data)),
+                                        match("vcomp_test", names(ps_data)), match("psobject_test", names(ps_data)),
+                                        match("wrench", names(ps_data)), match("controls", names(ps_data)),
+                                        match("loose_rbolting", names(ps_data)), match("flew", names(ps_data)),
+                                        match("loose", names(ps_data)), match("broke", names(ps_data)),
+                                        match("digit", names(ps_data)), match("derail", names(ps_data)),
+                                        match("v_to_v", names(ps_data)), match("v_to_p", names(ps_data)),
                                match("likely_equip", names(ps_data)), match("unlikely_equip", names(ps_data)),
                                match("likely_class", names(ps_data)), match("unlikely_class", names(ps_data)),
                                match("likely_type", names(ps_data)), match("unlikely_type", names(ps_data)),
@@ -796,7 +851,13 @@ simple.data.raw2.grouped2 = ps_data[, c(match("documentno", names(ps_data)), mat
                                         match("bodyseat", names(ps_data)), match("headroof", names(ps_data)),
                                         match("handcaught", names(ps_data)),
                                         match("drillsteel", names(ps_data)), match("outsidevehicle", names(ps_data)),
-                                        match("bumped", names(ps_data)),
+                                        match("bumped", names(ps_data)), match("no_vehcl", names(ps_data)),
+                                        match("vcomp_test", names(ps_data)), match("psobject_test", names(ps_data)),
+                                        match("wrench", names(ps_data)), match("controls", names(ps_data)),
+                                        match("loose_rbolting", names(ps_data)), match("flew", names(ps_data)),
+                                        match("loose", names(ps_data)), match("broke", names(ps_data)),
+                                        match("digit", names(ps_data)), match("derail", names(ps_data)),
+                                        match("v_to_v", names(ps_data)), match("v_to_p", names(ps_data)),
                                         match("likely_equip", names(ps_data)), match("unlikely_equip", names(ps_data)),
                                         match("likely_class", names(ps_data)), match("unlikely_class", names(ps_data)),
                                         match("likely_type", names(ps_data)), match("unlikely_type", names(ps_data)),
@@ -821,7 +882,7 @@ write.csv(simple.data.raw2.grouped2, file = "C:/Users/nsaifull/Dropbox/R-Code/pr
 #simplex = read.csv("C:/Users/slevine2/Dropbox (Stanford Law School)/R-code/prepped_PS_simple_data.csv", header = T)
 
 # RANDOMLY SORT DATA (IT WAS ORDERED IN STATA BEFORE THIS)
-simple.data = simple.data.grouped1
+simple.data = simple.data.grouped2
 set.seed(625)
 rand <- runif(nrow(simple.data))
 simple.ps <- simple.data[order(rand),]
