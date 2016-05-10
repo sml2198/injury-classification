@@ -135,8 +135,9 @@ ps_data[, "ranover"] = ifelse(grepl("( |^)r(a|u)n( )*(over|into)", ps_data[,"nar
 ps_data[, "rolled"] = ifelse(grepl("rolled( )*(over|into|onto)", ps_data[,"narrative"]), 1, 0)
 ps_data[, "caught"] = ifelse(grepl("caught.{1,15}between", ps_data[,"narrative"]), 1, 0)
 ps_data[, "between"] = ifelse(grepl("between", ps_data[,"narrative"]), 1, 0)
-ps_data[, "by"] = ifelse(grepl("by", ps_data[,"narrative"]), 1, 0)
 ps_data[, "wheel"] = ifelse(grepl("wheel", ps_data[,"narrative"]) & !grepl("wheeler", ps_data[,"narrative"]), 1, 0)
+ps_data[, "by"] = ifelse(grepl("by", ps_data[,"narrative"]), 1, 0)
+
 #ps_data[, "bump"] = ifelse(grepl("bump(ing|ed)", ps_data[,"narrative"]), 1, 0)
 
 # GENERATE NEGATIVE KEYWORDS
@@ -147,15 +148,17 @@ ps_data[, "brakes"] = ifelse(grepl("brakes.{1,10}(off|lost|not engage|did not|we
 ps_data[, "jarring"] = ifelse(grepl("jar(r)*(ed|ing)", ps_data[,"narrative"]) |
                                 grepl("jo(lt|stl)(ed|ing)", ps_data[,"narrative"]), 1, 0)
 ps_data[, "bounced"] = ifelse(grepl("boun(c)*( )*(e|ing)", ps_data[,"narrative"]), 1, 0)
-ps_data[, "roofbolt"] = ifelse(grepl("(roof|rib)( )*bolt", ps_data[,"narrative"]), 1, 0)
 # avoid sprocket, rockduster, etc
 ps_data[, "rock"] = ifelse(grepl("rock( |$|\\.|s|,)", ps_data[,"narrative"]), 1, 0)
+ps_data[, "digit"] = ifelse(grepl("(finger(s)*|pinky|hand(s)*|thumb|hand( |\\.|,|$))", ps_data[,"narrative"]), 1, 0)
+ps_data[, "derail"] = ifelse(grepl("(left|off|jumped).{1,15}track", ps_data[,"narrative"]) | grepl("derai", ps_data[,"narrative"]), 1, 0)
+
+# GENERATE LESS GOOD NEGATIVE KEYWORDS
+ps_data[, "roofbolt"] = ifelse(grepl("(roof|rib)( )*bolt", ps_data[,"narrative"]), 1, 0)
 ps_data[, "driving"] = ifelse(grepl("was.{1,5}driv(e|ing)", ps_data[,"narrative"]), 1, 0)
 ps_data[, "operating"] = ifelse(grepl("operating", ps_data[,"narrative"]), 1, 0)
 ps_data[, "riding"] = ifelse(grepl("was.{1,5}rid(e|ing)( )*in(side)*", ps_data[,"narrative"]), 1, 0)
 ps_data[, "passenger"] = ifelse(grepl("passenger", ps_data[,"narrative"]), 1, 0)
-
-# GENERATE LESS GOOD NEGATIVE KEYWORDS
 ps_data[, "wrench"] = ifelse(grepl("wrench", ps_data[,"narrative"]), 1, 0)
 ps_data[, "controls"] = ifelse(grepl("(lever|stick)", ps_data[,"narrative"]), 1, 0)
 ps_data[, "resin"] = ifelse(grepl("resin", ps_data[,"narrative"]), 1, 0)
@@ -163,8 +166,6 @@ ps_data[, "atrs"] = ifelse(grepl("a(\\.)*t(\\.)*r(\\.)*s(\\.)*", ps_data[,"narra
 ps_data[, "flew"] = ifelse(grepl("fl(ew|y|ing)", ps_data[,"narrative"]), 1, 0)
 ps_data[, "loose"] = ifelse(grepl("loose", ps_data[,"narrative"]), 1, 0)
 ps_data[, "broke"] = ifelse(grepl("broke", ps_data[,"narrative"]), 1, 0)
-ps_data[, "digit"] = ifelse(grepl("(finger(s)*|pinky|hand(s)*|thumb|hand( |\\.|,|$))", ps_data[,"narrative"]), 1, 0)
-ps_data[, "derail"] = ifelse(grepl("(left|off|jumped).{1,15}track", ps_data[,"narrative"]) | grepl("derai", ps_data[,"narrative"]), 1, 0)
 ps_data[, "canopy"] = ifelse(grepl("canopy", ps_data[,"narrative"]), 1, 0)
 
 ##################################################################################################
@@ -172,14 +173,14 @@ ps_data[, "canopy"] = ifelse(grepl("canopy", ps_data[,"narrative"]), 1, 0)
 
 # USE BODY/SEAT TO REMOVE FALSE POSITIVE ACCIDENTS OF SOMEONE BEING JOSTLED AGAINST THE SEAT
 ps_data[, "bodyseat"] = ifelse(grepl("(back|head|neck).{1,10}seat", ps_data[,"narrative"]) &
-                               !grepl("backward.{1,10}seat", ps_data[,"narrative"]) &
-                               !grepl("(bolt|over|drill)( )*head.{1,10}seat", ps_data[,"narrative"]), 1, 0) 
+                                 !grepl("backward.{1,10}seat", ps_data[,"narrative"]) &
+                                 !grepl("(bolt|over|drill)( )*head.{1,10}seat", ps_data[,"narrative"]), 1, 0) 
 # USE HEAD/ROOF TO REMOVE DRIVER HITTING HEAD AGAINST VEHICLE ROOF
 ps_data[, "headroof"] = ifelse(grepl("(head|neck).{1,5}(on|struck|hit|against).{1,5}roof", ps_data[,"narrative"]) &
-                               !grepl("drill( )*head.{1,10}roof", ps_data[,"narrative"]) &
-                               !grepl("over( )*head.{1,10}roof", ps_data[,"narrative"]) &
-                               !grepl("head(ing|er|ed).{1,10}roof", ps_data[,"narrative"]) &
-                               !grepl("head.{1,10}roof.{1,5}bolt", ps_data[,"narrative"]), 1, 0) 
+                                 !grepl("drill( )*head.{1,10}roof", ps_data[,"narrative"]) &
+                                 !grepl("over( )*head.{1,10}roof", ps_data[,"narrative"]) &
+                                 !grepl("head(ing|er|ed).{1,10}roof", ps_data[,"narrative"]) &
+                                 !grepl("head.{1,10}roof.{1,5}bolt", ps_data[,"narrative"]), 1, 0) 
 # GOING OVER A BUMP AND OPERATOR HITTING HEAD 
 ps_data[, "hole"] = ifelse(grepl("(hit|strike|ran over|struck|went over).{1,6}(rock|hole|bump|dip|depression)", ps_data[,"narrative"]), 1, 0)
 # DRILLING STEEL AND FINGER BEING PINNED
@@ -190,21 +191,6 @@ ps_data[, "outsidevehicle"] = ifelse(grepl("(arm|hand|leg|foot).{1,6}(resting on
 ps_data[, "handcaught"] = ifelse(grepl("(hand|finger|thumb|digit|pinky|glove)(s)*.{1,5}(c(a|u)(a|u)ght|pinned|between)", ps_data[,"narrative"]), 1, 0)
 
 ##################################################################################################
-
-ps_data[, "vcomp_test"] = ifelse(grepl("(seat|rail|canopy|battery|drill|steel|chain|cable)+.{1,20}VEHICLE", ps_data[,"narrative"]) | grepl("VEHICLE.{1,20}(seat|rail|canopy|battery|drill|steel|chain|cable)+", ps_data[,"narrative"]), 1, 0)
-ps_data[, "psobject_test"] = ifelse(grepl("(corner|beam|overcast|rib|wall|coal|rock|header|top|seat|canopy)+.{1,20}PINNED/STRUCK", ps_data[,"narrative"]) | grepl("PINNED/STRUCK.{1,20}(corner|beam|overcast|rib|wall|coal|rock|header|top|seat|canopy)+", ps_data[,"narrative"]), 1, 0)
-ps_data[, "wrench"] = ifelse(grepl("wrench", ps_data[,"narrative"]), 1, 0)
-ps_data[, "controls"] = ifelse(grepl("(lever|stick)", ps_data[,"narrative"]), 1, 0)
-ps_data[, "loose_rbolting"] = ifelse(grepl("(plate|bit|bolt)+.{1,10}PINNED/STRUCK", ps_data[,"narrative"]), 1, 0)
-ps_data[, "flew"] = ifelse(grepl("fl(ew|y|ing)", ps_data[,"narrative"]), 1, 0)
-ps_data[, "loose"] = ifelse(grepl("loose", ps_data[,"narrative"]), 1, 0)
-ps_data[, "broke"] = ifelse(grepl("broke", ps_data[,"narrative"]), 1, 0)
-ps_data[, "digit"] = ifelse(grepl("(finger(s)*|pinky|hand(s)*|thumb|hand( |\\.|,|$))", ps_data[,"narrative"]), 1, 0)
-ps_data[, "derail"] = ifelse(grepl("(left|off|jumped).{1,15}track", ps_data[,"narrative"]) | grepl("derai", ps_data[,"narrative"]), 1, 0)
-ps_data[, "resin"] = ifelse(grepl("resin", ps_data[,"narrative"]), 1, 0)
-ps_data[, "atrs"] = ifelse(grepl("a(\\.)*t(\\.)*r(\\.)*s(\\.)*", ps_data[,"narrative"]), 1, 0)
-ps_data[, "drill_action"] = ifelse(grepl("(put|install|tramm|bendin|lower|startin|push)", ps_data[,"narrative"]), 1, 0)  
-  
 # GENERATE KEYWORD FLAGS
 
 ps_data$keyword = ifelse((ps_data$pin == 1 | ps_data$strike == 1 |  ps_data$strikerib == 1 |
