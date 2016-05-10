@@ -163,7 +163,10 @@ ps_data[, "loose"] = ifelse(grepl("loose", ps_data[,"narrative"]), 1, 0)
 ps_data[, "broke"] = ifelse(grepl("broke", ps_data[,"narrative"]), 1, 0)
 ps_data[, "digit"] = ifelse(grepl("(finger(s)*|pinky|hand(s)*|thumb|hand( |\\.|,|$))", ps_data[,"narrative"]), 1, 0)
 ps_data[, "derail"] = ifelse(grepl("(left|off|jumped).{1,15}track", ps_data[,"narrative"]) | grepl("derai", ps_data[,"narrative"]), 1, 0)
-
+ps_data[, "resin"] = ifelse(grepl("resin", ps_data[,"narrative"]), 1, 0)
+ps_data[, "atrs"] = ifelse(grepl("a(\\.)*t(\\.)*r(\\.)*s(\\.)*", ps_data[,"narrative"]), 1, 0)
+ps_data[, "drill_action"] = ifelse(grepl("(put|install|tramm|bendin|lower|startin|push)", ps_data[,"narrative"]), 1, 0)  
+  
 # GENERATE KEYWORD FLAGS
 
 ps_data$keyword = ifelse((ps_data$pin == 1 | ps_data$strike == 1 |
@@ -638,6 +641,8 @@ simple.data.grouped2 = ps_data[, c(match("documentno", names(ps_data)), match("P
                                    match("loose", names(ps_data)), match("broke", names(ps_data)),
                                    match("digit", names(ps_data)), match("derail", names(ps_data)),
                                    match("v_to_v", names(ps_data)), match("v_to_p", names(ps_data)),
+                                   match("resin", names(ps_data)), match("atrs", names(ps_data)),
+                                   match("drill_action", names(ps_data)),
                                    match("likely_equip", names(ps_data)), match("unlikely_equip", names(ps_data)),
                                    match("likely_class", names(ps_data)), match("unlikely_class", names(ps_data)),
                                    match("likely_type", names(ps_data)), match("unlikely_type", names(ps_data)),
@@ -882,6 +887,7 @@ write.csv(simple.data.raw2.grouped2, file = "C:/Users/nsaifull/Dropbox/R-Code/pr
 #simplex = read.csv("C:/Users/slevine2/Dropbox (Stanford Law School)/R-code/prepped_PS_simple_data.csv", header = T)
 
 # RANDOMLY SORT DATA (IT WAS ORDERED IN STATA BEFORE THIS)
+#Best one so far is "grouped2" dataset
 simple.data = simple.data.grouped2
 set.seed(625)
 rand <- runif(nrow(simple.data))
@@ -928,8 +934,9 @@ adaboost.pred$confusion
 # BEST PREDICTION SO FAR
 rf.smote.pred = predict(rf.smote, smote.test, type="class")
 table(smote.test$PS, predicted = rf.smote.pred)
-#      NO YES
-# NO  354  10
-# YES  46  89
+#predicted
+#NO YES
+#NO  360   4
+#YES  28 107
 
 
