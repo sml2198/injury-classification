@@ -33,7 +33,6 @@ imputation_method = 3
 
 ps_data = read.csv("X:/Projects/Mining/NIOSH/analysis/data/training/coded_sets/Training_Set_Pinning_And_Striking_Accidents-January-29-2016.csv")
 
-
 ##################################################################################################
 # MAKE ALL STRING VARIABLES LOWERCASE
 
@@ -191,6 +190,21 @@ ps_data[, "outsidevehicle"] = ifelse(grepl("(arm|hand|leg|foot).{1,6}(resting on
 ps_data[, "handcaught"] = ifelse(grepl("(hand|finger|thumb|digit|pinky|glove)(s)*.{1,5}(c(a|u)(a|u)ght|pinned|between)", ps_data[,"narrative"]), 1, 0)
 
 ##################################################################################################
+
+ps_data[, "vcomp_test"] = ifelse(grepl("(seat|rail|canopy|battery|drill|steel|chain|cable)+.{1,20}VEHICLE", ps_data[,"narrative"]) | grepl("VEHICLE.{1,20}(seat|rail|canopy|battery|drill|steel|chain|cable)+", ps_data[,"narrative"]), 1, 0)
+ps_data[, "psobject_test"] = ifelse(grepl("(corner|beam|overcast|rib|wall|coal|rock|header|top|seat|canopy)+.{1,20}PINNED/STRUCK", ps_data[,"narrative"]) | grepl("PINNED/STRUCK.{1,20}(corner|beam|overcast|rib|wall|coal|rock|header|top|seat|canopy)+", ps_data[,"narrative"]), 1, 0)
+ps_data[, "wrench"] = ifelse(grepl("wrench", ps_data[,"narrative"]), 1, 0)
+ps_data[, "controls"] = ifelse(grepl("(lever|stick)", ps_data[,"narrative"]), 1, 0)
+ps_data[, "loose_rbolting"] = ifelse(grepl("(plate|bit|bolt)+.{1,10}PINNED/STRUCK", ps_data[,"narrative"]), 1, 0)
+ps_data[, "flew"] = ifelse(grepl("fl(ew|y|ing)", ps_data[,"narrative"]), 1, 0)
+ps_data[, "loose"] = ifelse(grepl("loose", ps_data[,"narrative"]), 1, 0)
+ps_data[, "broke"] = ifelse(grepl("broke", ps_data[,"narrative"]), 1, 0)
+ps_data[, "digit"] = ifelse(grepl("(finger(s)*|pinky|hand(s)*|thumb|hand( |\\.|,|$))", ps_data[,"narrative"]), 1, 0)
+ps_data[, "derail"] = ifelse(grepl("(left|off|jumped).{1,15}track", ps_data[,"narrative"]) | grepl("derai", ps_data[,"narrative"]), 1, 0)
+ps_data[, "resin"] = ifelse(grepl("resin", ps_data[,"narrative"]), 1, 0)
+ps_data[, "atrs"] = ifelse(grepl("a(\\.)*t(\\.)*r(\\.)*s(\\.)*", ps_data[,"narrative"]), 1, 0)
+ps_data[, "drill_action"] = ifelse(grepl("(put|install|tramm|bendin|lower|startin|push)", ps_data[,"narrative"]), 1, 0)  
+  
 # GENERATE KEYWORD FLAGS
 
 ps_data$keyword = ifelse((ps_data$pin == 1 | ps_data$strike == 1 |  ps_data$strikerib == 1 |
@@ -673,6 +687,8 @@ simple.data.grouped2 = ps_data[, c(match("documentno", names(ps_data)), match("P
                                    match("loose", names(ps_data)), match("broke", names(ps_data)),
                                    match("digit", names(ps_data)), match("derail", names(ps_data)),
                                    match("v_to_v", names(ps_data)), match("v_to_p", names(ps_data)),
+                                   match("resin", names(ps_data)), match("atrs", names(ps_data)),
+                                   match("drill_action", names(ps_data)),
                                    match("likely_equip", names(ps_data)), match("unlikely_equip", names(ps_data)),
                                    match("likely_class", names(ps_data)), match("unlikely_class", names(ps_data)),
                                    match("likely_type", names(ps_data)), match("unlikely_type", names(ps_data)),
@@ -915,6 +931,7 @@ write.csv(simple.data.raw2.grouped2, file = "C:/Users/nsaifull/Dropbox/R-Code/pr
 # ALGORITHM
 
 # RANDOMLY SORT DATA (IT WAS ORDERED IN STATA BEFORE THIS)
+#Best one so far is "grouped2" dataset
 simple.data = simple.data.grouped2
 set.seed(625)
 rand <- runif(nrow(simple.data))
@@ -961,8 +978,9 @@ adaboost.pred$confusion
 # BEST PREDICTION SO FAR
 rf.smote.pred = predict(rf.smote, smote.test, type="class")
 table(smote.test$PS, predicted = rf.smote.pred)
-#      NO YES
-# NO  354  10
-# YES  46  89
+#predicted
+#NO YES
+#NO  360   4
+#YES  28 107
 
 
