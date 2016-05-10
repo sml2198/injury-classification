@@ -295,6 +295,7 @@ ps_data[, "numbertypo"] = ifelse(grepl("[a-z][0-9][a-z]", ps_data[,"narrative"],
                                  for (i in 0:9) {
                                    ps_data$narrative <- gsub("i", "", ps_data$narrative)
                                  }
+                                 
 ##################################################################################################
 # GENERATE LIKELY CLASSES
 
