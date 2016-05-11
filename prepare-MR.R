@@ -172,7 +172,7 @@ mr.data[, "rplace"] = ifelse(grepl("(^| )replac(e|i)[a-z]*", mr.data[,"narrative
 # We don't want to see the noun "service" because that often refers to hoist service, but "serviced" and "servicing" are good indicators.
 mr.data[, "service"] = ifelse(grepl("serviced", mr.data[,"narrative"]) | grepl("servicing", mr.data[,"narrative"]), 1, 0)
 mr.data[, "fix"] = ifelse(grepl("(^| )fix[a-z]*", mr.data[,"narrative"]) & !grepl("(^| )fixture", mr.data[,"narrative"]), 1, 0) 
-mr.data[, "changing"] = ifelse(grepl("chang(e|ing|ed)( )*out", mr.data[,"narrative"]), 1, 0)
+mr.data[, "changing"] = ifelse(grepl("chang(e|ing|ed)( |-)*out", mr.data[,"narrative"]), 1, 0)
 mr.data[, "retrack"] = ifelse(grepl("re(rail|track|trakc)(ed|ing)", mr.data[,"narrative"]) |
                               grepl("pull(ing|ed)*.{1,5}track", mr.data[,"narrative"]), 1, 0)
 mr.data[, "pullbelt"] = ifelse(grepl("pull( |ing|ed|s)*.{1,15}(belt|rope|tube|tubing)", mr.data[,"narrative"]) |
@@ -218,8 +218,8 @@ mr.data[, "tests"] = ifelse(grepl("test(ing|ed)", mr.data[,"narrative"]) &
                           !grepl("emergency", mr.data[,"narrative"]) &
                           !grepl("clinic", mr.data[,"narrative"]), 1, 0) 
 # Oil in mention of can/drum/barrel often means something is being greased. Otherwise it usually apears in some other context (being slipped on, lit, etc...)
-mr.data[, "oil"] = ifelse(grepl("(^| )oil.{1,25}( can|drum|barrel)", mr.data[,"narrative"]) |
-                          grepl("(can|drum|barrel).{1,25} oil", mr.data[,"narrative"]), 1, 0) 
+mr.data[, "oil"] = ifelse(grepl("(^| )(oil).{1,25}(can|drum|barrel)", mr.data[,"narrative"]) |
+                          grepl("(can|drum|barrel).{1,25}oil", mr.data[,"narrative"]), 1, 0) 
 
 # GENERATE POTENTIALLY POSITIVE KEYWORDS (MAYBE INDICATE POSITIVE OUTCOMES?) 
 
@@ -317,6 +317,8 @@ if (falling.accidents == "excluded") {
   mr.data$MR[mr.data$documentno == "220072410056" ] = "NO"
   mr.data$MR[mr.data$documentno == "220062280014" ] = "NO"
 } 
+
+######################################################################################################
 
 ######################################################################################################
 # CREATE/PREP VARIOUS TIME AND DATE VARIABLES - YEAR AND QUARTER
@@ -643,6 +645,7 @@ rf.smote
 
 ######################################################################################################
 # USE ADABOOST TO IMPLEMENT BOOSTING ALGORITHM 
+
 set.seed(625)
 mr.adaboost = boosting(MR ~ . , data = simple[1:700,!(names(simple) %in% c('documentno','narrative'))], boos = T, mfinal = 1000, coeflearn = 'Freund')
 adaboost.pred = predict.boosting(mr.adaboost, newdata = simple[701:1019,!(names(simple) %in% c('documentno','narrative'))])
