@@ -17,6 +17,10 @@ imputation.method = 3
 # but are not related in nature to MR activities.
 falling.accidents = "excluded"
 
+#mr.data = read.csv("/Users/Sarah/Dropbox (Stanford Law School)/R-code/Training_Set_Maintenance_And_Repair_Accidents_August_2015.csv")
+#
+#mr.data = mr.data.copy
+
 # LOAD IN CODED TRAINING SET (1000 OBSERVATIONS, CODED FOR "MR")
 mr.data = read.csv("X:/Projects/Mining/NIOSH/analysis/data/training/coded_sets/Training_Set_Maintenance_And_Repair_Accidents_August_2015_2.csv", header = TRUE, sep = ",", nrows = 1001, stringsAsFactors = FALSE)
 
@@ -49,15 +53,15 @@ mr.data = mr.data[, !(names(mr.data) %in% drops)]
 names(mr.data)[names(mr.data) == 'narrativemodified.1'] = 'narrative'
 mr.data$narrative = tolower(mr.data$narrative)
 names(mr.data)[names(mr.data) == 'degreeofinjury.1'] = 'degreeofinjury'
-mr.data$narrative = tolower(mr.data$narrative)
+mr.data$degreeofinjury = tolower(mr.data$degreeofinjury)
 names(mr.data)[names(mr.data) == 'accidentclassification.1'] = 'accidentclassification'
-mr.data$narrative = tolower(mr.data$narrative)
+mr.data$accidentclassification = tolower(mr.data$accidentclassification)
 names(mr.data)[names(mr.data) == 'accidenttype.1'] = 'accidenttype'
-mr.data$narrative = tolower(mr.data$narrative)
+mr.data$accidenttype = tolower(mr.data$accidenttype)
 names(mr.data)[names(mr.data) == 'natureofinjury.1'] = 'natureofinjury'
-mr.data$narrative = tolower(mr.data$narrative)
+mr.data$natureofinjury = tolower(mr.data$natureofinjury)
 names(mr.data)[names(mr.data) == 'mineractivity.1'] = 'mineractivity'
-mr.data$narrative = tolower(mr.data$narrative)
+mr.data$mineractivity = tolower(mr.data$mineractivity)
 
 # APPEND DATASET OF ADDITIONAL FATALITY OBSERVATIONS FOR TRAINING SET
 mr.data <- rbind(mr.data, mr.fatalities) 
