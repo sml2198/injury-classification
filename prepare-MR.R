@@ -185,7 +185,7 @@ mr.data[, "mrworker"] = ifelse(grepl("(mechanic|electrician|repairm(a|e)n)", mr.
 mr.data[, "cover"] = ifelse(grepl("(replac|lift).{1,20}(panel|cover| lid)", mr.data[,"narrative"]) |
                             grepl("(panel|cover| lid){1,5}fell", mr.data[,"narrative"]) &
                             !grepl("eye.{1,5}lid)", mr.data[,"narrative"]), 1, 0) 
-mr.data[, "toolbox"] = ifelse(grepl("tool( )*box", mr.data[,"narrative"]), 1, 0)
+mr.data[, "toolbox"] = ifelse(grepl("( |^)tool", mr.data[,"narrative"]), 1, 0)
                             
 # *MAINTENANCE* 
 
@@ -271,7 +271,12 @@ mr.data[, "surgery"] = ifelse((grepl("surger[a-z]*", mr.data[,"narrative"]) |
 ######################################################################################################
 # GENERATE ADDITIONAL KEYWORDS WE HAVE NO PRIORS ABOUT TO FEED INTO RANDOM FOREST 
 
-mr.data[, "power"] = ifelse(grepl("power", mr.data[,"narrative"]), 1, 0)
+mr.data[, "power"] = ifelse(grepl("pow(e)*r", mr.data[,"narrative"]), 1, 0)
+#These don't add much
+mr.data[, "splice"] = ifelse(grepl("splice", mr.data[,"narrative"]) & (mr.data$occupcode3digit %in% c("004", "418")), 1, 0)
+mr.data[, "lug"] = ifelse(grepl("lug(g)*", mr.data[,"narrative"]) & (mr.data$occupcode3digit %in% c("004", "418")), 1, 0)
+# We only want the noun, not the verb.
+#mr.data[, "wrench"] = ifelse(grepl("wrench", mr.data[,"narrative"]), 1, 0)
 mr.data[, "trash"] = ifelse(grepl("(trash|garbage)", mr.data[,"narrative"]), 1, 0)
 mr.data[, "roller"] = ifelse(grepl("roller", mr.data[,"narrative"]), 1, 0)
 
@@ -460,13 +465,13 @@ simple.data = mr.data[, c(match("MR", names(mr.data)), match("repair", names(mr.
                           match("maintain", names(mr.data)), match("inspect", names(mr.data)),
                           match("shovel", names(mr.data)), match("washingdown", names(mr.data)),
                           match("grease", names(mr.data)), match("check", names(mr.data)),
-                          match("tests", names(mr.data)),
+                          match("tests", names(mr.data)), match("splice", names(mr.data)), match("lug", names(mr.data)),
                           match("oil", names(mr.data)), match("dismantl", names(mr.data)),
                           match("rethread", names(mr.data)), match("remove", names(mr.data)),
                           match("bits", names(mr.data)), match("conveyor", names(mr.data)),
                           match("helping", names(mr.data)), match("belt", names(mr.data)),
                           match("tighten", names(mr.data)), match("battery", names(mr.data)),
-                          match("install", names(mr.data)),
+                          match("install", names(mr.data)), 
                           match("hoist", names(mr.data)), match("surgery", names(mr.data)),                          
                           match("pain", names(mr.data)), match("trash", names(mr.data)), 
                           match("roller", names(mr.data)), 
@@ -660,8 +665,11 @@ adaboost.pred$confusion
 
 # BEST SO FAR
 #Predicted Class  NO YES
-#NO  261  19
-#YES   8 120
+#NO  200  18
+#YES   5  96
+
+#NO  201  21
+#YES   4  93
 
 #simple$prediction <- ifelse(adaboost.pred$prob > 0.5, 1, 0)
 
