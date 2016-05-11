@@ -33,8 +33,6 @@ library(caret)
 ######################################################################################################
 # SET PREFERENCES - IMPUTATION METHOD - METHOD 3 IS RANDOM DRAWS FROM DISTRIBUTION (OUR BEST METHOD)
 
-setwd("X:/Projects/Mining/NIOSH/analysis/data/training/coded_sets/")
-
 imputation.method = 3
 # Different people at NIOSH told us different things about whether or not to include accidents that occur during MR
 # but are not related in nature to MR activities, for example falling rock/metal accidents, or an employee walking
@@ -84,6 +82,13 @@ names(mr.data)[names(mr.data) == 'natureofinjury.1'] = 'natureofinjury'
 mr.data$natureofinjury = tolower(mr.data$natureofinjury)
 names(mr.data)[names(mr.data) == 'mineractivity.1'] = 'mineractivity'
 mr.data$mineractivity = tolower(mr.data$mineractivity)
+mr.data$occupation = tolower(mr.data$occupation)
+mr.data$typeofequipment = tolower(mr.data$typeofequipment)
+mr.data$sourceofinjury = tolower(mr.data$sourceofinjury)
+mr.data$bodypart = tolower(mr.data$bodypart)
+mr.data$equipmanufacturer = tolower(mr.data$equipmanufacturer)
+mr.data$immediatenotificationclass = tolower(mr.data$immediatenotificationclass)
+mr.data$uglocation = tolower(mr.data$uglocation)
 
 # APPEND DATASET OF ADDITIONAL FATALITY OBSERVATIONS FOR TRAINING SET
 mr.data <- rbind(mr.data, mr.fatalities) 
@@ -109,10 +114,10 @@ mr.data[,grep("averagemineheight", names(mr.data))] = gsub(pattern = ",",replace
 mr.data[,grep("averagemineheight", names(mr.data))] = as.numeric(mr.data[,grep("averagemineheight", names(mr.data))])
 
 # MERGE REDUNDANT "NO VALUE FOUND" FIELDS IN FACTOR VARIABLES
-mr.data[, "uglocation"] = ifelse(mr.data[, "uglocation"] == "NOT MARKED", "NO VALUE FOUND", mr.data[, "uglocation"])
-mr.data[, "immediatenotificationclass"] = ifelse(mr.data[, "immediatenotificationclass"] == "NOT MARKED", "NO VALUE FOUND", mr.data[, "immediatenotificationclass"])
-mr.data[, "natureofinjury"] = ifelse(mr.data[, "natureofinjury"] == "UNCLASSIFIED,NOT DETERMED", "NO VALUE FOUND", mr.data[, "natureofinjury"])
-mr.data[, "equipmanufacturer"] = ifelse(mr.data[, "equipmanufacturer"] == "Not Reported", "NO VALUE FOUND", mr.data[, "equipmanufacturer"])
+mr.data[, "uglocation"] = ifelse(mr.data[, "uglocation"] == "not marked", "no value found", mr.data[, "uglocation"])
+mr.data[, "immediatenotificationclass"] = ifelse(mr.data[, "immediatenotificationclass"] == "not marked", "no value found", mr.data[, "immediatenotificationclass"])
+mr.data[, "natureofinjury"] = ifelse(mr.data[, "natureofinjury"] == "unclassified,not determed", "no value found", mr.data[, "natureofinjury"])
+mr.data[, "equipmanufacturer"] = ifelse(mr.data[, "equipmanufacturer"] == "not reported", "no value found", mr.data[, "equipmanufacturer"])
 
 # We decided to recode three observations in our data that were coded as MR, but are apparently non-injury accidents. 
 # It's apparent that whoever did the coding didn't look at this field. We don't ever want our algorithm to classify 
@@ -138,6 +143,12 @@ for (i in 1:length(messy_rows)) {
   mr.data[messy_rows[i], "returntoworkdate"] = unlist(narrative_split[i])[4]
 }
 mr.data = mr.data[, c(-match("messy", names(mr.data)))]
+
+# DEAL WITH MESSY NUMBER TYPOS - RANDOM NUMBERS THAT HAVE BEEN DROPPED INTO NARRATIVES 
+mr.data[, "numbertypo"] = ifelse(grepl("[a-z][0-9][a-z]", mr.data[,"narrative"]), 1, 0)
+for (i in 0:9) {
+  mr.data$narrative <- gsub("i", "", mr.data$narrative)
+}
 
 # CONVERT DATES - THIS NEEDS TO HAPPEN AFTER REPLACING RETURNTOWORKDATE WITH EXTRACTS FROM NARRATIVE FIELDS
 indices_with_date = grep("date", names(mr.data))
