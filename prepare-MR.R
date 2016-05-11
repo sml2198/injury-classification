@@ -160,7 +160,7 @@ mr.data[, "rplace"] = ifelse(grepl("(^| )replac(e|i)[a-z]*", mr.data[,"narrative
 # We don't want to see the noun "service" because that often refers to hoist service, but "serviced" and "servicing" are good indicators.
 mr.data[, "service"] = ifelse(grepl("serviced", mr.data[,"narrative"]) | grepl("servicing", mr.data[,"narrative"]), 1, 0)
 mr.data[, "fix"] = ifelse(grepl("(^| )fix[a-z]*", mr.data[,"narrative"]) & !grepl("(^| )fixture", mr.data[,"narrative"]), 1, 0) 
-mr.data[, "changing"] = ifelse(grepl("chang(e|ing|ed)( )*out", mr.data[,"narrative"]), 1, 0)
+mr.data[, "changing"] = ifelse(grepl("chang(e|ing|ed)( |-)*out", mr.data[,"narrative"]), 1, 0)
 mr.data[, "retrack"] = ifelse(grepl("re(rail|track|trakc)(ed|ing)", mr.data[,"narrative"]) |
                               grepl("pull(ing|ed)*.{1,5}track", mr.data[,"narrative"]), 1, 0)
 mr.data[, "pullbelt"] = ifelse(grepl("pull( |ing|ed|s)*.{1,15}(belt|rope|tube|tubing)", mr.data[,"narrative"]) |
@@ -206,8 +206,8 @@ mr.data[, "tests"] = ifelse(grepl("test(ing|ed)", mr.data[,"narrative"]) &
                           !grepl("emergency", mr.data[,"narrative"]) &
                           !grepl("clinic", mr.data[,"narrative"]), 1, 0) 
 # Oil in mention of can/drum/barrel often means something is being greased. Otherwise it usually apears in some other context (being slipped on, lit, etc...)
-mr.data[, "oil"] = ifelse(grepl("(^| )oil.{1,25}( can|drum|barrel)", mr.data[,"narrative"]) |
-                          grepl("(can|drum|barrel).{1,25} oil", mr.data[,"narrative"]), 1, 0) 
+mr.data[, "oil"] = ifelse(grepl("(^| )(oil).{1,25}(can|drum|barrel)", mr.data[,"narrative"]) |
+                          grepl("(can|drum|barrel).{1,25}oil", mr.data[,"narrative"]), 1, 0) 
 
 # GENERATE POTENTIALLY POSITIVE KEYWORDS (MAYBE INDICATE POSITIVE OUTCOMES?) 
 
@@ -302,7 +302,7 @@ if (falling.accidents == "excluded") {
 
 ######################################################################################################
 # CREATE SIMPLE DATA CONTAINING JUST THE VARS USED FOR SIMPLE ALGORITHM - DO THIS BEFORE IMPUTATION HAPPENS 
-simple.data = mr.data[, c(match("MR", names(mr.data)), match("repair", names(mr.data)),
+simple.data = mr.data[, c(match("MR", names(mr.data)), match("repair", names(mr.data)), match("documentno", names(mr.data)),
                           match("rplace", names(mr.data)), match("service", names(mr.data)),
                           match("fix", names(mr.data)),  match("changing", names(mr.data)),
                           match("retrack", names(mr.data)), match("pullbelt", names(mr.data)),
@@ -498,7 +498,7 @@ test.data8 <- datdum(x="quarter",data=mr.data,name="quarter")
 test.data8 <- test.data8 [, c(grep("quarter", names(test.data8)))]
 
 mr.data = cbind(mr.data, test.data1, test.data2, test.data3, test.data4, test.data5, test.data6, test.data7, test.data8)
-
+rm(test.data1, test.data2, test.data3, test.data4, test.data5, test.data6, test.data7, test.data8)
 ######################################################################################################
 # SAVE DATA FOR CART AND RF ANALYSIS
 drops <- c("sourceofinjury", "equipmentmodelno", "fipscountyname", "controllername", "mineractivity", "minename", "operatorname", "quarter")
@@ -516,7 +516,7 @@ rand <- runif(nrow(mr.data))
 train <- mr.data[order(rand),]
 rand2 <- runif(nrow(simple.data))
 simple <- simple.data[order(rand2),]
-remove(rand,rand2, simplex)
+remove(rand,rand2)
 # just to find out which col # MR is
 which( colnames(train)=="MR" )
 which( colnames(simple)=="MR" )
@@ -623,7 +623,7 @@ table(smote.test$MR, predicted = rf.smote.pred)
 
 ######################################################################################################
 # USE ADABOOST TO IMPLEMENT BOOSTING ALGORITHM 
-mr.adaboost = boosting(MR ~ ., data = simple[1:700,], boos = T, mfinal = 100, coeflearn = 'Freund')
+mr.adaboost = boosting(MR ~ . -documentno, data = simple[1:700,], boos = T, mfinal = 100, coeflearn = 'Freund')
 adaboost.pred = predict.boosting(mr.adaboost, newdata = simple[701:1019,])
 adaboost.pred$confusion
 
