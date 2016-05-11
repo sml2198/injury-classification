@@ -681,6 +681,10 @@ simple.data.grouped2 = ps_data[, c(match("documentno", names(ps_data)), match("P
                                match("maybe_false_keyword", names(ps_data)), 
                                match("v_to_v", names(ps_data)), match("v_to_p", names(ps_data)),                                    
                                match("no_vehcl", names(ps_data)), 
+                               match("num.vehicles", names(ps_data)), 
+                               match("num.pinstrike", names(ps_data)), 
+                               match("num.person", names(ps_data)), 
+                               match("num.body", names(ps_data)), 
                                match("vcomp_test", names(ps_data)), match("psobject_test", names(ps_data)), 
                                match("loose_rbolting", names(ps_data)), match("drill_action", names(ps_data)),
                                    match("likely_equip", names(ps_data)), match("unlikely_equip", names(ps_data)),
@@ -950,14 +954,16 @@ rf <- randomForest(PS ~ . -documentno, data = simple.ps[1:600,], mtry = 8, impor
 rf
 
 # USE SMOTE TO OVERSAMPLE DATA
+set.seed(625)
 splitIndex = createDataPartition(simple.ps$PS, p =.50, list = FALSE, times = 1)
 smote.trainx = simple.ps[splitIndex,]
 smote.test = simple.ps[-splitIndex,]
 prop.table(table(smote.trainx$PS))
 
+set.seed(625)
 smote.ps <- SMOTE(PS ~ ., simple.ps, perc.over = 600,perc.under=100)
 table(smote.ps$PS)
-rf.smote <- randomForest(PS ~ . -documentno, data = smote.ps, mtry = 10, ntree = 1000)
+rf.smote <- randomForest(PS ~ . -documentno, data = smote.ps, mtry = 15, ntree = 1000)
 rf.smote
 
 # BOOSTING
@@ -979,9 +985,7 @@ adaboost.pred$confusion
 rf.smote.pred = predict(rf.smote, smote.test, type="class")
 table(smote.test$PS, predicted = rf.smote.pred)
 
-#predicted
-#NO YES
-#NO  360   4
-#YES  28 107
-
+# 5/11/16 (mtry = 15)
+#NO  361   3
+#YES  13 122
 
