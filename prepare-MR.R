@@ -6,20 +6,41 @@
 # used in the "simple-algorithm."
 
 install.packages("zoo")
+install.packages("rpart")
+install.packages("rpart.plot")
+install.packages("tree")
+install.packages("randomForest")
+install.packages("ggplot2")
+install.packages("reshape2")
+install.packages("pROC")
+install.packages("ROSE")
+install.packages("adabag")
+install.packages("DMwR")
+install.packages("caret")
 library(zoo)
+library(tree)
+library(randomForest)
+library(ggplot2)
+library(reshape2)
+library(pROC)
+library(ROSE)
+library(rpart)
+library(rpart.plot)
+library(adabag)
+library(DMwR)
+library(caret)
 
 ######################################################################################################
 # SET PREFERENCES - IMPUTATION METHOD - METHOD 3 IS RANDOM DRAWS FROM DISTRIBUTION (OUR BEST METHOD)
+
 setwd("X:/Projects/Mining/NIOSH/analysis/data/training/coded_sets/")
 
 imputation.method = 3
-# Different people at NIOSH told us different things about whether or not accidents that occur during MR
-# but are not related in nature to MR activities.
+# Different people at NIOSH told us different things about whether or not to include accidents that occur during MR
+# but are not related in nature to MR activities, for example falling rock/metal accidents, or an employee walking
+# into a piece of equipment. If "excluded", this code will replace MR with 0 for observations I've identified as
+# these types of accidents.
 falling.accidents = "excluded"
-
-#mr.data = read.csv("/Users/Sarah/Dropbox (Stanford Law School)/R-code/Training_Set_Maintenance_And_Repair_Accidents_August_2015.csv")
-#
-#mr.data = mr.data.copy
 
 # LOAD IN CODED TRAINING SET (1000 OBSERVATIONS, CODED FOR "MR")
 mr.data = read.csv("X:/Projects/Mining/NIOSH/analysis/data/training/coded_sets/Training_Set_Maintenance_And_Repair_Accidents_August_2015_2.csv", header = TRUE, sep = ",", nrows = 1001, stringsAsFactors = FALSE)
@@ -29,11 +50,12 @@ mr.fatalities = read.csv("X:/Projects/Mining/NIOSH/analysis/data/4_coded/coded_M
 
 ######################################################################################################
 # MAKE SURE TRAINING SET AND FATALITIES DATASETS HAVE ALL THE SAME VAR NAMES BEFORE APPENDING
+
 mr.data$MR = as.factor(mr.data$M.R.)
 mr.data = mr.data[, c(-match("M.R.", names(mr.data)))]
 mr.data[, "death"] = ifelse(grepl("fatality", mr.data[,"degreeofinjury"]), 1, 0)
 
-# CLEAN UP FATALITIES VARIABLES - DROP VARS NOT PRESENT IN TRAINING SET BEFORE APPENDING
+# CLEAN UP FATALITIES VARIABLES - DROP VARIABLES NOT PRESENT IN TRAINING SET BEFORE APPENDING
 mr.fatalities$MR = as.factor(mr.fatalities$MR_fatality)
 mr.fatalities = mr.fatalities[, c(-grep("MR_fatality", names(mr.fatalities)), -grep("v56", names(mr.fatalities)),
                                   -grep("v57", names(mr.fatalities)), -grep("v58", names(mr.fatalities)), 
@@ -41,7 +63,7 @@ mr.fatalities = mr.fatalities[, c(-grep("MR_fatality", names(mr.fatalities)), -g
 
 # THESE FOUR FATALGRAMS ARE CONSIDERED M&R AND WERE INCLUDED IN A STUDY BY JOHN H. FROM NIOSH AS M&R. 
 # HOWEVER, IT'S REALLY ONLY EVIDENT FROM THE FATALGRAMS (SEE OPEN DATA FOLDER) THAT THESE WERE SUSTAINED
-# DURING LARGER M&R ACTIVITIES. NOTHING FROM THE NARRATIVE FIELD/OCCUPAITON INDICATES THAT M&R WAS THE
+# DURING LARGER GROUP M&R ACTIVITIES. NOTHING FROM THE NARRATIVE FIELD/OCCUPATION INDICATES THAT M&R WAS THE
 # ACTIVITY AT THE TIME. ESSENTIALLY, TRAINING ON THESE OBSERVATIONS WILL STACK THE DECK AGAINST US.
 # LET'S DELETE THEM FOR NOW.
 mr.fatalities = mr.fatalities[!(mr.fatalities$documentno=="220030290001") & !(mr.fatalities$documentno=="220030290002") &
@@ -105,6 +127,7 @@ names(mr.data)[names(mr.data) == "MR"] = "MR"
 
 ######################################################################################################
 # 60 NARRATIVE FIELDS ARE POLLUTED WITH OTHER COLUMNS - SPLIT AND REPLACE THESE 
+
 mr.data[, "messy"] = ifelse(grepl("\\|[0-9]*[0-9]*[0-9]*\\|", mr.data[,"narrative"]), 1, 0)
 narrative_split = strsplit(mr.data[mr.data$messy == 1, "narrative"], "|", fixed = T)
 messy_rows = row.names(mr.data[mr.data$messy == 1, ])
@@ -236,16 +259,8 @@ mr.data[, "surgery"] = ifelse((grepl("surger[a-z]*", mr.data[,"narrative"]) |
 ######################################################################################################
 # GENERATE ADDITIONAL KEYWORDS WE HAVE NO PRIORS ABOUT TO FEED INTO RANDOM FOREST 
 
-# belt chute, belt structure, belt line, conveyor chain, conveyor belt, tubing rope, stacker belt, slope belt
-# roller, tail roller, bottom roller
-# speed reducer (never comes off scoop motor if not being repaired)
-# miner sprays 
-# add "testing' to checking
 mr.data[, "trash"] = ifelse(grepl("(trash|garbage)", mr.data[,"narrative"]), 1, 0)
 mr.data[, "roller"] = ifelse(grepl("roller", mr.data[,"narrative"]), 1, 0)
-# tightening bolts, tightening conveyor chain, tightening cables 
-# batteries 
-# repair a wound, repair a hernia, repair an injury, repair 
 
 # GENERATE OTHER USEFUL FLAGS ABOUT ACCIDENT 
 mr.data$falling.class = ifelse(mr.data$accidentclassification == "fall of roof or back", 1, 0)
@@ -353,8 +368,7 @@ simple.data = simple.data[, c(-match("degreeofinjury", names(simple.data)), -mat
                               -match("accidentclassification", names(simple.data)), -match("mineractivity", names(simple.data)),
                               -match("accidenttype", names(simple.data)), -match("narrative", names(simple.data)))]
 
-# office computer directory
-write.csv(simple.data, file = "C:/Users/slevine2/Dropbox (Stanford Law School)/R-code/prepped_MR_simple_data.csv", row.names = FALSE)
+#write.csv(simple.data, file = "C:/Users/slevine2/Dropbox (Stanford Law School)/R-code/prepped_MR_simple_data.csv", row.names = FALSE)
 
 ######################################################################################################
 # CREATE/PREP VARIOUS TIME AND DATE VARIABLES - YEAR AND QUARTER
@@ -425,6 +439,7 @@ modus = function(x) {
 
 ######################################################################################################
 # IMPUTE MISSING VARS
+
 if (imputation.method == 1 | imputation.method == 2) {
   for (i in 1:length(num_vars)) {
     mr.data[, num_vars[i]] = ifelse(is.na(mr.data[, num_vars[i]]), mean(mr.data[, num_vars[i]]), mr.data[, num_vars[i]])
@@ -456,6 +471,7 @@ if (imputation.method == 1 | imputation.method == 2) {
 
 ######################################################################################################
 # DUMMY-OUT FACTOR VARS WITH TOO MANY VALUES
+
 datdum <- function(x, data, name){
   data$rv <- rnorm(dim(data)[1],1,1)
   mm <- data.frame(model.matrix(lm(data$rv~-1+factor(data[,x]))))
@@ -466,25 +482,18 @@ datdum <- function(x, data, name){
 }
 test.data1 <- datdum(x="sourceofinjury",data=mr.data,name="sourceofinjury")
 test.data1 <- test.data1 [, c(grep("sourceofinjury", names(test.data1)))]
-
 test.data2 <- datdum(x="equipmentmodelno",data=mr.data,name="equipmentmodelno")
 test.data2 <- test.data2 [, c(grep("equipmentmodelno", names(test.data2)))]
-
 test.data3 <- datdum(x="minename",data=mr.data,name="minename")
 test.data3 <- test.data3 [, c(grep("minename", names(test.data3)))]
-
 test.data4 <- datdum(x="operatorname",data=mr.data,name="operatorname")
 test.data4 <- test.data4 [, c(grep("operatorname", names(test.data4)))]
-
 test.data5 <- datdum(x="fipscountyname",data=mr.data,name="fipscountyname")
 test.data5 <- test.data5 [, c(grep("fipscountyname", names(test.data5)))]
-
 test.data6 <- datdum(x="controllername",data=mr.data,name="controllername")
 test.data6 <- test.data6 [, c(grep("controllername", names(test.data6)))]
-
 test.data7 <- datdum(x="mineractivity",data=mr.data,name="mineractivity")
 test.data7 <- test.data7 [, c(grep("mineractivity", names(test.data7)))]
-
 test.data8 <- datdum(x="quarter",data=mr.data,name="quarter")
 test.data8 <- test.data8 [, c(grep("quarter", names(test.data8)))]
 
@@ -494,9 +503,145 @@ mr.data = cbind(mr.data, test.data1, test.data2, test.data3, test.data4, test.da
 # SAVE DATA FOR CART AND RF ANALYSIS
 drops <- c("sourceofinjury", "equipmentmodelno", "fipscountyname", "controllername", "mineractivity", "minename", "operatorname", "quarter")
 mr.data = mr.data[, !(names(mr.data) %in% drops)]
-
-#setwd("/Users/Sarah/Dropbox (SLS)/R-code")
-#office computer directory
-write.csv(mr.data, file = "C:/Users/slevine2/Dropbox (Stanford Law School)/R-code/prepped_MR_training_data.csv", row.names = FALSE)
+#write.csv(mr.data, file = "C:/Users/slevine2/Dropbox (Stanford Law School)/R-code/prepped_MR_training_data.csv", row.names = FALSE)
 
 ######################################################################################################
+#BEGIN ALGORITHM
+#trainx = read.csv("C:/Users/slevine2/Dropbox (Stanford Law School)/R-code/prepped_MR_training_data.csv", header = T)
+#simplex = read.csv("C:/Users/slevine2/Dropbox (Stanford Law School)/R-code/prepped_MR_simple_data.csv", header = T)
+
+# RANDOMLY SORT DATA (IT WAS ORDERED IN STATA BEFORE THIS)
+set.seed(625)
+rand <- runif(nrow(mr.data))
+train <- mr.data[order(rand),]
+rand2 <- runif(nrow(simple.data))
+simple <- simple.data[order(rand2),]
+remove(rand,rand2, simplex)
+# just to find out which col # MR is
+which( colnames(train)=="MR" )
+which( colnames(simple)=="MR" )
+
+######################################################################################################
+# CREATE CART FUNCTION WITH RPART AND EXECUTE ON 1ST 800 OBSERVATIONS
+cart <- rpart(MR ~ ., data = simple[1:700,], method="class")
+cart 
+
+# PREDICT ON REMAINING OBSERVATIONS 
+cart.predictions = predict(cart, simple[701:1019,],type="class")
+table(simple[701:1019,1], predicted = cart.predictions)
+
+# PLOT RESULTS & DETAILED PLOT OF SPLITS
+rpart.plot(cart, type=3, extra = 101, fallen.leaves=T)
+printcp(cart) 
+
+######################################################################################################
+# DEFINE RANDOM FOREST (ON TRUE PROPORTION OF NO'S AND YES'S)
+rf <- randomForest(MR ~ ., data = simple[1:700,], mtry = 8, importance=TRUE, type="class",
+                   ntree = 200)
+rf
+
+# INSPECT RANKED VARIABLES AND ERROR RATE
+plot(rf)
+plot(margin(rf))
+getTree(rf,1, labelVar=TRUE)
+
+# STORE VARIABLE IMPORTANCE
+round(importance(rf),2)
+#df.rf_imp <- data.frame(variable = names(rf$importance[,1]), importance = rf$importance[,1])
+
+# PREDICT ON OUT-OF-BAG (OOB) OBSERVATIONS 
+rf.oob.predictions = predict(rf, simple[1:700,],type="class")
+table(simple[1:700,1], predicted = rf.oob.predictions)
+
+# PREDICT ON REMAINING OBSERVATIONS & PLOT THE PREDICTIONS (TOP ROW) VS ACTUALS IN TABLE 
+rf.predictions = predict(rf, simple[701:1019,],type="class")
+table(simple[701:1019,1], predicted = rf.predictions)
+
+######################################################################################################
+# DOWNSAMPLE NEGATIVE OUTCOMES (MR=NO) FOR RANDOM FOREST
+nmin = sum(simple$MR == "YES")
+nmin
+
+ctrl <- trainControl(method = "cv", classProbs = TRUE, summaryFunction = twoClassSummary)
+
+rf.downsampled = train(MR ~ ., data = simple[1:700,], method = "rf", ntree = 800,
+                       tuneLength = 10, metric = "ROC", trControl = ctrl, 
+                       strata = simple$MR, sampsize = rep(nmin, 2))
+
+rf.baseline = train(MR ~ ., data = simple[1:700,], method = "rf", ntree = 800,
+                    tuneLength = 10, metric = "ROC", trControl = ctrl)
+
+down.prob = predict(rf.downsampled, simple[701:1019,], type = "prob")[,1]
+down.ROC = roc(response = simple[701:1019,1], predictor = down.prob, levels = rev(levels(simple[701:1019,1])))
+
+base.prob = predict(rf.baseline, simple[701:1019,], type = "prob")[,1]
+base.ROC = roc(response = simple[701:1019,1], predictor = base.prob, levels = rev(levels(simple[701:1019,1])))
+
+plot(down.ROC, col = rgb(1, 0, 0, .5), lwd = 2)
+plot(base.ROC, col = rgb(0, 0, 1, .5), lwd = 2, add = TRUE)
+legend(.4, .4, c("Down-Sampled", "Normal"), lwd = rep(2, 1), col = c(rgb(1, 0, 0, .5), rgb(0, 0, 1, .5)))
+# sensitivity = true-positive rate
+# specificity = false-positive rate
+
+######################################################################################################
+# OVERSAMPLE POSITIVE OUTCOMES (MR=YES) FOR RANDOM FOREST: GENERATE BALANCED DATA W ROSE
+simple.rosex <- ROSE(MR ~ ., data=simple[1:700,])$data
+
+# CHECK IMBALANCE AND SORT RANDOMLY (FOR SHITZNGIGGLES)
+table(simple.rosex$MR)
+rand3 <- runif(nrow(simple.rosex))
+simple.rose <- simple.rosex[order(rand3),]
+remove(simple.rosex)
+
+# DEFINE RF ON ROSE OVERSAMPLED DATA
+rf.rose <- randomForest(MR ~ ., data = simple.rose, mtry = 10, ntree = 1000)
+rf.rose
+rf.rose.pred = predict(rf.rose, simple[701:1019,],type="class")
+table(simple[701:1019,1], predicted = rf.rose.pred)
+
+######################################################################################################
+# OVERSAMPLE POSITIVE OUTCOMES (MR=YES) FOR RANDOM FOREST: GENERATE BALANCED DATA W SMOTE
+set.seed(1234)
+prop.table(table(simple$MR))
+# 0.626104 0.373896 
+
+splitIndex = createDataPartition(simple$MR, p =.50, list = FALSE, times = 1)
+smote.trainx = simple[splitIndex,]
+smote.test = simple[-splitIndex,]
+prop.table(table(smote.train$MR))
+# 0.6254902 0.3745098 
+
+# USE SMOTE TO OVERSAMPLE DATA
+smote.train <- SMOTE(MR ~ ., smote.trainx, perc.over = 600,perc.under=100)
+table(smote.train$MR)
+
+# DEFINE RF ON SMOTE OVERSAMPLED DATA
+rf.smote <- randomForest(MR ~ ., data = smote.train, mtry = 10, ntree = 1000)
+rf.smote
+rf.smote.pred = predict(rf.smote, smote.test, type="class")
+table(smote.test$MR, predicted = rf.smote.pred)
+
+######################################################################################################
+# USE ADABOOST TO IMPLEMENT BOOSTING ALGORITHM 
+mr.adaboost = boosting(MR ~ ., data = simple[1:700,], boos = T, mfinal = 100, coeflearn = 'Freund')
+adaboost.pred = predict.boosting(mr.adaboost, newdata = simple[701:1019,])
+adaboost.pred$confusion
+
+######################################################################################################
+# PRINT ALL PREDICTIONS 
+
+# SMOTE
+table(smote.test$MR, predicted = rf.smote.pred)
+# ROSE
+table(simple[701:1019,1], predicted = rf.rose.pred)
+# SIMPLE CART
+table(simple[701:1019,1], predicted = cart.predictions)
+# RF UNBALANCED 
+table(simple[701:1019,1], predicted = rf.predictions)
+# BOOSTING
+adaboost.pred$confusion
+
+simple$new.col <- ifelse(adaboost.pred$prob > 0.5, 1, 0)
+
+######################################################################################################
+
