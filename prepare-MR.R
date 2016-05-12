@@ -279,7 +279,9 @@ mr.data[, "lug"] = ifelse(grepl("( |^)lug(g)*", mr.data[,"narrative"]) & (mr.dat
 mr.data[, "wrench"] = ifelse(grepl("wrench", mr.data[,"narrative"]), 1, 0)
 mr.data[, "trash"] = ifelse(grepl("(trash|garbage)", mr.data[,"narrative"]), 1, 0)
 mr.data[, "roller"] = ifelse(grepl("roller", mr.data[,"narrative"]), 1, 0)
-# ADD TANK/ACETYLENE/ 
+mr.data[, "moretools"] = ifelse(grepl("(pry|crow|jack)( )*bar", mr.data[,"narrative"]), 1, 0)
+mr.data[, "welding"] = ifelse(grepl("(( |^)tank|ac(c)*etyle(ne|en)|weld)", mr.data[,"narrative"]), 1, 0)
+mr.data[, "tire"] = ifelse(grepl("(chang|pump)(e|ed|ing).{1,5}tire", mr.data[,"narrative"]), 1, 0)
 
 # GENERATE OTHER USEFUL FLAGS ABOUT ACCIDENT 
 mr.data$falling.class = ifelse(mr.data$accidentclassification == "fall of roof or back", 1, 0)
@@ -317,9 +319,8 @@ if (falling.accidents == "excluded") {
   mr.data$MR[mr.data$documentno == "220020350113" ] = "NO"
   mr.data$MR[mr.data$documentno == "220072410056" ] = "NO"
   mr.data$MR[mr.data$documentno == "220062280014" ] = "NO"
+  mr.data$MR[mr.data$documentno == "220033090003" ] = "NO"  
 } 
-
-######################################################################################################
 
 ######################################################################################################
 # CREATE/PREP VARIOUS TIME AND DATE VARIABLES - YEAR AND QUARTER
@@ -376,7 +377,7 @@ num_vars = names(var_classes[c(grep("numeric", var_classes), grep("integer", var
 
 for (i in 1:length(charac_vars)) {
   print(i)
-  mr.data[, charac_vars[i]] = ifelse((mr.data[,charac_vars[i]] == "NO VALUE FOUND" | mr.data[,charac_vars[i]] == "UNKNOWN" | 
+  mr.data[, charac_vars[i]] = ifelse((mr.data[,charac_vars[i]] == "no value found" | mr.data[,charac_vars[i]] == "unknown" | 
                                         mr.data[,charac_vars[i]] == "?" | mr.data[,charac_vars[i]] == ""), NA_character_, as.character(mr.data[,charac_vars[i]]))
   mr.data[, charac_vars[i]] = factor(mr.data[, charac_vars[i]])
 }
@@ -467,6 +468,7 @@ simple.data = mr.data[, c(match("MR", names(mr.data)), match("repair", names(mr.
                           match("shovel", names(mr.data)), match("washingdown", names(mr.data)),
                           match("grease", names(mr.data)), match("check", names(mr.data)),
                           match("tests", names(mr.data)), match("splice", names(mr.data)), match("lug", names(mr.data)),
+                          match("moretools", names(mr.data)), match("welding", names(mr.data)), match("tire", names(mr.data)),
                           match("oil", names(mr.data)), match("dismantl", names(mr.data)),
                           match("rethread", names(mr.data)), match("remove", names(mr.data)),
                           match("bits", names(mr.data)), match("conveyor", names(mr.data)),
@@ -495,8 +497,7 @@ simple.data[, "maybe.activy"] = ifelse(match("handling supplies/materials", simp
 simple.data[, "likely.class"] = ifelse(match("handtools (nonpowered)", simple.data[,"accidentclassification"]) |
                                          match("machinery", simple.data[,"accidentclassification"]) |
                                          match("electrical", simple.data[,"accidentclassification"]), 1, 0)
-simple.data[, "unlikely.class"] = ifelse(match("fall of roof or back", simple.data[,"accidentclassification"]) |
-                                         match("struck by falling object", simple.data[,"accidenttype"]), 1, 0)
+simple.data[, "unlikely.class"] = ifelse(match("fall of roof or back", simple.data[,"accidentclassification"]), 1, 0)
 
 simple.data[, "likely.source"] = ifelse((simple.data$sourceofinjury == "wrench" | simple.data$sourceofinjury == "knife" |
                                          simple.data$sourceofinjury == "power saw" | simple.data$sourceofinjury == "hand tools,nonpowered,nec" |
@@ -548,7 +549,7 @@ mr.data = mr.data[, !(names(mr.data) %in% drops)]
 #simplex = read.csv("C:/Users/slevine2/Dropbox (Stanford Law School)/R-code/prepped_MR_simple_data.csv", header = T)
 
 # RANDOMLY SORT DATA (IT WAS ORDERED IN STATA BEFORE THIS)
-set.seed(625)
+set.seed(626)
 rand <- runif(nrow(mr.data))
 train <- mr.data[order(rand),]
 rand2 <- runif(nrow(simple.data))
@@ -647,9 +648,10 @@ rf.smote
 ######################################################################################################
 # USE ADABOOST TO IMPLEMENT BOOSTING ALGORITHM 
 
-set.seed(626)
-mr.adaboost = boosting(MR ~ . , data = simple[1:700,!(names(simple) %in% c('documentno','narrative'))], boos = T, mfinal = 200, coeflearn = 'Freund')
+set.seed(625)
+mr.adaboost = boosting(MR ~ . , data = simple[1:700,!(names(simple) %in% c('documentno','narrative'))], boos = T, mfinal = 1000, coeflearn = 'Freund')
 adaboost.pred = predict.boosting(mr.adaboost, newdata = simple[701:1019,!(names(simple) %in% c('documentno','narrative'))])
+adaboost.pred$confusion
 
 ######################################################################################################
 # PRINT ALL PREDICTIONS 
@@ -675,7 +677,9 @@ table(simple[701:1019,1], predicted = rf.predictions)
 # BOOSTING
 adaboost.pred$confusion
 adaboost_test = cbind(simple[701:1019,], adaboost.pred$class)
-adaboost_test = adaboost_test[adaboost_test$MR == "YES" & adaboost_test$`adaboost.pred$class` == "NO",]$narrative
+names(adaboost_test)[names(adaboost_test) == 'adaboost.pred$class'] = 'adaboost'
+View(adaboost_test[adaboost_test$MR == "YES" & adaboost_test$adaboost == "NO",]$documentno)
+View(adaboost_test[adaboost_test$MR == "NO" & adaboost_test$adaboost == "YES",]$documentno)
 # Predicted Class  
 # NO  200  13
 # YES   5 101
