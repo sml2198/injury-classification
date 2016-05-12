@@ -726,8 +726,8 @@ rf.smote.pred = predict(rf.smote, smote.test, type="class")
 table(smote.test$PS, predicted = rf.smote.pred)
 
 # 5/12/16 (mtry = 15)
-# predicted
-# NO YES
-# NO  350  14
-# YES  51  84
+#predicted
+#NO YES
+#NO  316  21
+#YES  49  86
 
