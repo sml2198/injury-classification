@@ -148,7 +148,7 @@ mr.data = mr.data[, c(-match("messy", names(mr.data)))]
 # DEAL WITH MESSY NUMBER TYPOS - RANDOM NUMBERS THAT HAVE BEEN DROPPED INTO NARRATIVES 
 mr.data[, "numbertypo"] = ifelse(grepl("[a-z][0-9][a-z]", mr.data[,"narrative"]), 1, 0)
 for (i in 0:9) {
-  mr.data$narrative <- gsub(i, "", mr.data$narrative)
+  mr.data$narrative[mr.data$numbertypo==1] <- gsub(i, "", mr.data$narrative[mr.data$numbertypo==1])
 }
 
 # CONVERT DATES - THIS NEEDS TO HAPPEN AFTER REPLACING RETURNTOWORKDATE WITH EXTRACTS FROM NARRATIVE FIELDS
@@ -279,6 +279,7 @@ mr.data[, "lug"] = ifelse(grepl("( |^)lug(g)*", mr.data[,"narrative"]) & (mr.dat
 mr.data[, "wrench"] = ifelse(grepl("wrench", mr.data[,"narrative"]), 1, 0)
 mr.data[, "trash"] = ifelse(grepl("(trash|garbage)", mr.data[,"narrative"]), 1, 0)
 mr.data[, "roller"] = ifelse(grepl("roller", mr.data[,"narrative"]), 1, 0)
+# ADD TANK/ACETYLENE/ 
 
 # GENERATE OTHER USEFUL FLAGS ABOUT ACCIDENT 
 mr.data$falling.class = ifelse(mr.data$accidentclassification == "fall of roof or back", 1, 0)
@@ -624,19 +625,19 @@ rf.rose
 
 ######################################################################################################
 # OVERSAMPLE POSITIVE OUTCOMES (MR=YES) FOR RANDOM FOREST: GENERATE BALANCED DATA W SMOTE
-set.seed(1234)
+
 prop.table(table(simple$MR))
-# 0.626104 0.373896 
+#0.6470588 0.3529412 
 
 set.seed(625)
 splitIndex = createDataPartition(simple$MR, p =.50, list = FALSE, times = 1)
 smote.trainx = simple[splitIndex,]
 smote.test = simple[-splitIndex,]
 prop.table(table(smote.trainx$MR))
-# 0.6254902 0.3745098 
+#0.6470588 0.3529412 
 
 # USE SMOTE TO OVERSAMPLE DATA
-smote.train <- SMOTE(MR ~ ., smote.trainx[,!(names(simple) %in% c('documentno','narrative'))], perc.over = 500,perc.under=100)
+smote.train <- SMOTE(MR ~ ., smote.trainx[,!(names(smote.trainx) %in% c('documentno','narrative'))], perc.over = 500,perc.under=100)
 table(smote.train$MR)
 
 # DEFINE RF ON SMOTE OVERSAMPLED DATA
@@ -646,8 +647,8 @@ rf.smote
 ######################################################################################################
 # USE ADABOOST TO IMPLEMENT BOOSTING ALGORITHM 
 
-set.seed(625)
-mr.adaboost = boosting(MR ~ . , data = simple[1:700,!(names(simple) %in% c('documentno','narrative'))], boos = T, mfinal = 1000, coeflearn = 'Freund')
+set.seed(626)
+mr.adaboost = boosting(MR ~ . , data = simple[1:700,!(names(simple) %in% c('documentno','narrative'))], boos = T, mfinal = 200, coeflearn = 'Freund')
 adaboost.pred = predict.boosting(mr.adaboost, newdata = simple[701:1019,!(names(simple) %in% c('documentno','narrative'))])
 
 ######################################################################################################
@@ -656,26 +657,28 @@ adaboost.pred = predict.boosting(mr.adaboost, newdata = simple[701:1019,!(names(
 # SMOTE
 rf.smote.pred = predict(rf.smote, smote.test, type="class")
 table(smote.test$MR, predicted = rf.smote.pred)
+
 # ROSE
 rf.rose.pred = predict(rf.rose, simple[701:1019,!(names(simple) %in% c('documentno','narrative'))],type="class")
 table(simple[701:1019,1], predicted = rf.rose.pred)
+
 # SIMPLE CART
 cart.predictions = predict(cart, simple[701:1019,!(names(simple) %in% c('documentno','narrative'))],type="class")
 table(simple[701:1019,1], predicted = cart.predictions)
+
 # RF UNBALANCED 
 rf.predictions = predict(rf, simple[701:1019,!(names(simple) %in% c('documentno','narrative'))],type="class")
 table(simple[701:1019,1], predicted = rf.predictions)
+# NO  203   2
+# YES  14 100
+
 # BOOSTING
 adaboost.pred$confusion
 adaboost_test = cbind(simple[701:1019,], adaboost.pred$class)
 adaboost_test = adaboost_test[adaboost_test$MR == "YES" & adaboost_test$`adaboost.pred$class` == "NO",]$narrative
-
-# BEST SO FAR
-#Predicted Class  
-# NO  199  13
-# YES   6 101
-
-#simple$prediction <- ifelse(adaboost.pred$prob > 0.5, 1, 0)
+# Predicted Class  
+# NO  200  13
+# YES   5 101
 
 ######################################################################################################
 
