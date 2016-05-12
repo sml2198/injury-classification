@@ -70,10 +70,10 @@ for (i in 1:length(messy_rows)) {
 }
 ps_data = ps_data[, c(-match("messy", names(ps_data)))]
 
-# DEAL WITH MESSY NUMBER TYPOS - RANDOM NUMBERS THAT HAVE BEEN DROPPED INTO NARRATIVES 
+#DEAL WITH MESSY NUMBER TYPOS IN NARRATIVE FIELDS
 ps_data[, "numbertypo"] = ifelse(grepl("[a-z][0-9][a-z]", ps_data[,"narrative"]), 1, 0)
 for (i in 0:9) {
-  ps_data$narrative <- gsub("i", "", ps_data$narrative)
+  ps_data$narrative[ps_data$numbertypo == 1,] <- gsub(i, "", ps_data$narrative[ps_data$numbertypo == 1,])
 }
 # CLEAN UP COMMON TYPOS THAT MAY AFFECT OUR KEYWORD SEARCHES
 ps_data$narrative <- gsub("ag(a)*( )*(in)*st", "against", ps_data$narrative)
@@ -961,7 +961,7 @@ smote.test = simple.ps[-splitIndex,]
 prop.table(table(smote.trainx$PS))
 
 set.seed(625)
-smote.ps <- SMOTE(PS ~ ., simple.ps, perc.over = 600,perc.under=100)
+smote.ps <- SMOTE(PS ~ ., smote.trainx, perc.over = 600,perc.under=100)
 table(smote.ps$PS)
 rf.smote <- randomForest(PS ~ . -documentno, data = smote.ps, mtry = 15, ntree = 1000)
 rf.smote
@@ -985,7 +985,9 @@ adaboost.pred$confusion
 rf.smote.pred = predict(rf.smote, smote.test, type="class")
 table(smote.test$PS, predicted = rf.smote.pred)
 
-# 5/11/16 (mtry = 15)
-#NO  361   3
-#YES  13 122
+# 5/12/16 (mtry = 15)
+# predicted
+# NO YES
+# NO  350  14
+# YES  51  84
 
