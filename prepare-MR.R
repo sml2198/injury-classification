@@ -484,24 +484,30 @@ simple.data = mr.data[, c(match("MR", names(mr.data)), match("repair", names(mr.
                           match("falling.accident", names(mr.data)), match("accident.only", names(mr.data)),
                           match("narrative", names(mr.data)), match("documentno", names(mr.data)))]
 
-simple.data[, "likely.occup"] = ifelse(grepl("maintenance", simple.data[,"occupation"]), 1, 0)
-simple.data[, "maybe.occup"] = ifelse(grepl("electrician", simple.data[,"occupation"]) , 1, 0)
+simple.data[, "likely.occup"] = ifelse(grepl("maintenance", simple.data[,"occupation"]) 
+                                       & falling.accident == 0 & accident.only == 0, 1, 0)
+simple.data[, "maybe.occup"] = ifelse(grepl("electrician", simple.data[,"occupation"]) 
+                                      & falling.accident == 0 & accident.only == 0, 1, 0)
 simple.data[, "likely.activy"] = ifelse(grepl("maintenance", simple.data[,"mineractivity"]) | 
-                                        grepl("wet down working place", simple.data[,"mineractivity"]), 1, 0)
+                                        grepl("wet down working place", simple.data[,"mineractivity"])
+                                        & falling.accident == 0 & accident.only == 0, 1, 0)
 simple.data[, "maybe.activy"] = ifelse(match("handling supplies/materials", simple.data[,"mineractivity"]) |
                                          match("hand tools (not powered)", simple.data[,"mineractivity"]) |
                                          match("no value found", simple.data[,"mineractivity"]) |
                                          match("unknown", simple.data[,"mineractivity"]) | 
                                          match("clean up", simple.data[,"mineractivity"]) | 
-                                         match("inspect equipment", simple.data[,"mineractivity"]), 1, 0)
+                                         match("inspect equipment", simple.data[,"mineractivity"])
+                                         & falling.accident == 0 & accident.only == 0, 1, 0)
 simple.data[, "likely.class"] = ifelse(match("handtools (nonpowered)", simple.data[,"accidentclassification"]) |
                                          match("machinery", simple.data[,"accidentclassification"]) |
-                                         match("electrical", simple.data[,"accidentclassification"]), 1, 0)
+                                         match("electrical", simple.data[,"accidentclassification"])
+                                         & falling.accident == 0 & accident.only == 0, 1, 0)
 simple.data[, "unlikely.class"] = ifelse(match("fall of roof or back", simple.data[,"accidentclassification"]), 1, 0)
 
 simple.data[, "likely.source"] = ifelse((simple.data$sourceofinjury == "wrench" | simple.data$sourceofinjury == "knife" |
                                          simple.data$sourceofinjury == "power saw" | simple.data$sourceofinjury == "hand tools,nonpowered,nec" |
-                                         simple.data$sourceofinjury == "crowbar,pry bar" | simple.data$sourceofinjury == "axe,hammer,sledge"), 1, 0)
+                                         simple.data$sourceofinjury == "crowbar,pry bar" | simple.data$sourceofinjury == "axe,hammer,sledge")
+                                         & falling.accident == 0 & accident.only == 0, 1, 0)
 
 simple.data$false.keyword = ifelse(simple.data$hoist == 1 | simple.data$surgery == 1, 1, 0)
 simple.data$likely.keyword = ifelse((simple.data$repair == 1 | simple.data$fix == 1 | 
@@ -515,13 +521,16 @@ simple.data$likely.keyword = ifelse((simple.data$repair == 1 | simple.data$fix =
                                        simple.data$oil == 1 | simple.data$mrworker == 1 |                                      
                                        simple.data$cover == 1 | simple.data$tests == 1 |
                                        simple.data$toolbox == 1 ) &
+                                       falling.accident == 0 & accident.only == 0 &
                                        simple.data$false.keyword == 0, 1, 0)
 
 simple.data$maybe.keyword = ifelse( (simple.data$remove == 1 | simple.data$dismantl == 1 | 
                                        simple.data$rethread == 1 | 
                                        simple.data$bits == 1 | simple.data$helping == 1 |
                                        simple.data$conveyor == 1 | simple.data$belt == 1 |
-                                       simple.data$tighten == 1 | simple.data$battery == 1 ) & simple.data$false.keyword == 0, 1, 0)
+                                       simple.data$tighten == 1 | simple.data$battery == 1 ) &
+                                       falling.accident == 0 & accident.only == 0 &
+                                       simple.data$false.keyword == 0, 1, 0)
 
 # Remove categorical variables only (not their dummies) - keep narratives and documentno for model training
 #simple.data.groups = simple.data[, c(-match("degreeofinjury", names(simple.data)), -match("occupation", names(simple.data)), 
@@ -649,8 +658,8 @@ rf.smote
 # USE ADABOOST TO IMPLEMENT BOOSTING ALGORITHM 
 
 set.seed(625)
-mr.adaboost = boosting(MR ~ . , data = simple[1:700,!(names(simple) %in% c('documentno','narrative'))], boos = T, mfinal = 1000, coeflearn = 'Freund')
-adaboost.pred = predict.boosting(mr.adaboost, newdata = simple[701:1019,!(names(simple) %in% c('documentno','narrative'))])
+mr.adaboost = boosting(MR ~ . , data = simple[1:400,!(names(simple) %in% c('documentno','narrative'))], boos = T, mfinal = 300, coeflearn = 'Freund')
+adaboost.pred = predict.boosting(mr.adaboost, newdata = simple[401:674,!(names(simple) %in% c('documentno','narrative'))])
 adaboost.pred$confusion
 
 ######################################################################################################
