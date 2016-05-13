@@ -100,4 +100,4 @@ names(clean_inspecs)[grep(".x", names(clean_inspecs), fixed = T)] = common_varst
 #Why doesn't this just delete one observation? Data looks fine up to this point. Nikhil 5/3/16
 clean_inspecs = clean_inspecs[!(((!is.na(clean_inspecs$controllerid) & clean_inspecs$controllerid == "C11088") | is.na(clean_inspecs$controllerid)) & clean_inspecs$eventno == "4165469"),c(-grep("coal_metal_ind", names(clean_inspecs)), -grep("merge", names(clean_inspecs)))]
 
-save(clean_inspecs, file = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_Inspections.RData")
+saveRDS(clean_inspecs, file = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_Inspections.rds")

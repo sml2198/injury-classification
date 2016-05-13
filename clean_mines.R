@@ -60,4 +60,4 @@ names(open_data_mines) = tolower(names(open_data_mines))
 open_data_mines = open_data_mines[, c(-grep("company_type", names(open_data_mines)), -grep("cong_dist_cd", names(open_data_mines)))]
 clean_mines = open_data_mines
 
-save(clean_mines, file = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_mines.RData")
+saveRDS(clean_mines, file = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_mines.rds")

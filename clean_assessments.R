@@ -13,7 +13,7 @@ names(early_assessments)[names(early_assessments) == "Ã.Ã.violationno"] = "vio
 names(open_data_assessments)[names(open_data_assessments) == "VIOLATION_NO"] = "violationno"
 names(open_data_assessments)[names(open_data_assessments) == "VIOLATION_ID"] = "violationid"
 names(open_data_assessments)[names(open_data_assessments) == "EVENT_NO"] = "eventno"
-names(open_data_inspecs)[names(open_data_inspecs) == "MINE_ID"] = "mineid"
+names(open_data_assessments)[names(open_data_assessments) == "MINE_ID"] = "mineid"
 names(open_data_assessments)[names(open_data_assessments) == "COAL_METAL_IND"] = "coalcormetalm"
 names(open_data_assessments)[names(open_data_assessments) == "VIOLATOR_TYPE_CD"] = "violatortypecode"
 names(open_data_assessments)[names(open_data_assessments) == "OFFICE_CD"] = "officecode"
@@ -49,8 +49,8 @@ clean_assessments = merge(open_data_assessments, early_assessments, by = "violat
 clean_assessments[, "merge"] = ifelse(!is.na(clean_assessments$issuedate.y) & !is.na(clean_assessments$issuedate.x), 3, 0)
 clean_assessments[, "merge"] = ifelse(is.na(clean_assessments$issuedate.x) & !is.na(clean_assessments$issuedate.y), 2, clean_assessments[, "merge"])
 clean_assessments[, "merge"] = ifelse(is.na(clean_assessments$issuedate.y) & !is.na(clean_assessments$issuedate.x), 1, clean_assessments[, "merge"])
-table(clean_assessments$merge) #Not matching up with STATA. 1,432 more observations match that in STATA were master only and 1 using only. 32 more using only
+table(clean_assessments$merge) #1 observation in STATA's open data as compared with open_data_assessments. Nikhil 5/13/16
 
 clean_assessments = clean_assessments[, -grep("merge", names(clean_assessments))]
 
-save(clean_assessments, file = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_assessments.RData")
+saveRDS(clean_assessments, file = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_assessments.rds")
