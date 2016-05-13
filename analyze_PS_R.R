@@ -74,7 +74,7 @@ ps_data = ps_data[, c(-match("messy", names(ps_data)))]
 #DEAL WITH MESSY NUMBER TYPOS IN NARRATIVE FIELDS
 ps_data[, "numbertypo"] = ifelse(grepl("[a-z][0-9][a-z]", ps_data[,"narrative"]), 1, 0)
 for (i in 0:9) {
-  ps_data$narrative[ps_data$numbertypo == 1,] <- gsub(i, "", ps_data$narrative[ps_data$numbertypo == 1,])
+  ps_data[ps_data$numbertypo == 1,]$narrative <- gsub(i, "", ps_data[ps_data$numbertypo == 1,]$narrative)
 }
 # CLEAN UP COMMON TYPOS THAT MAY AFFECT OUR KEYWORD SEARCHES
 ps_data$narrative <- gsub("ag(a)*( )*(in)*st", "against", ps_data$narrative)
@@ -84,6 +84,19 @@ ps_data$narrative <- gsub("ag(a)*( )*(in)*st", "against", ps_data$narrative)
 
 ps_data[, "X"] = factor(ifelse(ps_data[, "X"] == 1, "YES", "NO"))
 names(ps_data)[names(ps_data) == "X"] = "PS"
+
+# RECODE SEVEN INJURIES THAT DO NOT JIVE WITH OUR AGREE UPON DEFINITION OF PINNING AND STRIKING. THESE INURIES
+# REFLECT ONE OF TWO TYPES OF ACCIDENTS: (1) THE BRAKES ON A VEHICLE FAIL, CAUSING A V-TO-V OR V-TO-P INCIDENT.
+# PROXIMITY DETECTION COULD NOT BE USED PREVENTATIVELY IN THESE CASES. (2) AN EMPLOYEE IS EITHER OPERATING A
+# VEHICLE OR IS A PASSENGER IN A VEHICLE, WHEN SOME PART OF THEIR BODY IS TRAILING OUTSIDE THE VEHICLE AND IS STRUCK,
+# OR THE VEHICLE IS JOSTLED BY SOME NON-VEHICLE OBJECT, AND THE EMPLOYEE IS HIT AGAINST SOME PART OF THE VEHICLE.
+ps_data$MR[ps_data$documentno=="219982290067"] = "NO"
+ps_data$MR[ps_data$documentno=="219893100251"] = "NO"
+ps_data$MR[ps_data$documentno=="220001180052"] = "NO"
+ps_data$MR[ps_data$documentno=="219893520099"] = "NO"
+ps_data$MR[ps_data$documentno=="219912970040"] = "NO"
+ps_data$MR[ps_data$documentno=="220053110050"] = "NO"
+ps_data$MR[ps_data$documentno=="219952260148"] = "NO"
 
 # How to destring a variable
 ps_data[,grep("numberofemployees", names(ps_data))] = gsub(pattern = ",",replacement =  "", ps_data[,grep("numberofemployees", names(ps_data))])
@@ -154,9 +167,10 @@ ps_data[, "jarring"] = ifelse(grepl("jar(r)*(ed|ing)", ps_data[,"narrative"]) |
                                 grepl("jo(lt|stl)(ed|ing)", ps_data[,"narrative"]), 1, 0)
 ps_data[, "bounced"] = ifelse(grepl("boun(c)*( )*(e|ing)", ps_data[,"narrative"]), 1, 0)
 # avoid sprocket, rockduster, etc
-ps_data[, "rock"] = ifelse(grepl("rock( |$|\\.|s|,)", ps_data[,"narrative"]), 1, 0)
+ps_data[, "rock"] = ifelse((grepl("rock( |$|\\.|s|,)", ps_data[,"narrative"]) & !grepl("rock( )*dust", ps_data[,"narrative"])), 1, 0)
 ps_data[, "digit"] = ifelse(grepl("(finger(s)*|pinky|hand(s)*|thumb|hand( |\\.|,|$))", ps_data[,"narrative"]), 1, 0)
-ps_data[, "derail"] = ifelse(grepl("(left|off|jumped).{1,15}track", ps_data[,"narrative"]) | grepl("derai", ps_data[,"narrative"]), 1, 0)
+ps_data[, "derail"] = ifelse((grepl("(left|off|jumped).{1,15}track", ps_data[,"narrative"]) & !grepl("(left|off|jumped).{1,15}track.{1,3}switch", ps_data[,"narrative"])) | 
+                            grepl("derai", ps_data[,"narrative"]), 1, 0)
 
 # GENERATE LESS GOOD NEGATIVE KEYWORDS
 ps_data[, "roofbolt"] = ifelse(grepl("(roof|rib)( )*bolt", ps_data[,"narrative"]), 1, 0)
@@ -317,7 +331,7 @@ ps_data$narrative <- gsub("passenger", "PERSON", ps_data$narrative)
 ps_data$narrative <- gsub("driver", "PERSON", ps_data$narrative)
 
 ##################################################################################################
-# CREATE A FEW MORE KEYWORDS ON THE NEW NARRATIVE FIELDS, AND GENERATE VARS TO COUNT # OF UPPERCASE WORDS AND DISTANCES
+# GENERATE VARS TO COUNT # OF UPPERCASE WORDS AND DISTANCES
 
 # Count the number of capital words in each string
 ps_data$num.vehicles <- str_count(ps_data$narrative, "VEHICLE")
@@ -325,14 +339,9 @@ ps_data$num.pinstrike <- str_count(ps_data$narrative, "PINNED/STRUCK")
 ps_data$num.person <- str_count(ps_data$narrative, "PERSON")
 ps_data$num.body <- str_count(ps_data$narrative, "BODY")
 
-ps_data[, "no_vehcl"] = ifelse(!grepl("VEHICLE", ps_data[, "narrative"]), 1, 0)
-ps_data[, "v_to_v"] = ifelse(grepl("(VEHICLE|drill|steel|bolter|shear|cutter|tire).{1,20}PINNED/STRUCK.{1,20}(VEHICLE|drill|steel|bolter|shear|cutter|tire)", ps_data[, "narrative"]), 1, 0)
-ps_data[, "v_to_p"] = ifelse((grepl("(VEHICLE).{1,20}PINNED/STRUCK.{1,20}(PERSON|BODY)", ps_data[, "narrative"]) |
-                               grepl("(PERSON|BODY).{1,20}PINNED/STRUCK.{1,20}(VEHICLE)", ps_data[, "narrative"])) & ps_data$false_keyword == 0, 1, 0)
-
+# CREATE A FEW MORE KEYWORDS ON THE NEW NARRATIVE FIELDS
 ps_data[, "loose_rbolting"] = ifelse(grepl("(plate|bit|bolt)+.{1,10}PINNED/STRUCK", ps_data[,"narrative"]), 1, 0)
 ps_data[, "drill_action"] = ifelse(grepl("(plate|bit|bolt)+.{1,10}PINNED/STRUCK", ps_data[,"narrative"]), 1, 0)
-
 # OPERATOR ARM OF HAND TRAILING OUTSIDE VEHICLE
 ps_data[, "outsidevehicle"] = ifelse(((grepl("BODY.{1,15}(resting| hanging).{1,5}(over|out|on)", ps_data[,"narrative"]) & grepl("VEHICLE", ps_data[,"narrative"])) |
                                      grepl("BODY.{1,15}out( )*side.{1,30}VEHICLE", ps_data[,"narrative"])) &
@@ -341,26 +350,32 @@ ps_data[, "outsidevehicle"] = ifelse(((grepl("BODY.{1,15}(resting| hanging).{1,5
 ps_data[, "vcomp_test"] = ifelse(grepl("(seat|rail|canopy|battery|drill|steel|chain|cable)+.{1,20}VEHICLE", ps_data[,"narrative"]) | grepl("VEHICLE.{1,20}(seat|rail|canopy|battery|drill|steel|chain|cable)+", ps_data[,"narrative"]), 1, 0)
 ps_data[, "psobject_test"] = ifelse(grepl("(corner|beam|overcast|rib|wall|coal|rock|header|top|seat|canopy)+.{1,20}PINNED/STRUCK", ps_data[,"narrative"]) | grepl("PINNED/STRUCK.{1,20}(corner|beam|overcast|rib|wall|coal|rock|header|top|seat|canopy)+", ps_data[,"narrative"]), 1, 0)
 
-
 ##################################################################################################
 # GENERATE KEYWORD FLAGS
 
-ps_data$keyword = ifelse((ps_data$pin == 1 | ps_data$strike == 1 |  ps_data$strikerib == 1 | ps_data$drillsteel == 1 |
-                            ps_data$trap == 1 | ps_data$collided == 1 | ps_data$hit == 1 | ps_data$dropped = 1 |
-                            ps_data$ranover == 1 | ps_data$bumped == 1 | ps_data$caught == 1 |
-                            ps_data$rolled == 1 | ps_data$between == 1 | ps_data$wheel == 1), 1, 0)
+ps_data$keyword = ifelse((ps_data$pin == 1 | ps_data$strike == 1 | ps_data$strikerib == 1 | ps_data$drillsteel == 1 |
+                          ps_data$trap == 1 | ps_data$collided == 1 | ps_data$hit == 1 | ps_data$dropped == 1 |
+                          ps_data$ranover == 1 | ps_data$bumped == 1 | ps_data$caught == 1 |
+                          ps_data$rolled == 1 | ps_data$between == 1 | ps_data$wheel == 1), 1, 0)
 ps_data$false_keyword = ifelse((ps_data$brakes == 1 | ps_data$jarring == 1 | ps_data$outsidevehicle == 1 |
-                                  ps_data$bounced == 1 | ps_data$rock == 1 |
-                                  ps_data$digit == 1 | ps_data$derail == 1 |
+                                  ps_data$bounced == 1 | ps_data$rock == 1 | ps_data$derail == 1 |
                                   ps_data$bodyseat == 1 | ps_data$headroof == 1 |
                                   ps_data$hole == 1), 1, 0)
-ps_data$maybe_false_keyword = ifelse((ps_data$roofbolt == 1 | ps_data$driving == 1 |
+ps_data$maybe_false_keyword = ifelse((ps_data$roofbolt == 1 | ps_data$driving == 1 | ps_data$digit == 1 |
                                         ps_data$operating == 1 | ps_data$riding == 1 |
                                         ps_data$passenger == 1 | ps_data$wrench == 1 |
                                         ps_data$controls == 1 | ps_data$resin == 1 |
                                         ps_data$atrs == 1 | ps_data$flew == 1 |
                                         ps_data$loose == 1 | ps_data$broke == 1 | 
                                         ps_data$canopy == 1), 1, 0)
+
+##################################################################################################
+# A FEW MORE KEYWORDS, USING EXISTING KEYWORD FLAGS 
+
+ps_data[, "no_vehcl"] = ifelse(!grepl("VEHICLE", ps_data[, "narrative"]), 1, 0)
+ps_data[, "v_to_v"] = ifelse(grepl("(VEHICLE|drill|steel|bolter|shear|cutter|tire).{1,20}PINNED/STRUCK.{1,20}(VEHICLE|drill|steel|bolter|shear|cutter|tire)", ps_data[, "narrative"]), 1, 0)
+ps_data[, "v_to_p"] = ifelse((grepl("(VEHICLE).{1,20}PINNED/STRUCK.{1,20}(PERSON|BODY)", ps_data[, "narrative"]) |
+                                grepl("(PERSON|BODY).{1,20}PINNED/STRUCK.{1,20}(VEHICLE)", ps_data[, "narrative"])) & ps_data$false_keyword == 0, 1, 0)
 
 ##################################################################################################
 # GENERATE LIKELY CLASSES
@@ -422,21 +437,20 @@ ps_data$maybs_type = ifelse((ps_data$accidenttype == "acc type, without injuries
                                    ps_data$accidenttype == "no value found" |
                                    ps_data$accidenttype == "not elsewhere classified") & ps_data$false_keyword == 0, 1, 0)
 # GENERATE LIKELY EQUIPMENT
-
+vehcl_equip_codes = c("06", "13", "28", "53", "?")
 ps_data[, "moving_vehcl"] = ifelse(!(ps_data$equiptypecode %in% vehcl_equip_codes), 1, 0)
 
 ps_data$likely_equip = ifelse((ps_data$equiptypecode == "12" |  ps_data$equiptypecode == "23" |
                                  ps_data$equiptypecode == "33" |  ps_data$equiptypecode == "34" |
                                  ps_data$equiptypecode == "35" |  ps_data$equiptypecode == "37" |
-                                 ps_data$equiptypecode == "41" |  ps_data$equiptypecode == "44" |
-                                 ps_data$equiptypecode == "60" |  ps_data$equiptypecode == "61" |
-                                 ps_data$equiptypecode == "66" |  ps_data$equiptypecode == "67") & ps_data$false_keyword == 0, 1, 0)
+                                 ps_data$equiptypecode == "41" |  ps_data$equiptypecode == "61" |
+                                 ps_data$equiptypecode == "67") & ps_data$false_keyword == 0, 1, 0)
 ps_data$unlikely_equip = ifelse((ps_data$equiptypecode == "06" |  ps_data$equiptypecode == "09" |
                                    ps_data$equiptypecode == "15" |  ps_data$equiptypecode == "16" |
                                    ps_data$equiptypecode == "20" |  ps_data$equiptypecode == "28" |
                                    ps_data$equiptypecode == "29" |  ps_data$equiptypecode == "53" |
-                                   ps_data$equiptypecode == "55"), 1, 0)
-ps_data$uncertain_equip = ifelse((ps_data$equiptypecode == "?" |  ps_data$equiptypecode == "54" |
+                                   ps_data$equiptypecode == "55" | ps_data$equiptypecode == "?" ), 1, 0)
+ps_data$uncertain_equip = ifelse((ps_data$equiptypecode == "54" |
                                   ps_data$equiptypecode == "71" |  ps_data$equiptypecode == "25" |
                                   ps_data$equiptypecode == "13" |  ps_data$equiptypecode == "14"), 1, 0)
 # GENERATE LIKELY SOURCES
@@ -510,9 +524,6 @@ ps_data$likely_occup = ifelse((ps_data$occupcode3digit == "050" | ps_data$occupc
 ps_data$unlikely_body = ifelse((ps_data$bodypartcode == "200" | ps_data$bodypartcode == "340" | 
                                 ps_data$bodypartcode == "420"), 1, 0)
 
-# GENERATE LIKELY PINNING AND STRIKING ACCIDENT FLAG
-ps_data$potential_ps = ifelse((ps_data$keyword == 1 | ps_data$likely_class == 1 | ps_data$accidenttype == 1), 1, 0)
-
 # GENERATE LIKELY CIRCUMSTANCES
 
 ps_data$falling.class = ifelse(ps_data$accidentclassification == "fall of roof or back", 1, 0)
@@ -524,10 +535,21 @@ ps_data = ps_data[, c(-match("falling.class", names(ps_data)), -match("falling.w
 
 ps_data$accident.only = ifelse( (ps_data$degreeofinjury == "accident only" | ps_data$accidenttypecode == 44), 1, 0)
 
+# GENERATE LIKELY PINNING AND STRIKING ACCIDENT FLAG
+ps_data$potential_ps = ifelse((ps_data$keyword == 1 | ps_data$likely_class == 1 | ps_data$v_to_v == 1 | ps_data$v_to_p == 1) &
+                              (ps_data$accident.only == 0 & ps_data$falling.accident == 0) , 1, 0)
+
+# GENERATE OUR BEST SIMPLE ALGORITHM PINNING AND STRIKING ACCIDENT FLAG
+ps_data$likely_ps = ifelse((ps_data$keyword == 1 | ps_data$likely_class == 1 | ps_data$v_to_v == 1 | ps_data$v_to_p == 1) &
+                              (ps_data$accident.only == 0 & ps_data$falling.accident == 0) &
+                              (ps_data$bodyseat == 0 & ps_data$headroof == 0 & ps_data$hole == 0 &
+                               ps_data$outsidevehicle == 0 & ps_data$derail == 0 & ps_data$bounced == 0 &
+                               ps_data$unlikely_nature == 0 & ps_data$unlikely_source == 0), 1, 0)
+
 ##################################################################################################
 # SIMPLE ALGORITHM
-ps_data[, "holistic"] = ifelse((((ps_data$accidenttypecode %in% likely_acc_type) | (ps_data$accidenttypecode %in% maybe_likely_acc_type)) 
-                                  & (ps_data$likely_actvty == 1 | ps_data$maybe_likely_actvty == 1) & (ps_data$accidentclassification %in% likely_classfctn) 
+ps_data[, "holistic"] = ifelse((((ps_data$likely_type == 1) | (ps_data$maybs_type == 1)) 
+                                  & (ps_data$likely_actvty == 1 | ps_data$maybe_likely_actvty == 1) & (ps_data$likely_class == 1) 
                                   & ps_data$moving_vehcl == 1), 1, 0)
 
 # DUMMY-OUT FACTOR VARS WITH TOO MANY VALUES FOR RANDOM FOREST - MAYBE BETTER THAN THE ABOVE
@@ -663,8 +685,8 @@ simple.data.grouped = ps_data[, c(match("documentno", names(ps_data)), match("PS
                                match("maybe_false_keyword", names(ps_data)), match("dropped", names(ps_data)), 
                                match("v_to_v", names(ps_data)), match("v_to_p", names(ps_data)),                                    
                                match("no_vehcl", names(ps_data)), match("bumped", names(ps_data)),
-                               match("num.vehicles", names(ps_data)), 
-                               match("num.pinstrike", names(ps_data)), 
+                               match("num.vehicles", names(ps_data)), match("potential_ps", names(ps_data)), 
+                               match("num.pinstrike", names(ps_data)), match("likely_ps", names(ps_data)), 
                                match("num.person", names(ps_data)), 
                                match("num.body", names(ps_data)), 
                                match("vcomp_test", names(ps_data)), match("psobject_test", names(ps_data)), 
@@ -774,7 +796,7 @@ names(post.smote.test) = gsub("\\.[x|y]", "", names(post.smote.test))
 
 # LET'S TRACK DOWN WHY THERE ARE MISSING DOC NO'S 
 
-post.smote.test[, "smote_pred"] = ifelse(post.smote.test$`adaboost.pred$class` == "YES" | post.smote.test$rf.smote.pred == "YES", "YES", "NO")
+post.smote.test[, "smote_pred"] = ifelse(((post.smote.test$`adaboost.pred$class` == "YES" | post.smote.test$rf.smote.pred == "YES"), "YES", "NO")
 table(post.smote.test$smote_pred, post.smote.test$PS)
 
 # STEP THREE - POST-PROCESSING
@@ -786,6 +808,6 @@ table(post.smote.test$smote_pred, post.smote.test$PS)
 # 5/12/16 (mtry = 15)
 #predicted
 #NO YES
-#NO  316  21
-#YES  49  86
+#NO  272  31
+#YES  18  79
 
