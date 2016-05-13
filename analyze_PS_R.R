@@ -137,7 +137,6 @@ ps_data[, "drillsteel"] = ifelse((grepl("drill.{1,5}steel", ps_data[,"narrative"
 
 # GENERATE MAYBE LIKELY KEYWORDS
 
-ps_data[, "hit"] = ifelse(grepl("( |^)hit( )*(by|him|his|her|employee|ee)", ps_data[,"narrative"]), 1, 0)
 ps_data[, "ranover"] = ifelse(grepl("( |^)r(a|u)n( )*(over|into)", ps_data[,"narrative"]), 1, 0)
 ps_data[, "rolled"] = ifelse(grepl("rolled( )*(over|into|onto)", ps_data[,"narrative"]), 1, 0)
 ps_data[, "between"] = ifelse(grepl("between", ps_data[,"narrative"]) | grepl("btwn", ps_data[,"narrative"]), 1, 0)
@@ -183,35 +182,14 @@ ps_data[, "bodyseat"] = ifelse(grepl("(back|head|neck).{1,10}seat", ps_data[,"na
                                  !grepl("backward.{1,10}seat", ps_data[,"narrative"]) &
                                  !grepl("(bolt|over|drill)( )*head.{1,10}seat", ps_data[,"narrative"]), 1, 0) 
 # USE HEAD/ROOF TO REMOVE DRIVER HITTING HEAD AGAINST VEHICLE ROOF
-ps_data[, "headroof"] = ifelse(grepl("(head|neck).{1,5}(on|struck|hit|against)+.{1,5}roof", ps_data[,"narrative"]) &
+ps_data[, "headroof"] = ifelse((grepl("(head|neck).{1,5}(on|struck|hit|against)+.{1,5}roof", ps_data[,"narrative"]) |
+                                grepl("(bump|str(ike|uck)|hit).{1,5}(head|neck).{1,5}(roof|top)", ps_data[,"narrative"])) &
                                  !grepl("drill( )*head.{1,10}roof", ps_data[,"narrative"]) &
                                  !grepl("over( )*head.{1,10}roof", ps_data[,"narrative"]) &
                                  !grepl("head(ing|er|ed).{1,10}roof", ps_data[,"narrative"]) &
                                  !grepl("head.{1,10}roof.{1,5}bolt", ps_data[,"narrative"]), 1, 0) 
 # GOING OVER A BUMP AND OPERATOR HITTING HEAD 
 ps_data[, "hole"] = ifelse(grepl("(hit|strike|ran over|struck|went over).{1,10}(rock|hole|bump(s| |$|\\.|,)|dip|depression|low spot)", ps_data[,"narrative"]), 1, 0)
-# FINGERS GETTING PINCHED
-# ps_data[, "handcaught"] = ifelse(grepl("(hand|finger|thumb|digit|pinky|glove)(s)*.{1,5}(c(a|u)(a|u)ght|pinned|between)", ps_data[,"narrative"]), 1, 0)
-
-##################################################################################################
-# GENERATE KEYWORD FLAGS
-
-ps_data$keyword = ifelse((ps_data$pin == 1 | ps_data$strike == 1 |  ps_data$strikerib == 1 | ps_data$drillsteel == 1 |
-                          ps_data$trap == 1 | ps_data$collided == 1 | ps_data$hit == 1 |
-                          ps_data$ranover == 1 | ps_data$rolled == 1 | ps_data$caught == 1 |
-                          ps_data$rolled == 1 | ps_data$between == 1 | ps_data$wheel == 1), 1, 0)
-ps_data$false_keyword = ifelse((ps_data$brakes == 1 | ps_data$jarring == 1 |
-                                ps_data$bounced == 1 | ps_data$rock == 1 |
-                                ps_data$digit == 1 | ps_data$derail == 1 |
-                                ps_data$bodyseat == 1 | ps_data$headroof == 1 |
-                                ps_data$hole == 1), 1, 0)
-ps_data$maybe_false_keyword = ifelse((ps_data$roofbolt == 1 | ps_data$driving == 1 |
-                                  ps_data$operating == 1 | ps_data$riding == 1 |
-                                  ps_data$passenger == 1 | ps_data$wrench == 1 |
-                                  ps_data$controls == 1 | ps_data$resin == 1 |
-                                  ps_data$atrs == 1 | ps_data$flew == 1 |
-                                  ps_data$loose == 1 | ps_data$broke == 1 | 
-                                  ps_data$canopy == 1), 1, 0)
 
 ##################################################################################################
 # CREATE DUPLICATE NARRATIVE FIELDS AND THEN REPLACE ALL MENTIONS OF VEHICLES WITH "VEHICLE", BODY PARTS WITH "BODY", ETC.
@@ -281,7 +259,7 @@ ps_data$narrative <- gsub("spine", "BODY", ps_data$narrative)
 ps_data$narrative <- gsub("elbow(s)*", "BODY", ps_data$narrative)
 ps_data$narrative <- gsub("testicle(s)*", "BODY", ps_data$narrative)
 ps_data$narrative <- gsub("t(ee|oo)th", "BODY", ps_data$narrative) # CHECK TO MAKE SURE NO EQUIPMENT HAS TEETH/TOOTH
-ps_data$narrative <- gsub("(right|left|his|her|both)( )*(foot|feet)", "BODY", ps_data$narrative)
+ps_data$narrative <- gsub("(right|left|his|her|both|onto)( )*(foot|feet)", "BODY", ps_data$narrative)
 ps_data$narrative <- gsub("( |^)hip(s)*", " BODY", ps_data$narrative)
 ps_data[!grepl("backward", ps_data[,"narrative"]),]$narrative <- gsub("(lower|PERSON|the)( )*back", " BODY", ps_data[!grepl("backward", ps_data[,"narrative"]),]$narrative)
 ps_data[!grepl("drill.{1,5}head", ps_data[,"narrative"]) & !grepl("head(ing|er|ed)", ps_data[,"narrative"]) 
@@ -298,6 +276,7 @@ ps_data[, "caught"] = ifelse(grepl("caught.{1,15}(between| in )", ps_data[,"old_
                                grepl("BODY.{1,6}caught", ps_data[,"narrative"]), 1, 0)
 ps_data[, "hit"] = ifelse(grepl("( |^)hit.{1,5}(by|him|his|her|employee|ee)", ps_data[,"old_narrative"]) |
                             grepl("( |^)hit.{1,10}BODY", ps_data[,"narrative"]), 1, 0)
+ps_data[, "dropped"] = ifelse(grepl("(lower(ing|ed)*|drop(p)*(ing|ed)*).{1,15}(bucket|drill( |-)*head|drill( |-)*pod|pinner( |-)*head).{1,15}BODY", ps_data[,"old_narrative"]), 1, 0)
 
 # PIN/STRIKE/TRAP
 
@@ -347,7 +326,7 @@ ps_data$num.person <- str_count(ps_data$narrative, "PERSON")
 ps_data$num.body <- str_count(ps_data$narrative, "BODY")
 
 ps_data[, "no_vehcl"] = ifelse(!grepl("VEHICLE", ps_data[, "narrative"]), 1, 0)
-ps_data[, "v_to_v"] = ifelse(!grepl("(VEHICLE|cricket|drill|steel|bolter|mac 8|shear|cutter|tire).{1,20}PINNED/STRUCK.{1,20}(VEHICLE|cricket|drill|steel|bolter|mac 8|shear|cutter|tire)", ps_data[, "narrative"]), 1, 0)
+ps_data[, "v_to_v"] = ifelse(!grepl("(VEHICLE|drill|steel|bolter|shear|cutter|tire).{1,20}PINNED/STRUCK.{1,20}(VEHICLE|drill|steel|bolter|shear|cutter|tire)", ps_data[, "narrative"]), 1, 0)
 ps_data[, "v_to_p"] = ifelse(!grepl("VEHICLE.{1,35}PINNED/STRUCK.{1,35}(PERSON|BODY)", ps_data[, "narrative"]), 1, 0)
 ps_data[, "loose_rbolting"] = ifelse(grepl("(plate|bit|bolt)+.{1,10}PINNED/STRUCK", ps_data[,"narrative"]), 1, 0)
 ps_data[, "drill_action"] = ifelse(grepl("(plate|bit|bolt)+.{1,10}PINNED/STRUCK", ps_data[,"narrative"]), 1, 0)
@@ -360,10 +339,29 @@ ps_data[, "outsidevehicle"] = ifelse(((grepl("BODY.{1,15}(resting| hanging).{1,5
 ps_data[, "vcomp_test"] = ifelse(grepl("(seat|rail|canopy|battery|drill|steel|chain|cable)+.{1,20}VEHICLE", ps_data[,"narrative"]) | grepl("VEHICLE.{1,20}(seat|rail|canopy|battery|drill|steel|chain|cable)+", ps_data[,"narrative"]), 1, 0)
 ps_data[, "psobject_test"] = ifelse(grepl("(corner|beam|overcast|rib|wall|coal|rock|header|top|seat|canopy)+.{1,20}PINNED/STRUCK", ps_data[,"narrative"]) | grepl("PINNED/STRUCK.{1,20}(corner|beam|overcast|rib|wall|coal|rock|header|top|seat|canopy)+", ps_data[,"narrative"]), 1, 0)
 
+
+##################################################################################################
+# GENERATE KEYWORD FLAGS
+
+ps_data$keyword = ifelse((ps_data$pin == 1 | ps_data$strike == 1 |  ps_data$strikerib == 1 | ps_data$drillsteel == 1 |
+                            ps_data$trap == 1 | ps_data$collided == 1 | ps_data$hit == 1 | ps_data$dropped = 1 |
+                            ps_data$ranover == 1 | ps_data$bumped == 1 | ps_data$caught == 1 |
+                            ps_data$rolled == 1 | ps_data$between == 1 | ps_data$wheel == 1), 1, 0)
+ps_data$false_keyword = ifelse((ps_data$brakes == 1 | ps_data$jarring == 1 | ps_data$outsidevehicle == 1 |
+                                  ps_data$bounced == 1 | ps_data$rock == 1 |
+                                  ps_data$digit == 1 | ps_data$derail == 1 |
+                                  ps_data$bodyseat == 1 | ps_data$headroof == 1 |
+                                  ps_data$hole == 1), 1, 0)
+ps_data$maybe_false_keyword = ifelse((ps_data$roofbolt == 1 | ps_data$driving == 1 |
+                                        ps_data$operating == 1 | ps_data$riding == 1 |
+                                        ps_data$passenger == 1 | ps_data$wrench == 1 |
+                                        ps_data$controls == 1 | ps_data$resin == 1 |
+                                        ps_data$atrs == 1 | ps_data$flew == 1 |
+                                        ps_data$loose == 1 | ps_data$broke == 1 | 
+                                        ps_data$canopy == 1), 1, 0)
+
 ##################################################################################################
 # GENERATE LIKELY CLASSES
-
-likely_classfctn = c("machinery", "powered haulage")
 
 ps_data$likely_class = ifelse((ps_data$accidentclassification == "powered haulage" | 
                                ps_data$accidentclassification == "machinery" ), 1, 0)
@@ -382,9 +380,6 @@ ps_data$uncertain_class = ifelse((ps_data$accidentclassification == "fall of roo
                                     ps_data$accidentclassification == "striking or bumping"), 1, 0)
 
 # GENERATE LIKELY TYPES
-
-likely_acc_type = c(7, 6, 22, 2) 
-maybe_likely_acc_type = c(1, 12, 20, 21, 24) 
 
 ps_data$likely_type = ifelse((ps_data$accidenttype == "struck by, nec" | 
                               ps_data$accidenttype == "struck by powered moving obj" |
@@ -410,8 +405,8 @@ ps_data$unlikely_type = ifelse((ps_data$accidenttype == "fall from ladders" |
                                 ps_data$accidenttype == "absrtn rad caust txc & nox sbs" |
                                 ps_data$accidenttype == "flash burns (electric)" |
                                 ps_data$accidenttype == "over-exertion, nec"), 1, 0)
-ps_data$uncertain_type = ifelse((
-                                   ps_data$accidenttype == "struck against stationary obj" |
+
+ps_data$uncertain_type = ifelse((ps_data$accidenttype == "struck against stationary obj" |
                                    ps_data$accidenttype == "fall frm mach, vehicle, equip" |
                                    ps_data$accidenttype == "struck by falling object" |
                                    ps_data$accidenttype == "struck by flying object" |
@@ -426,7 +421,6 @@ ps_data$maybs_type = ifelse((ps_data$accidenttype == "acc type, without injuries
                                    ps_data$accidenttype == "not elsewhere classified") & ps_data$false_keyword == 0, 1, 0)
 # GENERATE LIKELY EQUIPMENT
 
-vehcl_equip_codes = c("06", "13", "28", "53", "?")
 ps_data[, "moving_vehcl"] = ifelse(!(ps_data$equiptypecode %in% vehcl_equip_codes), 1, 0)
 
 ps_data$likely_equip = ifelse((ps_data$equiptypecode == "12" |  ps_data$equiptypecode == "23" |
@@ -515,7 +509,7 @@ ps_data$unlikely_body = ifelse((ps_data$bodypartcode == "200" | ps_data$bodypart
                                 ps_data$bodypartcode == "420"), 1, 0)
 
 # GENERATE LIKELY PINNING AND STRIKING ACCIDENT FLAG
-ps_data$POTENTIAL_PS = ifelse((ps_data$keyword == 1 | ps_data$likely_class == 1 | ps_data$accidenttype == 1), 1, 0)
+ps_data$potential_ps = ifelse((ps_data$keyword == 1 | ps_data$likely_class == 1 | ps_data$accidenttype == 1), 1, 0)
 
 # GENERATE LIKELY CIRCUMSTANCES
 
@@ -664,9 +658,9 @@ simple.data.grouped = ps_data[, c(match("documentno", names(ps_data)), match("PS
                                match("headroof", names(ps_data)), match("hole", names(ps_data)), 
                                match("drillsteel", names(ps_data)), match("outsidevehicle", names(ps_data)), 
                                match("keyword", names(ps_data)), match("false_keyword", names(ps_data)), 
-                               match("maybe_false_keyword", names(ps_data)), 
+                               match("maybe_false_keyword", names(ps_data)), match("dropped", names(ps_data)), 
                                match("v_to_v", names(ps_data)), match("v_to_p", names(ps_data)),                                    
-                               match("no_vehcl", names(ps_data)), 
+                               match("no_vehcl", names(ps_data)), match("bumped", names(ps_data)),
                                match("num.vehicles", names(ps_data)), 
                                match("num.pinstrike", names(ps_data)), 
                                match("num.person", names(ps_data)), 
@@ -785,9 +779,6 @@ table(post.smote.test$smote_pred, post.smote.test$PS)
 
 # THIS IS WHERE WE FILTER OUT FALSE POSITIVES
 
-hole 
-headroof 
-bodyseat
 
 # BEST PREDICTION SO FAR
 # 5/12/16 (mtry = 15)
