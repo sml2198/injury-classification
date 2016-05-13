@@ -148,7 +148,7 @@ mr.data = mr.data[, c(-match("messy", names(mr.data)))]
 # DEAL WITH MESSY NUMBER TYPOS - RANDOM NUMBERS THAT HAVE BEEN DROPPED INTO NARRATIVES 
 mr.data[, "numbertypo"] = ifelse(grepl("[a-z][0-9][a-z]", mr.data[,"narrative"]), 1, 0)
 for (i in 0:9) {
-  mr.data$narrative[mr.data$numbertypo==1] <- gsub(i, "", mr.data$narrative[mr.data$numbertypo==1])
+  mr.data[mr.data$numbertypo==1]$narrative <- gsub(i, "", mr.data[mr.data$numbertypo==1]$narrative)
 }
 
 # CONVERT DATES - THIS NEEDS TO HAPPEN AFTER REPLACING RETURNTOWORKDATE WITH EXTRACTS FROM NARRATIVE FIELDS
