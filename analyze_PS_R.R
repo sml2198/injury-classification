@@ -326,8 +326,10 @@ ps_data$num.person <- str_count(ps_data$narrative, "PERSON")
 ps_data$num.body <- str_count(ps_data$narrative, "BODY")
 
 ps_data[, "no_vehcl"] = ifelse(!grepl("VEHICLE", ps_data[, "narrative"]), 1, 0)
-ps_data[, "v_to_v"] = ifelse(!grepl("(VEHICLE|drill|steel|bolter|shear|cutter|tire).{1,20}PINNED/STRUCK.{1,20}(VEHICLE|drill|steel|bolter|shear|cutter|tire)", ps_data[, "narrative"]), 1, 0)
-ps_data[, "v_to_p"] = ifelse(!grepl("VEHICLE.{1,35}PINNED/STRUCK.{1,35}(PERSON|BODY)", ps_data[, "narrative"]), 1, 0)
+ps_data[, "v_to_v"] = ifelse(grepl("(VEHICLE|cricket|drill|steel|bolter|mac 8|shear|cutter|tire).{1,20}PINNED/STRUCK.{1,20}(VEHICLE|cricket|drill|steel|bolter|mac 8|shear|cutter|tire)", ps_data[, "narrative"]), 1, 0)
+ps_data[, "v_to_p"] = ifelse((grepl("(VEHICLE).{1,20}PINNED/STRUCK.{1,20}(PERSON|BODY)", ps_data[, "narrative"]) |
+                               grepl("(PERSON|BODY).{1,20}PINNED/STRUCK.{1,20}(VEHICLE)", ps_data[, "narrative"])) & ps_data$false_keyword == 0, 1, 0)
+
 ps_data[, "loose_rbolting"] = ifelse(grepl("(plate|bit|bolt)+.{1,10}PINNED/STRUCK", ps_data[,"narrative"]), 1, 0)
 ps_data[, "drill_action"] = ifelse(grepl("(plate|bit|bolt)+.{1,10}PINNED/STRUCK", ps_data[,"narrative"]), 1, 0)
 
