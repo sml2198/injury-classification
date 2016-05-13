@@ -27,6 +27,7 @@ library(caret)
 library(dummies)
 library(stringr)
 
+rm(list = ls())
 #Specify imputation method here: 1 - means & modes, 2 - medians & modes, 3 - random sampling from distribution - best we can do for now
 #4 - multiple imputation through regression
 imputation_method = 3
@@ -189,7 +190,7 @@ ps_data[, "headroof"] = ifelse(grepl("(head|neck).{1,5}(on|struck|hit|against)+.
                                  !grepl("head(ing|er|ed).{1,10}roof", ps_data[,"narrative"]) &
                                  !grepl("head.{1,10}roof.{1,5}bolt", ps_data[,"narrative"]), 1, 0) 
 # GOING OVER A BUMP AND OPERATOR HITTING HEAD 
-ps_data[, "hole"] = ifelse(grepl("(hit|strike|ran over|struck|went over).{1,10}(rock|hole|bump|dip|depression|low spot)", ps_data[,"narrative"]), 1, 0)
+ps_data[, "hole"] = ifelse(grepl("(hit|strike|ran over|struck|went over).{1,10}(rock|hole|bump(s| |$|\\.|,)|dip|depression|low spot)", ps_data[,"narrative"]), 1, 0)
 # FINGERS GETTING PINCHED
 # ps_data[, "handcaught"] = ifelse(grepl("(hand|finger|thumb|digit|pinky|glove)(s)*.{1,5}(c(a|u)(a|u)ght|pinned|between)", ps_data[,"narrative"]), 1, 0)
 
@@ -629,7 +630,7 @@ if (imputation_method == 1 | imputation_method == 2) {
 
 ##################################################################################################
 # PRODUCE DATASETS WITH ONLY VARS OF INTEREST FOR RF/BOOSTING ANALYSIS
-simple.data.grouped = ps_data[ps_data$accident.only == 0, c(match("documentno", names(ps_data)), match("PS", names(ps_data)), match("pin", names(ps_data)),
+simple.data.grouped = ps_data[, c(match("documentno", names(ps_data)), match("PS", names(ps_data)), match("pin", names(ps_data)),
                                match("strike", names(ps_data)), match("strikerib", names(ps_data)), grep("maybs_", names(ps_data)),
                                match("trap", names(ps_data)),  match("collided", names(ps_data)),
                                match("hit", names(ps_data)), match("ranover", names(ps_data)),
@@ -693,19 +694,6 @@ rf <- randomForest(PS ~ . -documentno, data = simple.ps[1:600,], mtry = 8, impor
                    ntree = 200)
 rf
 
-# USE SMOTE TO OVERSAMPLE DATA
-set.seed(625)
-splitIndex = createDataPartition(simple.ps$PS, p =.50, list = FALSE, times = 1)
-smote.trainx = simple.ps[splitIndex,]
-smote.test = simple.ps[-splitIndex,]
-prop.table(table(smote.trainx$PS))
-
-set.seed(625)
-smote.ps <- SMOTE(PS ~ ., smote.trainx, perc.over = 600,perc.under=100)
-table(smote.ps$PS)
-rf.smote <- randomForest(PS ~ . -documentno, data = smote.ps, mtry = 15, ntree = 1000)
-rf.smote
-
 # BOOSTING
 ps.adaboost = boosting(PS ~ . -documentno, data = simple.ps[1:600,], boos = T, mfinal = 100, coeflearn = 'Freund')
 adaboost.pred = predict.boosting(ps.adaboost, newdata = simple.ps[601:1000,])
@@ -721,10 +709,68 @@ table(simple.ps[601:1000,2], predicted = rf.predictions)
 
 adaboost.pred$confusion
 
-# BEST PREDICTION SO FAR
-rf.smote.pred = predict(rf.smote, smote.test, type="class")
-table(smote.test$PS, predicted = rf.smote.pred)
 
+##################################################################################################
+# COMPOSITE ALGORITHM
+
+#splitIndex = createDataPartition(simple.ps$PS, p =.50, list = FALSE, times = 1)
+#smote.trainx = simple.ps[splitIndex,]
+#smote.test = simple.ps[-splitIndex,]
+#prop.table(table(smote.trainx$PS))
+set.seed(625)
+# CREATE UNIQUE ID FOR FUTURE MERGES, SEPARATE TRAINING AND TEST DATA
+simple.ps[, "unique_id"] = row(as.matrix(simple.ps[,1]))
+smote.trainx = simple.ps[1:600,]
+smote.test = simple.ps[601:1000,]
+
+# STEP ONE: PRE-PROCESSING
+# USE SMOTE TO OVERSAMPLE DATA
+smote.ps <- SMOTE(PS ~ ., smote.trainx, perc.over = 600,perc.under=100)
+table(smote.ps$PS)
+
+#  WEED OUT OBS THAT ARE DEFINITELY NOT PS
+smote.test[, "predict"] = ifelse((smote.test$accident.only == 0 & smote.test$falling.accident == 0), 1, 0)
+
+# STEP TWO: MODEL
+# NOW DO A RANDOM FOREST ON THE SMOTED DATA
+rf.smote <- randomForest(PS ~ . -documentno, data = smote.ps, mtry = 15, ntree = 1000)
+rf.smote
+
+#PREDICT
+rf.smote.pred = predict(rf.smote, smote.test[smote.test$predict == 1,], type="class")
+table(smote.test[smote.test$predict == 1,]$PS, predicted = rf.smote.pred)
+
+# MERGE ON PREDICTIONS
+smote.test.aux = cbind(smote.test[smote.test$predict == 1,], rf.smote.pred)
+post.smote.test = merge(smote.test, smote.test.aux, by = "unique_id", all = T)
+post.smote.test = post.smote.test[, c(-grep("\\.y", names(post.smote.test)))]
+names(post.smote.test) = gsub("\\.[x|y]", "", names(post.smote.test))
+
+post.smote.test[, "smote_pred"] = ifelse(is.na(post.smote.test$rf.smote.pred), 1, post.smote.test$rf.smote.pred)
+
+# RUN BOOSTING ON OBSERVATIONS CLASSIFIED "NO" BY THE RANDOM FOREST
+ps.adaboost = boosting(PS ~ . -documentno, data = smote.trainx, boos = T, mfinal = 1000, coeflearn = 'Freund')
+
+adaboost.pred = predict.boosting(ps.adaboost, newdata = post.smote.test[post.smote.test$predict==1 & post.smote.test$rf.smote.pred=="NO",
+                  c(-grep("rf.smote.pred",names(post.smote.test)), -grep("predict",names(post.smote.test)))])
+adaboost.pred$confusion
+
+# GENERATE VARIABLE WITH FINAL PREDICTIONS
+boost.test.aux = cbind(post.smote.test[post.smote.test$predict == 1 & post.smote.test$rf.smote.pred == "NO",], adaboost.pred$class)
+post.smote.test = merge(post.smote.test, boost.test.aux, by = "documentno", all = T)
+post.smote.test = post.smote.test[, c(-grep("\\.y", names(post.smote.test)))]
+names(post.smote.test) = gsub("\\.[x|y]", "", names(post.smote.test))
+
+# LET'S TRACK DOWN WHY THERE ARE MISSING DOC NO'S 
+
+post.smote.test[, "smote_pred"] = ifelse(post.smote.test$`adaboost.pred$class` == "YES" | post.smote.test$rf.smote.pred == "YES", "YES", "NO")
+table(post.smote.test$smote_pred, post.smote.test$PS)
+
+# STEP THREE - POST-PROCESSING
+
+# THIS IS WHERE WE FILTER OUT FALSE POSITIVES
+
+# BEST PREDICTION SO FAR
 # 5/12/16 (mtry = 15)
 #predicted
 #NO YES
