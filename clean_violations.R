@@ -57,6 +57,6 @@ clean_violations = merge(early_viols, open_data_viols, by = "violationno", all =
 clean_violations[, "merge"] = ifelse(!is.na(clean_violations$eventno.y) & !is.na(clean_violations$eventno.x), 3, 0)
 clean_violations[, "merge"] = ifelse(is.na(clean_violations$eventno.x) & !is.na(clean_violations$eventno.y), 2, clean_violations[, "merge"])
 clean_violations[, "merge"] = ifelse(is.na(clean_violations$eventno.y) & !is.na(clean_violations$eventno.x), 1, clean_violations[, "merge"])
-table(clean_violations$merge)
+table(clean_violations$merge) #1 observation in STATA's open data as compared with open_data_assessments. Nikhil 5/13/16
 
-save(clean_violations, file = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_violations.RData")
+saveRDS(clean_violations, file = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_violations.rds")
