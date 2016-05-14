@@ -243,6 +243,8 @@ ps_data$narrative <- gsub("jeep", "VEHICLE", ps_data$narrative)
 ps_data$narrative <- gsub("(ore)*( |-)haul(er|age)", "VEHICLE", ps_data$narrative)
 ps_data$narrative <- gsub("rail( |-)*runner", "VEHICLE", ps_data$narrative)
 ps_data$narrative <- gsub("feeder", "VEHICLE", ps_data$narrative)
+ps_data$narrative <- gsub("rail( |-)*runner", "VEHICLE", ps_data$narrative)
+ps_data$narrative <- gsub("mobile", "VEHICLE", ps_data$narrative)
 ps_data$narrative <- gsub("porta( |-)*bus", "VEHICLE", ps_data$narrative)
 ps_data[!grepl("to trip", ps_data[,"narrative"]),]$narrative <- gsub("( |^)trip( |$|,|\\.)", " VEHICLE ", ps_data[!grepl("to trip", ps_data[,"narrative"]),]$narrative)
 ps_data[!grepl("scoop(er|ing)", ps_data[,"narrative"]),]$narrative <- gsub("scoop", " VEHICLE ", ps_data[!grepl("scoop(er|ing)", ps_data[,"narrative"]),]$narrative)
@@ -729,7 +731,7 @@ simple.data.grouped = ps_data[, c(match("documentno", names(ps_data)), match("PS
                                    match("uncertain_nature", names(ps_data)),
                                    match("falling.accident", names(ps_data)), match("accident.only", names(ps_data)))]
 
-#write.csv(simple.data.grouped, file = "C:/Users/nsaifull/Dropbox/R-Code/prepped_PS_training_data_grouped.csv", row.names = FALSE)
+write.csv(simple.data.grouped, file = "C:/Users/slevine2/Dropbox/R-Code/prepped_PS_training_data_grouped.csv", row.names = FALSE)
 
 ##################################################################################################
 # ALGORITHM
@@ -770,9 +772,7 @@ simple.adaboost.pred = predict.boosting(ps.adaboost, newdata = simple.ps[601:100
 #splitIndex = createDataPartition(simple.ps$PS, p =.50, list = FALSE, times = 1)
 #smote.trainx = simple.ps[splitIndex,]
 #smote.test = simple.ps[-splitIndex,]
-#prop.table(table(smote.trainx$PS))
 set.seed(625)
-# CREATE UNIQUE ID FOR FUTURE MERGES, SEPARATE TRAINING AND TEST DATA
 smote.trainx = simple.ps[1:600,]
 smote.test = simple.ps[601:1000,]
 
@@ -839,7 +839,8 @@ simple.adaboost.pred$confusion
 table(post.smote.test$smote_pred, post.smote.test$PS)
 
 # BEST PREDICTION SO FAR
-#NO YES
+
+     #NO YES
 #NO  232  29
 #YES  21  81
 
