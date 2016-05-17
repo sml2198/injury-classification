@@ -853,11 +853,8 @@ table(post.smote.test$smote_pred, post.smote.test$PS)
 
 # BEST PREDICTION SO FAR
 
-     #NO YES
-#NO  232  29
-#YES  21  81
+#NO YES
+#NO  242  30
+#YES  14  77
 
-NO YES
-NO  242  30
-YES  14  77
 post.smote.test[, "smote_pred"] = ifelse((post.smote.test$smote_pred == "NO" | post.smote.test$PS == "YES"), "YES", "NO")
