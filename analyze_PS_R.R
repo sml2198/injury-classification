@@ -214,7 +214,7 @@ ps_data[, "hole"] = ifelse(grepl("(hit|strike|ran over|struck|went over).{1,10}(
 ps_data$old_narrative <- ps_data$narrative
 
 # VEHICLE
-ps_data$narrative <- gsub("(man|ram|shuttle)( |-|- |v)*(trip|car)", "VEHICLE", ps_data$narrative)
+ps_data$narrative <- gsub("(man|ram|shuttle)( |-|- |v)*(trip|car)( car)*", "VEHICLE", ps_data$narrative)
 ps_data$narrative <- gsub("( |^)car( |\\.|,|$)", " VEHICLE ", ps_data$narrative)
 ps_data$narrative <- gsub("(m|a)(m|a)n( |-|- )*bus", "VEHICLE", ps_data$narrative)
 ps_data$narrative <- gsub("( |^)bus( |\\.|,|$)", " VEHICLE ", ps_data$narrative)
@@ -251,7 +251,7 @@ ps_data$narrative <- gsub("mobile", "VEHICLE", ps_data$narrative)
 ps_data$narrative <- gsub("porta( |-)*bus", "VEHICLE", ps_data$narrative)
 ps_data[!grepl("troll(e)*y( )*pol(e|l)", ps_data[,"narrative"]),]$narrative <- gsub("trolley", " VEHICLE ", ps_data[!grepl("troll(e)*y( )*pol(e|l)", ps_data[,"narrative"]),]$narrative)
 ps_data[!grepl("to trip", ps_data[,"narrative"]),]$narrative <- gsub("( |^)trip( |$|,|\\.)", " VEHICLE ", ps_data[!grepl("to trip", ps_data[,"narrative"]),]$narrative)
-ps_data[!grepl("scoop(er|ing)", ps_data[,"narrative"]),]$narrative <- gsub("scoop", " VEHICLE ", ps_data[!grepl("scoop(er|ing)", ps_data[,"narrative"]),]$narrative)
+ps_data[!grepl("scoop(er|ing)", ps_data[,"narrative"]),]$narrative <- gsub("scoop( car)*", " VEHICLE ", ps_data[!grepl("scoop(er|ing)", ps_data[,"narrative"]),]$narrative)
 ps_data[!grepl("to tram", ps_data[,"narrative"]) & 
           !grepl("tram.{1,5}(lever|sprocket|pedal|chain)", ps_data[,"narrative"]),]$narrative <- gsub("tram( |$|\\.|,)", " VEHICLE ", ps_data[!grepl("to tram", ps_data[,"narrative"]) & 
                                                                                                                                       !grepl("tram.{1,5}(lever|sprocket|pedal|chain)", ps_data[,"narrative"]),]$narrative)
@@ -288,8 +288,8 @@ ps_data$narrative <- gsub("(right|left|his|her|both|onto)( )*(foot|feet)", "BODY
 ps_data$narrative <- gsub("( |^)hip(s)*", " BODY", ps_data$narrative)
 ps_data[!grepl("backward", ps_data[,"narrative"]),]$narrative <- gsub("(lower|PERSON|the)( )*back", " BODY", ps_data[!grepl("backward", ps_data[,"narrative"]),]$narrative)
 ps_data[!grepl("drill.{1,5}head", ps_data[,"narrative"]) & !grepl("head(ing|er|ed)", ps_data[,"narrative"]) 
-        & !grepl("over( )*head", ps_data[,"narrative"]),]$narrative <- gsub("(^| )head( |$|\\.|,)", " BODY ",
-                                                                            ps_data[!grepl("drill.{1,5}head", ps_data[,"narrative"]) & !grepl("head(ing|er|ed)", ps_data[,"narrative"]) & !grepl("over( )*head", ps_data[,"narrative"]),]$narrative)
+        & !grepl("(over|cutter)( )*head", ps_data[,"narrative"]),]$narrative <- gsub("(^| )head( |$|\\.|,)", " BODY ",
+                                                                            ps_data[!grepl("drill.{1,5}head", ps_data[,"narrative"]) & !grepl("head(ing|er|ed)", ps_data[,"narrative"]) & !grepl("(over|cutter)( )*head", ps_data[,"narrative"]),]$narrative)
 ps_data[!grepl("(coal|the).{1,5}face", ps_data[,"narrative"]),]$narrative <- gsub("face", "BODY", ps_data[!grepl("(coal|the).{1,5}face", ps_data[,"narrative"]),]$narrative)
 
 #GENERATE SOME POSITIVE KEYWORDS USING THE BODY PARTS, BEFORE SUBBING IN THE PIN/STRIKE/TRAP 
@@ -392,13 +392,13 @@ ps_data$keyword = ifelse((ps_data$pin == 1 | ps_data$strike == 1 | ps_data$strik
                             ps_data$rolled == 1 | ps_data$between == 1 | ps_data$wheel == 1) &
                            (ps_data$accident.only == 0 & ps_data$falling.accident == 0), 1, 0)
 
-ps_data$false_keyword = ifelse((ps_data$brakes == 1 | ps_data$jarring == 1 | ps_data$outsidevehicle == 1 |
+ps_data$false_keyword = ifelse((ps_data$brakes == 1 | ps_data$jarring == 1 | ps_data$outsidevehicle == 1 | ps_data$steering == 1 |
                                   ps_data$bounced == 1 | ps_data$rock == 1 | ps_data$derail == 1 | ps_data$cable == 1 |
                                   ps_data$bodyseat == 1 | ps_data$headroof == 1 | ps_data$strap == 1 | ps_data$trolleypole == 1 |
                                   ps_data$hole == 1), 1, 0)
 
 ps_data$maybe_false_keyword = ifelse((ps_data$roofbolt == 1 | ps_data$driving == 1 | ps_data$digit == 1 |
-                                      ps_data$riding == 1 | ps_data$bent == 1 | ps_data$steering == 1 |
+                                      ps_data$riding == 1 | ps_data$bent == 1 | 
                                       ps_data$passenger == 1 | ps_data$wrench == 1 |
                                       ps_data$controls == 1 | ps_data$resin == 1 | ps_data$flew == 1 |
                                       ps_data$loose == 1 | ps_data$broke == 1 | 
