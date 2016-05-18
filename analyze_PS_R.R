@@ -254,6 +254,8 @@ ps_data$narrative <- gsub("jeep", "VEHICLE", ps_data$narrative)
 ps_data$narrative <- gsub("(ore)*( |-)haul(er|age)", "VEHICLE", ps_data$narrative)
 ps_data$narrative <- gsub("rail( |-)*runner", "VEHICLE", ps_data$narrative)
 ps_data$narrative <- gsub("feeder", "VEHICLE", ps_data$narrative)
+ps_data$narrative <- gsub("mucker", "VEHICLE", ps_data$narrative)
+ps_data$narrative <- gsub("eimco", "VEHICLE", ps_data$narrative)
 ps_data$narrative <- gsub("jitney", "VEHICLE", ps_data$narrative)
 ps_data$narrative <- gsub("rail( |-)*runner", "VEHICLE", ps_data$narrative)
 ps_data$narrative <- gsub("mobile", "VEHICLE", ps_data$narrative)
@@ -507,10 +509,10 @@ ps_data$unlikely_source = ifelse((ps_data$injurysourcecode == "003" | ps_data$in
                                  ps_data$injurysourcecode == "006" | ps_data$injurysourcecode == "007" | 
                                  ps_data$injurysourcecode == "008" | ps_data$injurysourcecode == "009" |
                                  ps_data$injurysourcecode == "012" | ps_data$injurysourcecode == "051" | 
-                                 ps_data$injurysourcecode == "057" | ps_data$injurysourcecode == "063" | 
+                                 ps_data$injurysourcecode == "089" |
                                  ps_data$injurysourcecode == "067" | ps_data$injurysourcecode == "068" |
                                  ps_data$injurysourcecode == "078" | ps_data$injurysourcecode == "079" | 
-                                 ps_data$injurysourcecode == "080" | ps_data$injurysourcecode == "083" | ps_data$injurysourcecode == "089" |
+                                 ps_data$injurysourcecode == "080" | ps_data$injurysourcecode == "083" |
                                  ps_data$injurysourcecode == "090" | ps_data$injurysourcecode == "092" | 
                                  ps_data$injurysourcecode == "093" | ps_data$injurysourcecode == "096" | 
                                  ps_data$injurysourcecode == "098" | ps_data$injurysourcecode == "112" |
