@@ -200,13 +200,14 @@ ps_data[, "bodyseat"] = ifelse(grepl("(back|head|neck).{1,10}seat", ps_data[,"na
 # USE HEAD/ROOF TO REMOVE DRIVER HITTING HEAD AGAINST VEHICLE ROOF
 ps_data[, "headroof"] = ifelse((grepl("(head|neck).{1,5}(on|str(ike|uck)|hit|against).{1,5}(roof|top)", ps_data[,"narrative"]) |
                                 grepl("(bump|str(ike|uck)|hit).{1,5}(head|neck).{1,5}(roof|top)", ps_data[,"narrative"]) | 
-                               (grepl("whip( )*lash", ps_data[,"narrative"]) & ps_data$driving == 1)) &
+                               (grepl("whip( )*lash", ps_data[,"narrative"]) & ps_data$driving == 1) | 
+                                grepl("jerked.{1,10}(head|neck)", ps_data[,"narrative"])) &
                                  !grepl("drill( )*head.{1,10}roof", ps_data[,"narrative"]) &
                                  !grepl("over( )*head.{1,10}roof", ps_data[,"narrative"]) &
                                  !grepl("head(ing|er|ed).{1,10}roof", ps_data[,"narrative"]) &
                                  !grepl("head.{1,10}roof.{1,5}bolt", ps_data[,"narrative"]), 1, 0) 
 # GOING OVER A BUMP AND OPERATOR HITTING HEAD 
-ps_data[, "hole"] = ifelse(grepl("(hit|strike|ran over|struck|went over).{1,10}(rock|hole|bump(s| |$|\\.|,)|dip|depression|low spot)", ps_data[,"narrative"]), 1, 0)
+ps_data[, "hole"] = ifelse(grepl("(hit|str(ike|uck)|r(a|u)n( )*over|(went|go)( )*over).{1,10}(rock|hole|bump(s| |$|\\.|,)|dip|depression|uneven|offset|((low|bad|rough)( |-)*(spot|patch|place)", ps_data[,"narrative"]), 1, 0)
 
 ##################################################################################################
 # CREATE DUPLICATE NARRATIVE FIELDS AND THEN REPLACE ALL MENTIONS OF VEHICLES WITH "VEHICLE", BODY PARTS WITH "BODY", ETC.
