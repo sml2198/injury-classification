@@ -206,8 +206,16 @@ ps_data[, "headroof"] = ifelse((grepl("(head|neck).{1,5}(on|str(ike|uck)|hit|aga
                                  !grepl("over( )*head.{1,10}roof", ps_data[,"narrative"]) &
                                  !grepl("head(ing|er|ed).{1,10}roof", ps_data[,"narrative"]) &
                                  !grepl("head.{1,10}roof.{1,5}bolt", ps_data[,"narrative"]), 1, 0) 
+# HITTING HEAD AGAINST CANOPY
+ps_data[, "headcanopy"] = ifelse((grepl("(head|neck).{1,5}(on|str(ike|uck)|hit|against).{1,5}(canopy)", ps_data[,"narrative"]) |
+                                  grepl("(bump|str(ike|uck)|hit).{1,5}(head|neck).{1,5}(canopy)", ps_data[,"narrative"])) &
+                                 !grepl("drill( )*head.{1,10}canopy", ps_data[,"narrative"]) &
+                                 !grepl("over( )*head.{1,10}canopy", ps_data[,"narrative"]) &
+                                 !grepl("head(ing|er|ed).{1,10}canopy", ps_data[,"narrative"]), 1, 0) 
 # GOING OVER A BUMP AND OPERATOR HITTING HEAD 
-ps_data[, "hole"] = ifelse(grepl("(hit|str(ike|uck)|r(a|u)n( )*over|(went|go)( )*over).{1,10}(rock|hole|bump(s| |$|\\.|,)|dip|depression|uneven|offset|((low|bad|rough)( |-)*(spot|patch|place)", ps_data[,"narrative"]), 1, 0)
+ps_data[, "hole"] = ifelse(grepl("(hit|str(ike|uck)|r(a|u)n( )*over|(went|go)( )*over).{1,10}(rock|hole|bump(s| |$|\\.|,)|dip|depression|uneven|offset|((low|bad|rough)( |-)*(spot|patch|place)))", ps_data[,"narrative"]), 1, 0)
+ps_data[, "unevenbottom"] = ifelse(grepl("(hole|bump(s| |$|\\.|,)|dip|depression|uneven|offset|((low|bad|rough)( |-)*(spot|place|patch)))", ps_data[,"narrative"]) & 
+                                  !grepl("(bolt|drill|steel|cable|test|pin).{1,15}hole", ps_data[,"narrative"]), 1, 0)
 
 ##################################################################################################
 # CREATE DUPLICATE NARRATIVE FIELDS AND THEN REPLACE ALL MENTIONS OF VEHICLES WITH "VEHICLE", BODY PARTS WITH "BODY", ETC.
@@ -561,10 +569,10 @@ ps_data$unlikely_body = ifelse((ps_data$bodypartcode == "200" | ps_data$bodypart
 ##################################################################################################
 # SUM UP LIKELY AND UNLIKELY INDICATORS
 
-ps_data$keyword_pts = rowSums(ps_data[,c('pin', 'strike', 'strikerib', 'drillsteel', 'trap', 'collided', 
-                                         'hit', 'dropped', 'ranover', 'bumped', 'caught', 'rolled', 'between', 'wheel')], na.rm=TRUE)
-ps_data$neg_keyword_pts = rowSums(ps_data[,c('brakes', 'jarring', 'outsidevehicle', 'bounced', 'rock', 'derail', 'cable', 'strap', 'trolleypole', 
-                                             'bodyseat', 'headroof', 'hole')], na.rm=TRUE)
+ps_data$keyword_pts = rowSums(ps_data[,c('pin', 'strike', 'drillsteel', 'trap', 'collided', 'hit', 'dropped', 'ranover', 
+                                         'bumped', 'caught', 'rolled', 'between', 'wheel')], na.rm=TRUE)
+ps_data$neg_keyword_pts = rowSums(ps_data[,c('brakes', 'jarring', 'outsidevehicle', 'steering', 'bounced', 'rock', 'derail', 'cable', 'strap', 'trolleypole', 
+                                             'tool_break', 'bodyseat', 'headroof', 'hole')], na.rm=TRUE)
 ps_data$pos_pts = rowSums(ps_data[,c('likely_class', 'likely_equip', 'likely_nature', 'likely_source', 'likely_type')], na.rm=TRUE)
 ps_data$neg_pts = rowSums(ps_data[,c('unlikely_class', 'unlikely_equip', 'unlikely_source', 'unlikely_nature', 'unlikely_type', 'uncertain_activity')], na.rm=TRUE)
 
@@ -726,8 +734,8 @@ simple.data.grouped = ps_data[, c(match("documentno", names(ps_data)), match("PS
                                match("loose", names(ps_data)), match("broke", names(ps_data)), match("strap", names(ps_data)), 
                                match("canopy", names(ps_data)), match("bodyseat", names(ps_data)), match("steering", names(ps_data)), 
                                match("headroof", names(ps_data)), match("hole", names(ps_data)), match("tool_break", names(ps_data)), 
-                               match("drillsteel", names(ps_data)), match("outsidevehicle", names(ps_data)), 
-                               match("keyword", names(ps_data)), match("false_keyword", names(ps_data)), 
+                               match("drillsteel", names(ps_data)), match("outsidevehicle", names(ps_data)), match("headcanopy", names(ps_data)),
+                               match("keyword", names(ps_data)), match("false_keyword", names(ps_data)), match("unevenbottom", names(ps_data)),
                                match("maybe_false_keyword", names(ps_data)), match("dropped", names(ps_data)), 
                                match("v_to_v", names(ps_data)), match("v_to_p", names(ps_data)),                                    
                                match("no_vehcl", names(ps_data)), match("bumped", names(ps_data)),
