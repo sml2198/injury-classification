@@ -31,7 +31,7 @@ rm(list = ls())
 #Specify imputation method here: 1 - means & modes, 2 - medians & modes, 3 - random sampling from distribution - best we can do for now
 #4 - multiple imputation through regression
 imputation_method = 3
-
+strict = T
 ps_data = read.csv("X:/Projects/Mining/NIOSH/analysis/data/training/coded_sets/Training_Set_Pinning_And_Striking_Accidents-January-29-2016.csv")
 
 ##################################################################################################
@@ -745,8 +745,16 @@ simple.data.grouped = ps_data[, c(match("documentno", names(ps_data)), match("PS
                                    match("uncertain_nature", names(ps_data)),
                                    match("falling.accident", names(ps_data)), match("accident.only", names(ps_data)))]
 
-write.csv(simple.data.grouped, file = "C:/Users/slevine2/Dropbox (Stanford Law School)/R-Code/prepped_PS_training_data_grouped.csv", row.names = FALSE)
+#write.csv(simple.data.grouped, file = "C:/Users/slevine2/Dropbox (Stanford Law School)/R-Code/prepped_PS_training_data_grouped.csv", row.names = FALSE)
 
+#enforce factor storage
+if (strict) {
+  var_classes = sapply(ps_data[,names(simple.data.grouped)], class)
+  num_vars = names(var_classes[grep("numeric", var_classes)])
+  for (i in 1:length(num_vars)) {
+    simple.data.grouped[, num_vars[i]] = factor(simple.data.grouped[, num_vars[i]])
+  }
+}
 ##################################################################################################
 # ALGORITHM
 
@@ -796,7 +804,17 @@ smote.ps <- SMOTE(PS ~ ., smote.trainx, perc.over = 600,perc.under=100)
 table(smote.ps$PS)
 
 #  WEED OUT OBS THAT ARE DEFINITELY NOT PS
-smote.test[, "predict"] = ifelse((smote.test$accident.only == 0 & smote.test$falling.accident == 0), 1, 0)
+num_vars = num_vars[-grep("documentno", num_vars)]
+if (strict) {
+  for (i in 1:length(num_vars)) {
+    smote.ps[, num_vars[i]] = as.numeric(smote.ps[, num_vars[i]])
+    smote.trainx[, num_vars[i]] = as.numeric(smote.trainx[, num_vars[i]])
+    smote.test[, num_vars[i]] = as.numeric(smote.test[, num_vars[i]])
+    smote.test[, "predict"] = ifelse((smote.test$accident.only == 1 & smote.test$falling.accident == 1), 1, 0)
+  }
+} else {
+    smote.test[, "predict"] = ifelse((smote.test$accident.only == 0 & smote.test$falling.accident == 0), 1, 0)
+}
 
 # STEP TWO: MODEL
 
