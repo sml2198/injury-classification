@@ -224,7 +224,7 @@ ps_data$old_narrative <- ps_data$narrative
 
 # VEHICLE
 ps_data$narrative <- gsub("(man|ram|shuttle|scoop)( |-|- |v)*(trip|car)( car)*", "VEHICLE", ps_data$narrative)
-ps_data$narrative <- gsub("( |^)car( |\\.|,|$)", " VEHICLE ", ps_data$narrative)
+ps_data$narrative <- gsub("( |^)car( |-|s|\\.|,|$)", " VEHICLE ", ps_data$narrative)
 ps_data$narrative <- gsub("(m|a)(m|a)n( |-|- )*bus", "VEHICLE", ps_data$narrative)
 ps_data$narrative <- gsub("vehic(l|e)(l|e)", "VEHICLE", ps_data$narrative)
 ps_data$narrative <- gsub("person(n)*(e|a)l carrier", "VEHICLE", ps_data$narrative)
@@ -232,20 +232,20 @@ ps_data$narrative <- gsub("wheeler", "VEHICLE", ps_data$narrative)
 ps_data$narrative <- gsub("scooter", "VEHICLE", ps_data$narrative)
 ps_data$narrative <- gsub("shuttle", "VEHICLE", ps_data$narrative)
 ps_data$narrative <- gsub("cricket ", "VEHICLE", ps_data$narrative)
-ps_data$narrative <- gsub("(rock|roof)*( |-)*bolt(er|ing)", "VEHICLE", ps_data$narrative)
+ps_data$narrative <- gsub("(rock|roof)( |-)*bolter", "VEHICLE", ps_data$narrative)
 ps_data$narrative <- gsub("( |^)truck", " VEHICLE", ps_data$narrative)
 ps_data$narrative <- gsub("buggy", "VEHICLE", ps_data$narrative)
 ps_data$narrative <- gsub("stam(m)*ler", "VEHICLE", ps_data$narrative)
 ps_data$narrative <- gsub("mac( |-)*(8|eight)", "VEHICLE", ps_data$narrative)
 ps_data$narrative <- gsub("(3|three)( |-)*wh(ee)*l(e)*r", "VEHICLE", ps_data$narrative)
-ps_data$narrative <- gsub("cont.{1,10}mi(e)*n(r|er|ing)", "VEHICLE", ps_data$narrative)
+ps_data$narrative <- gsub("(c)*ont.{1,10}mi(e)*n(r|er|ing)", "VEHICLE", ps_data$narrative)
 ps_data$narrative <- gsub("long( |-)*wall", "VEHICLE", ps_data$narrative)
-ps_data$narrative <- gsub("load( |-)haul(-| )dump( |-)", "VEHICLE", ps_data$narrative)
-ps_data$narrative <- gsub("(mining|miner|minr|loading|(roof)*( )*bolt(ing)*( )*machine", "VEHICLE", ps_data$narrative)
+ps_data$narrative <- gsub("load( |-)*haul(-| )*dump", "VEHICLE", ps_data$narrative)
+ps_data$narrative <- gsub("(mining|miner|minr|loading|(roof)*( )*bolt(ing)*)( )*machine", "VEHICLE", ps_data$narrative)
 ps_data$narrative <- gsub("tunnel( |-)*borer", "VEHICLE", ps_data$narrative)
 ps_data$narrative <- gsub("fork( |-)*lift", "VEHICLE", ps_data$narrative)
-ps_data$narrative <- gsub("(front( |-)*end|scraper) loader", "VEHICLE", ps_data$narrative)
-ps_data$narrative <- gsub("locomotive", "VEHICLE", ps_data$narrative)
+ps_data$narrative <- gsub("(front( |-)*end|scraper)( )*loader", "VEHICLE", ps_data$narrative)
+ps_data$narrative <- gsub("locomotiv(e)*", "VEHICLE", ps_data$narrative)
 ps_data$narrative <- gsub("(road|motor)( |-)*grader", "VEHICLE", ps_data$narrative)
 ps_data$narrative <- gsub("motor", "VEHICLE", ps_data$narrative)
 ps_data$narrative <- gsub("tractor", "VEHICLE", ps_data$narrative)
@@ -261,10 +261,10 @@ ps_data$narrative <- gsub("bolter", "VEHICLE", ps_data$narrative)
 ps_data$narrative <- gsub("rail( |-)*runner", "VEHICLE", ps_data$narrative)
 ps_data$narrative <- gsub("mobile", "VEHICLE", ps_data$narrative)
 ps_data$narrative <- gsub("porta(l)*( |-)*bus", "VEHICLE", ps_data$narrative)
-ps_data$narrative <- gsub("( |^)bus( |\\.|,|$)", " VEHICLE ", ps_data$narrative)
-ps_data[!grepl("troll(e)*y( )*pol(e|l)", ps_data[,"narrative"]),]$narrative <- gsub("trolley", " VEHICLE ", ps_data[!grepl("troll(e)*y( )*pol(e|l)", ps_data[,"narrative"]),]$narrative)
+ps_data$narrative <- gsub("( |^|-)bus(es| |\\.|,|$)", " VEHICLE ", ps_data$narrative)
+ps_data[!grepl("troll(e)*y( )*pol(e|l)", ps_data[,"narrative"]),]$narrative <- gsub("trol(l)*(e)*y", " VEHICLE ", ps_data[!grepl("troll(e)*y( )*pol(e|l)", ps_data[,"narrative"]),]$narrative)
 ps_data[!grepl("to trip", ps_data[,"narrative"]),]$narrative <- gsub("( |^)trip( |$|,|\\.)", " VEHICLE ", ps_data[!grepl("to trip", ps_data[,"narrative"]),]$narrative)
-ps_data[!grepl("scoop(er|ing)", ps_data[,"narrative"]),]$narrative <- gsub("scoop( car)*", " VEHICLE ", ps_data[!grepl("scoop(er|ing)", ps_data[,"narrative"]),]$narrative)
+ps_data[!grepl("scoop(er|ing)", ps_data[,"narrative"]),]$narrative <- gsub("scoop", " VEHICLE ", ps_data[!grepl("scoop(er|ing)", ps_data[,"narrative"]),]$narrative)
 ps_data[!grepl("to tram", ps_data[,"narrative"]) & 
           !grepl("tram.{1,5}(lever|sprocket|pedal|chain)", ps_data[,"narrative"]),]$narrative <- gsub("tram( |$|\\.|,)", " VEHICLE ", ps_data[!grepl("to tram", ps_data[,"narrative"]) & 
                                                                                                                                       !grepl("tram.{1,5}(lever|sprocket|pedal|chain)", ps_data[,"narrative"]),]$narrative)
@@ -273,7 +273,6 @@ ps_data[!grepl("to tram", ps_data[,"narrative"]) &
 ps_data$narrative <- gsub("hand(s| |\\.|,|$)", "BODY ", ps_data$narrative)
 ps_data$narrative <- gsub("finger(s)*", "BODY", ps_data$narrative)
 ps_data$narrative <- gsub("thumb", "BODY", ps_data$narrative)
-ps_data$narrative <- gsub("feet", "BODY", ps_data$narrative) # MAYBE DO SOMETHING FOR UNIT OF MEASUREMENT
 ps_data$narrative <- gsub("ankle(s)*", "BODY", ps_data$narrative)
 ps_data$narrative <- gsub("shoulder(s)*", "BODY", ps_data$narrative)
 ps_data$narrative <- gsub("knee( |s|\\.|,|$)", "BODY ", ps_data$narrative) 		# AVOID "KNEEL"
@@ -287,23 +286,26 @@ ps_data$narrative <- gsub("( |^)lip(s)*", " BODY", ps_data$narrative)
 ps_data$narrative <- gsub("( |^)ear(s)*", " BODY", ps_data$narrative)
 ps_data$narrative <- gsub("chin( |$|\\.|,)", "BODY", ps_data$narrative)
 ps_data$narrative <- gsub("neck", "BODY", ps_data$narrative)
-ps_data$narrative <- gsub("(^| |fore|for)arm", " BODY", ps_data$narrative)
+ps_data$narrative <- gsub("(^| )(fore|for)*arm", " BODY", ps_data$narrative)
 ps_data$narrative <- gsub("mouth", "BODY", ps_data$narrative)
+ps_data$narrative <- gsub("nose( |s|\\.|,|$)", "BODY ", ps_data$narrative)
 ps_data$narrative <- gsub("pelvis", "BODY", ps_data$narrative)
 ps_data$narrative <- gsub("chest", "BODY", ps_data$narrative)
-ps_data$narrative <- gsub("tibia", "BODY", ps_data$narrative)
-ps_data$narrative <- gsub("fibia", "BODY", ps_data$narrative)
+ps_data$narrative <- gsub("groin", "BODY", ps_data$narrative)
+ps_data$narrative <- gsub("(t|f)ibia", "BODY", ps_data$narrative)
+ps_data$narrative <- gsub("ulna", "BODY", ps_data$narrative)
+ps_data$narrative <- gsub("radia", "BODY", ps_data$narrative)
+ps_data$narrative <- gsub("buttock(s)*", "BODY", ps_data$narrative)
 ps_data$narrative <- gsub("spine", "BODY", ps_data$narrative)
 ps_data$narrative <- gsub("elbow(s)*", "BODY", ps_data$narrative)
 ps_data$narrative <- gsub("testicle(s)*", "BODY", ps_data$narrative)
 ps_data$narrative <- gsub("t(ee|oo)th", "BODY", ps_data$narrative) # CHECK TO MAKE SURE NO EQUIPMENT HAS TEETH/TOOTH
-ps_data$narrative <- gsub("(r(igh)*t|l(e)*ft|his|her|both|onto|r\\.)( )*(foot|feet)", "BODY", ps_data$narrative)
+ps_data$narrative <- gsub("(top|bottom) of|(r(igh)*t|l(e)*ft|his|her|both|onto|r\\.)( )*(foot|feet)", "BODY", ps_data$narrative)
 ps_data$narrative <- gsub("( |^)hip(s)*", " BODY", ps_data$narrative)
-ps_data[!grepl("backward", ps_data[,"narrative"]),]$narrative <- gsub("(lower|PERSON|the)( )*back", " BODY", ps_data[!grepl("backward", ps_data[,"narrative"]),]$narrative)
-ps_data[!grepl("drill.{1,5}head", ps_data[,"narrative"]) & !grepl("head(ing|er|ed)", ps_data[,"narrative"]) 
-        & !grepl("(over|cutter)( )*head", ps_data[,"narrative"]),]$narrative <- gsub("(^| )head( |$|\\.|,)", " BODY ",
-                                                                            ps_data[!grepl("drill.{1,5}head", ps_data[,"narrative"]) & !grepl("head(ing|er|ed)", ps_data[,"narrative"]) & !grepl("(over|cutter)( )*head", ps_data[,"narrative"]),]$narrative)
-ps_data[!grepl("(coal|the).{1,5}face", ps_data[,"narrative"]),]$narrative <- gsub("face", "BODY", ps_data[!grepl("(coal|the).{1,5}face", ps_data[,"narrative"]),]$narrative)
+ps_data[!grepl("backward", ps_data[,"narrative"]),]$narrative <- gsub("(lowe(r)*|upper|PERSON|the|strain).{1,8}back", " BODY", ps_data[!grepl("backward", ps_data[,"narrative"]),]$narrative)
+ps_data[!grepl("drill.{1,5}head", ps_data[,"narrative"]) & !grepl("(over|cutter)( )*head", ps_data[,"narrative"]),]$narrative <- gsub("(^| )head( |$|\\.|,)", " BODY ",
+                                                                            ps_data[!grepl("drill.{1,5}head", ps_data[,"narrative"]) & !grepl("(over|cutter)( )*head", ps_data[,"narrative"]),]$narrative)
+ps_data[!grepl("(coal|the).{1,5}face", ps_data[,"narrative"]) & !grepl("surface", ps_data[,"narrative"]),]$narrative <- gsub("face", "BODY", ps_data[!grepl("(coal|the).{1,5}face", ps_data[,"narrative"]) & !grepl("surface", ps_data[,"narrative"]),]$narrative)
 
 #GENERATE SOME POSITIVE KEYWORDS USING THE BODY PARTS, BEFORE SUBBING IN THE PIN/STRIKE/TRAP 
 ps_data[, "bumped"] = ifelse((grepl("bump(ed|ing)( )*(over|into|onto)", ps_data[,"narrative"]) | 
@@ -315,7 +317,7 @@ ps_data[, "caught"] = ifelse(grepl("caught.{1,15}(between| in )", ps_data[,"old_
                                grepl("BODY.{1,6}caught", ps_data[,"narrative"]), 1, 0)
 ps_data[, "hit"] = ifelse(grepl("( |^)hit.{1,5}(by|him|his|her|employee|ee)", ps_data[,"old_narrative"]) |
                             grepl("( |^)hit.{1,10}BODY", ps_data[,"narrative"]), 1, 0)
-ps_data[, "dropped"] = ifelse(grepl("(lower(ing|ed)*|drop(p)*(ing|ed)*).{1,15}(bucket|drill( |-)*head|drill( |-)*pod|pinner( |-)*head).{1,15}BODY", ps_data[,"narrative"]), 1, 0)
+ps_data[, "dropped"] = ifelse(grepl("(lowe(r)*(ing|ed)*|drop(p)*(ing|ed)*).{1,15}(bucket|drill( |-)*head|drill( |-)*pod|pinner( |-)*head).{1,15}BODY", ps_data[,"narrative"]), 1, 0)
 
 # PIN/STRIKE/TRAP
 
@@ -333,7 +335,7 @@ ps_data[grepl("VEHICLE.{1,5}got on{1,5}BODY", ps_data[,"narrative"]),]$narrative
                                               ps_data[grepl("VEHICLE.{1,5}got on{1,5}BODY", ps_data[,"narrative"]),]$narrative)
 
 # PERSON FLAGS
-ps_data$narrative <- gsub("( |^)e(e|mp|mpl|mployee)( |$|,|\\.)", " PERSON ", ps_data$narrative)
+ps_data$narrative <- gsub("( |^)e(e|mp|mpl|mploye)(e)*( |$|,|\\.)", " PERSON ", ps_data$narrative)
 ps_data$narrative <- gsub("( |^)i(,|\\.| )*name", " PERSON", ps_data$narrative)
 ps_data$narrative <- gsub("injured person", "PERSON", ps_data$narrative)
 ps_data$narrative <- gsub("(him|her)self", "PERSON", ps_data$narrative)
@@ -341,7 +343,7 @@ ps_data$narrative <- gsub("vi(c)*tim", "PERSON", ps_data$narrative)
 ps_data$narrative <- gsub("repairm(a|e)n", "PERSON", ps_data$narrative)
 ps_data$narrative <- gsub("maintenance( )*m(a|e)n", "PERSON", ps_data$narrative)
 ps_data$narrative <- gsub("( |^)m(a|e)n( |$|,|\\.)", " PERSON ", ps_data$narrative)
-ps_data$narrative <- gsub("forem(a|e)n", "PERSON", ps_data$narrative)
+ps_data$narrative <- gsub("fore(m|a)(a|e|m)n", "PERSON", ps_data$narrative)
 ps_data$narrative <- gsub("ind(i)*v(idual)*(s)*", "PERSON", ps_data$narrative)
 ps_data$narrative <- gsub("helper(s)*", "PERSON", ps_data$narrative)
 ps_data$narrative <- gsub("person(s)*", "PERSON", ps_data$narrative)
@@ -351,6 +353,7 @@ ps_data$narrative <- gsub("the.{1,6}injured", "PERSON", ps_data$narrative)
 ps_data$narrative <- gsub("injured was", "PERSON", ps_data$narrative)
 ps_data$narrative <- gsub("( |^)(s)*he(r|rs)*( |$|,|\\.)", " PERSON ", ps_data$narrative)
 ps_data$narrative <- gsub("( |^)hi(s|m)( |$|,|\\.)", " PERSON ", ps_data$narrative)
+ps_data$narrative <- gsub("(wo)*m(a|e)n( |$|,|\\.)", "PERSON ", ps_data$narrative)
 
 # these are less likely
 ps_data$narrative <- gsub("operat(o|e)r", "PERSON", ps_data$narrative)
@@ -892,7 +895,7 @@ table(post.smote.test$smote_pred, post.smote.test$PS)
 # BEST PREDICTION SO FAR
 
 #NO YES
-#NO  242  30
-#YES  14  77
+#NO  232  19
+#YES  24  88
 
 View(post.smote.test[post.smote.test$PS=="NO" & post.smote.test$smote_pred =="YES",]$documentno)
