@@ -12,6 +12,7 @@ names(early_assessments)[names(early_assessments) == "Ã.Ã.violationno"] = "vio
 
 names(open_data_assessments)[names(open_data_assessments) == "VIOLATION_NO"] = "violationno"
 names(open_data_assessments)[names(open_data_assessments) == "VIOLATION_ID"] = "violationid"
+names(open_data_assessments)[names(open_data_assessments) == "VIOLATOR_NAME"] = "violatorname"
 names(open_data_assessments)[names(open_data_assessments) == "EVENT_NO"] = "eventno"
 names(open_data_assessments)[names(open_data_assessments) == "MINE_ID"] = "mineid"
 names(open_data_assessments)[names(open_data_assessments) == "COAL_METAL_IND"] = "coalcormetalm"
@@ -50,7 +51,12 @@ clean_assessments[, "merge"] = ifelse(!is.na(clean_assessments$issuedate.y) & !i
 clean_assessments[, "merge"] = ifelse(is.na(clean_assessments$issuedate.x) & !is.na(clean_assessments$issuedate.y), 2, clean_assessments[, "merge"])
 clean_assessments[, "merge"] = ifelse(is.na(clean_assessments$issuedate.y) & !is.na(clean_assessments$issuedate.x), 1, clean_assessments[, "merge"])
 table(clean_assessments$merge) #1 observation in STATA's open data as compared with open_data_assessments. Nikhil 5/13/16
+#1       2       3 
+#237358  769535 1870134 
 
+#Next two lines to ensure R doesn't automatically convert occurrencedate to an integer (a likely quirk with factor variables)
+clean_assessments$occurrencedate.x = as.character(clean_assessments$occurrencedate.x)
+clean_assessments$occurrencedate.y = as.character(clean_assessments$occurrencedate.y)
 common_varstbs = sub(".x", "", names(clean_assessments)[grep(".x", names(clean_assessments), fixed = T)], fixed = T)
 for (i in 1:length(common_varstbs)) {
   clean_assessments[, paste(common_varstbs[i], ".x", sep = "")] = ifelse(clean_assessments[, "merge"] == 2, clean_assessments[, paste(common_varstbs[i], ".y", sep = "")], clean_assessments[, paste(common_varstbs[i], ".x", sep = "")])
