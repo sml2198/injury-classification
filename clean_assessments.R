@@ -51,6 +51,12 @@ clean_assessments[, "merge"] = ifelse(is.na(clean_assessments$issuedate.x) & !is
 clean_assessments[, "merge"] = ifelse(is.na(clean_assessments$issuedate.y) & !is.na(clean_assessments$issuedate.x), 1, clean_assessments[, "merge"])
 table(clean_assessments$merge) #1 observation in STATA's open data as compared with open_data_assessments. Nikhil 5/13/16
 
+common_varstbs = sub(".x", "", names(clean_assessments)[grep(".x", names(clean_assessments), fixed = T)], fixed = T)
+for (i in 1:length(common_varstbs)) {
+  clean_assessments[, paste(common_varstbs[i], ".x", sep = "")] = ifelse(clean_assessments[, "merge"] == 2, clean_assessments[, paste(common_varstbs[i], ".y", sep = "")], clean_assessments[, paste(common_varstbs[i], ".x", sep = "")])
+}
+clean_assessments = clean_assessments[, -grep(".y", names(clean_assessments), fixed = T)]
+names(clean_assessments)[grep(".x", names(clean_assessments), fixed = T)] = common_varstbs
 clean_assessments = clean_assessments[, -grep("merge", names(clean_assessments))]
 
 saveRDS(clean_assessments, file = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_assessments.rds")

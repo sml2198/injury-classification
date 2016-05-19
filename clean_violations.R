@@ -59,4 +59,12 @@ clean_violations[, "merge"] = ifelse(is.na(clean_violations$eventno.x) & !is.na(
 clean_violations[, "merge"] = ifelse(is.na(clean_violations$eventno.y) & !is.na(clean_violations$eventno.x), 1, clean_violations[, "merge"])
 table(clean_violations$merge) #1 observation in STATA's open data as compared with open_data_assessments. Nikhil 5/13/16
 
+common_varstbs = sub(".x", "", names(clean_violations)[grep(".x", names(clean_violations), fixed = T)], fixed = T)
+for (i in 1:length(common_varstbs)) {
+  clean_violations[, paste(common_varstbs[i], ".x", sep = "")] = ifelse(clean_violations[, "merge"] == 2, clean_violations[, paste(common_varstbs[i], ".y", sep = "")], clean_violations[, paste(common_varstbs[i], ".x", sep = "")])
+}
+clean_violations = clean_violations[, -grep(".y", names(clean_violations), fixed = T)]
+names(clean_violations)[grep(".x", names(clean_violations), fixed = T)] = common_varstbs
+clean_violations = clean_violations[, -grep("merge", names(clean_violations))]
+
 saveRDS(clean_violations, file = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_violations.rds")
