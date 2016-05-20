@@ -68,6 +68,8 @@ clean_inspecs[, "merge"] = ifelse(!is.na(clean_inspecs$beginningdate.y) & !is.na
 clean_inspecs[, "merge"] = ifelse(is.na(clean_inspecs$beginningdate.x) & !is.na(clean_inspecs$beginningdate.y), 2, clean_inspecs[, "merge"])
 clean_inspecs[, "merge"] = ifelse(is.na(clean_inspecs$beginningdate.y) & !is.na(clean_inspecs$beginningdate.x), 1, clean_inspecs[, "merge"])
 table(clean_inspecs$merge)
+#1       2 
+#775245 1415166
 
 common_varstbs = sub(".x", "", names(clean_inspecs)[grep(".x", names(clean_inspecs), fixed = T)], fixed = T)
 for (i in 1:length(common_varstbs)) {
@@ -82,6 +84,8 @@ clean_inspecs[, "merge2"] = ifelse(!is.na(clean_inspecs$mineid.y) & !is.na(clean
 clean_inspecs[, "merge2"] = ifelse(is.na(clean_inspecs$mineid.x) & !is.na(clean_inspecs$mineid.y), 2, clean_inspecs[, "merge2"])
 clean_inspecs[, "merge2"] = ifelse(is.na(clean_inspecs$mineid.y) & !is.na(clean_inspecs$mineid.x), 1, clean_inspecs[, "merge2"])
 table(clean_inspecs$merge2)
+#1       2       3 
+#198270   71243 1992141
 
 common_varstbs = sub(".x", "", names(clean_inspecs)[grep(".x", names(clean_inspecs), fixed = T)], fixed = T)
 for (i in 1:length(common_varstbs)) {

@@ -45,6 +45,8 @@ names(open_data_viols) = tolower(names(open_data_viols))
 #Flag and drop duplicates on violation number
 open_data_viols[, "dup"] = duplicated(open_data_viols$violationno)
 table(open_data_viols$dup) #Same duplicates as in the STATA version of the code so no testing here.
+#FALSE    TRUE 
+#2161636      51 
 open_data_viols = open_data_viols[open_data_viols$dup == F,]
 
 open_data_viols[, "violationno"] = as.character(open_data_viols[, "violationno"])
@@ -58,10 +60,16 @@ clean_violations[, "merge"] = ifelse(!is.na(clean_violations$eventno.y) & !is.na
 clean_violations[, "merge"] = ifelse(is.na(clean_violations$eventno.x) & !is.na(clean_violations$eventno.y), 2, clean_violations[, "merge"])
 clean_violations[, "merge"] = ifelse(is.na(clean_violations$eventno.y) & !is.na(clean_violations$eventno.x), 1, clean_violations[, "merge"])
 table(clean_violations$merge) #1 observation in STATA's open data as compared with open_data_assessments. Nikhil 5/13/16
+#1       2       3 
+#2276578 2161593      43
 
+#For the 43 pre-2000 observations in both datasets, use the open data
 common_varstbs = sub(".x", "", names(clean_violations)[grep(".x", names(clean_violations), fixed = T)], fixed = T)
 for (i in 1:length(common_varstbs)) {
-  clean_violations[, paste(common_varstbs[i], ".x", sep = "")] = ifelse(clean_violations[, "merge"] == 2, clean_violations[, paste(common_varstbs[i], ".y", sep = "")], clean_violations[, paste(common_varstbs[i], ".x", sep = "")])
+  mstr_copy = paste(common_varstbs[i], ".x", sep = "")
+  usng_copy = paste(common_varstbs[i], ".y", sep = "")
+  clean_violations[, mstr_copy] = ifelse(clean_violations[, "merge"] == 3, clean_violations[, usng_copy], clean_violations[, mstr_copy])
+  clean_violations[, mstr_copy] = ifelse(clean_violations[, "merge"] == 2, clean_violations[, usng_copy], clean_violations[, mstr_copy])
 }
 clean_violations = clean_violations[, -grep(".y", names(clean_violations), fixed = T)]
 names(clean_violations)[grep(".x", names(clean_violations), fixed = T)] = common_varstbs

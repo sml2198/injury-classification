@@ -6,6 +6,10 @@ early_assessments = read.csv("X:/Projects/Mining/NIOSH/analysis/data/1_converted
 open_data_assessments = read.table("X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA/open_data/AssessedViolations.txt", header = T, sep = "|")
 
 early_assessments[, "dup"] = duplicated(early_assessments) #Checks out with total number of duplicates implied by STATA's "duplicates" command
+table(early_assessments$dup)
+#FALSE    TRUE 
+#2639669    3238
+
 early_assessments = early_assessments[early_assessments$dup == F,]
 
 names(early_assessments)[names(early_assessments) == "Ã.Ã.violationno"] = "violationno"
@@ -45,6 +49,8 @@ names(open_data_assessments)[names(open_data_assessments) == "MINE_SIZE_POINTS"]
 names(open_data_assessments)[names(open_data_assessments) == "CONTROLLER_SIZE_POINTS"] = "controllersizepoints"
 names(open_data_assessments) = tolower(names(open_data_assessments))
 open_data_assessments[, "violationno"] = as.character(open_data_assessments[, "violationno"])
+early_assessments$src = "early"
+open_data_assessments$src = "open_data"
 
 clean_assessments = merge(open_data_assessments, early_assessments, by = "violationno", all = T)
 clean_assessments[, "merge"] = ifelse(!is.na(clean_assessments$issuedate.y) & !is.na(clean_assessments$issuedate.x), 3, 0)
