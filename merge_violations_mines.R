@@ -75,3 +75,7 @@ merged_assessments[, "minesmerge"] = ifelse(is.na(merged_assessments$minemarker.
 table(merged_assessments$minesmerge)
 #1       2       3 
 #5   39288 4493661
+
+#Drop mines without inspections/assessments and 5 obs from contractor with US DOE at a Waste Isolation Plant in NM (MSHA Data Retrieval System) without mine data (mineid = 2901857). Nikhil 5/1/16
+merged_assessments = merged_assessments[merged_assessments$minesmerge == 3 & merged_assessments$coalcormetalm == 1,]
+
