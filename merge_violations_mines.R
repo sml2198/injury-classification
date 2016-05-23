@@ -1,4 +1,5 @@
 #HEADER
+library(stringr)
 
 clean_assessments = readRDS("X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_assessments.rds") #Note: Carolyn data doesn't have eventno!
 clean_violations = readRDS("X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_violations.rds")
@@ -64,18 +65,34 @@ assessments_violations = assessments_violations[(assessments_violations$src == "
                                                   assessments_violations$merge == 1 | assessments_violations$merge == 2,]
 assessments_violations = assessments_violations[, -grep("merge", names(assessments_violations))]
 saveRDS(assessments_violations, file = "X:/Projects/Mining/NIOSH/analysis/data/3_merged/assessments_violations.rds") #should we name to align w/ STATA version?
+rm(clean_violations, clean_assessments)
 
 #Merge in mines data; still need an identifying variable @ mine-level
-assessments_violations$minemarker = assessments_violations$mineid + 1
-clean_mines$minemarker = clean_mines$mineid + 1
-merged_assessments = merge(assessments_violations, clean_mines, by = "mineid", all = T)
-merged_assessments[, "minesmerge"] = ifelse(!is.na(merged_assessments$minemarker.y) & !is.na(merged_assessments$minemarker.x), 3, 0)
-merged_assessments[, "minesmerge"] = ifelse(is.na(merged_assessments$minemarker.x) & !is.na(merged_assessments$minemarker.y), 2, merged_assessments[, "minesmerge"])
-merged_assessments[, "minesmerge"] = ifelse(is.na(merged_assessments$minemarker.y) & !is.na(merged_assessments$minemarker.x), 1, merged_assessments[, "minesmerge"])
-table(merged_assessments$minesmerge)
+assessments_violations$minemarker = paste("L", as.character(assessments_violations$mineid), sep = "")
+clean_mines$minemarker = paste("L", as.character(clean_mines$mineid), sep = "")
+assessments_violations_mines = merge(assessments_violations, clean_mines, by = "mineid", all = T)
+assessments_violations_mines[, "minesmerge"] = ifelse(!is.na(assessments_violations_mines$minemarker.y) & !is.na(assessments_violations_mines$minemarker.x), 3, 0)
+assessments_violations_mines[, "minesmerge"] = ifelse(is.na(assessments_violations_mines$minemarker.x) & !is.na(assessments_violations_mines$minemarker.y), 2, assessments_violations_mines[, "minesmerge"])
+assessments_violations_mines[, "minesmerge"] = ifelse(is.na(assessments_violations_mines$minemarker.y) & !is.na(assessments_violations_mines$minemarker.x), 1, assessments_violations_mines[, "minesmerge"])
+table(assessments_violations_mines$minesmerge)
 #1       2       3 
 #5   39288 4493661
 
 #Drop mines without inspections/assessments and 5 obs from contractor with US DOE at a Waste Isolation Plant in NM (MSHA Data Retrieval System) without mine data (mineid = 2901857). Nikhil 5/1/16
-merged_assessments = merged_assessments[merged_assessments$minesmerge == 3 & merged_assessments$coalcormetalm == 1,]
+#Number of assessments_violations_mines$coalcormetalm == 1 observations higher in R than in STATA. Nikhil 5/23/16
+assessments_violations_mines = assessments_violations_mines[assessments_violations_mines$minesmerge == 3 & assessments_violations_mines$coalcormetalm == 1,]
+
+#Insert clean violator names code here.
+
+saveRDS(assessments_violations_mines, file = "X:/Projects/Mining/NIOSH/analysis/data/3_merged/assessments_violations_mines.rds")
+rm(clean_mines, assessments_violations)
+
+assessments_violations_mines$inspecid = paste("L", assessments_violations_mines$eventno, sep = "")
+clean_Inspections$inspecid = paste("L", clean_Inspections$eventno, sep = "")
+merged_assessments = merge(assessments_violations_mines, clean_Inspections, by = c("mineid", "eventno"), all = T)
+merged_assessments[, "inspecmerge"] = ifelse(!is.na(merged_assessments$inspecid.y) & !is.na(merged_assessments$inspecid.x), 3, 0)
+merged_assessments[, "inspecmerge"] = ifelse(is.na(merged_assessments$inspecid.x) & !is.na(merged_assessments$inspecid.y), 2, merged_assessments[, "inspecmerge"])
+merged_assessments[, "inspecmerge"] = ifelse(is.na(merged_assessments$inspecid.y) & !is.na(merged_assessments$inspecid.x), 1, merged_assessments[, "inspecmerge"])
+table(merged_assessments$inspecmerge)
+
 
