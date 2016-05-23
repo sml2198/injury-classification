@@ -2,17 +2,17 @@
 
 #Coded by Nikhil Saifullah
 
-early_assessments = read.csv("X:/Projects/Mining/NIOSH/analysis/data/1_converted/MSHA/assessments_fromText.csv")
+#early_assessments = read.csv("X:/Projects/Mining/NIOSH/analysis/data/1_converted/MSHA/assessments_fromText.csv")
 open_data_assessments = read.table("X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA/open_data/AssessedViolations.txt", header = T, sep = "|")
 
-early_assessments[, "dup"] = duplicated(early_assessments) #Checks out with total number of duplicates implied by STATA's "duplicates" command
-table(early_assessments$dup)
+#early_assessments[, "dup"] = duplicated(early_assessments) #Checks out with total number of duplicates implied by STATA's "duplicates" command
+#table(early_assessments$dup)
 #FALSE    TRUE 
 #2639669    3238
 
-early_assessments = early_assessments[early_assessments$dup == F,]
+#early_assessments = early_assessments[early_assessments$dup == F,]
 
-names(early_assessments)[names(early_assessments) == "Ã.Ã.violationno"] = "violationno"
+#names(early_assessments)[names(early_assessments) == "Ã.Ã.violationno"] = "violationno"
 
 names(open_data_assessments)[names(open_data_assessments) == "VIOLATION_NO"] = "violationno"
 names(open_data_assessments)[names(open_data_assessments) == "VIOLATION_ID"] = "violationid"
@@ -49,26 +49,29 @@ names(open_data_assessments)[names(open_data_assessments) == "MINE_SIZE_POINTS"]
 names(open_data_assessments)[names(open_data_assessments) == "CONTROLLER_SIZE_POINTS"] = "controllersizepoints"
 names(open_data_assessments) = tolower(names(open_data_assessments))
 open_data_assessments[, "violationno"] = as.character(open_data_assessments[, "violationno"])
-early_assessments$src = "early"
-open_data_assessments$src = "open_data"
 
-clean_assessments = merge(open_data_assessments, early_assessments, by = "violationno", all = T)
-clean_assessments[, "merge"] = ifelse(!is.na(clean_assessments$issuedate.y) & !is.na(clean_assessments$issuedate.x), 3, 0)
-clean_assessments[, "merge"] = ifelse(is.na(clean_assessments$issuedate.x) & !is.na(clean_assessments$issuedate.y), 2, clean_assessments[, "merge"])
-clean_assessments[, "merge"] = ifelse(is.na(clean_assessments$issuedate.y) & !is.na(clean_assessments$issuedate.x), 1, clean_assessments[, "merge"])
-table(clean_assessments$merge) #1 observation in STATA's open data as compared with open_data_assessments. Nikhil 5/13/16
+clean_assessments = open_data_assessments
+rm(open_data_assessments)
+#early_assessments$src = "early"
+#open_data_assessments$src = "open_data"
+
+#clean_assessments = merge(open_data_assessments, early_assessments, by = "violationno", all = T)
+#clean_assessments[, "merge"] = ifelse(!is.na(clean_assessments$issuedate.y) & !is.na(clean_assessments$issuedate.x), 3, 0)
+#clean_assessments[, "merge"] = ifelse(is.na(clean_assessments$issuedate.x) & !is.na(clean_assessments$issuedate.y), 2, clean_assessments[, "merge"])
+#clean_assessments[, "merge"] = ifelse(is.na(clean_assessments$issuedate.y) & !is.na(clean_assessments$issuedate.x), 1, clean_assessments[, "merge"])
+#table(clean_assessments$merge) #1 observation in STATA's open data as compared with open_data_assessments. Nikhil 5/13/16
 #1       2       3 
 #237358  769535 1870134 
 
 #Next two lines to ensure R doesn't automatically convert occurrencedate to an integer (a likely quirk with factor variables)
-clean_assessments$occurrencedate.x = as.character(clean_assessments$occurrencedate.x)
-clean_assessments$occurrencedate.y = as.character(clean_assessments$occurrencedate.y)
-common_varstbs = sub(".x", "", names(clean_assessments)[grep(".x", names(clean_assessments), fixed = T)], fixed = T)
-for (i in 1:length(common_varstbs)) {
-  clean_assessments[, paste(common_varstbs[i], ".x", sep = "")] = ifelse(clean_assessments[, "merge"] == 2, clean_assessments[, paste(common_varstbs[i], ".y", sep = "")], clean_assessments[, paste(common_varstbs[i], ".x", sep = "")])
-}
-clean_assessments = clean_assessments[, -grep(".y", names(clean_assessments), fixed = T)]
-names(clean_assessments)[grep(".x", names(clean_assessments), fixed = T)] = common_varstbs
-clean_assessments = clean_assessments[, -grep("merge", names(clean_assessments))]
+#clean_assessments$occurrencedate.x = as.character(clean_assessments$occurrencedate.x)
+#clean_assessments$occurrencedate.y = as.character(clean_assessments$occurrencedate.y)
+#common_varstbs = sub(".x", "", names(clean_assessments)[grep(".x", names(clean_assessments), fixed = T)], fixed = T)
+#for (i in 1:length(common_varstbs)) {
+#  clean_assessments[, paste(common_varstbs[i], ".x", sep = "")] = ifelse(clean_assessments[, "merge"] == 2, clean_assessments[, paste(common_varstbs[i], ".y", sep = "")], clean_assessments[, paste(common_varstbs[i], ".x", sep = "")])
+#}
+#clean_assessments = clean_assessments[, -grep(".y", names(clean_assessments), fixed = T)]
+#names(clean_assessments)[grep(".x", names(clean_assessments), fixed = T)] = common_varstbs
+#clean_assessments = clean_assessments[, -grep("merge", names(clean_assessments))]
 
 saveRDS(clean_assessments, file = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_assessments.rds")
