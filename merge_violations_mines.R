@@ -87,13 +87,42 @@ table(assessments_violations_mines$minesmerge)
 #59710 2161422 
 
 #Drop mines without inspections/assessments and 5 obs from contractor with US DOE at a Waste Isolation Plant in NM (MSHA Data Retrieval System) without mine data (mineid = 2901857). Nikhil 5/1/16
-#Number of assessments_violations_mines$coalcormetalm == 1 observations higher in R than in STATA. Nikhil 5/23/16
 assessments_violations_mines = assessments_violations_mines[assessments_violations_mines$minesmerge == 3 & assessments_violations_mines$coalcormetalm == 1,]
+common_varstbs = sub(".x", "", names(assessments_violations_mines)[grep(".x", names(assessments_violations_mines), fixed = T)], fixed = T)
+assessments_violations_mines = assessments_violations_mines[, -grep(".y", names(assessments_violations_mines), fixed = T)]
+names(assessments_violations_mines)[grep(".x", names(assessments_violations_mines), fixed = T)] = common_varstbs
 
-##Insert clean violator names code here.##
+##Clean violator names code##
+assessments_violations_mines$operatorname = tolower(str_trim(assessments_violations_mines$operatorname, side = c("both")))
+violnames = c(grep("violatorname", names(assessments_violations_mines)), grep("violator_name", names(assessments_violations_mines)), grep("operatorname", names(assessments_violations_mines)))
+for (i in 1:length(violnames)) {
+  assessments_violations_mines[, violnames[i]] = gsub(",", "", assessments_violations_mines[, violnames[i]])
+  assessments_violations_mines[, violnames[i]] = gsub("\\.", "", assessments_violations_mines[, violnames[i]])
+  assessments_violations_mines[, violnames[i]] = gsub("company", "co", assessments_violations_mines[, violnames[i]])
+  assessments_violations_mines[, violnames[i]] = gsub("comp", "co", assessments_violations_mines[, violnames[i]])
+  assessments_violations_mines[, violnames[i]] = gsub("incorporated", "inc", assessments_violations_mines[, violnames[i]])
+  assessments_violations_mines[, violnames[i]] = gsub("and", "&", assessments_violations_mines[, violnames[i]])
+  assessments_violations_mines[, violnames[i]] = gsub("limited", "ltd", assessments_violations_mines[, violnames[i]])
+  assessments_violations_mines[, violnames[i]] = gsub("corporation", "corp", assessments_violations_mines[, violnames[i]])
+  assessments_violations_mines[, violnames[i]] = gsub("limited", "ltd", assessments_violations_mines[, violnames[i]])
+  assessments_violations_mines[, violnames[i]] = gsub("services", "srv", assessments_violations_mines[, violnames[i]])
+  
+  assessments_violations_mines[, violnames[i]] = gsub("llc", "", assessments_violations_mines[, violnames[i]])
+  assessments_violations_mines[, violnames[i]] = gsub("inc", "", assessments_violations_mines[, violnames[i]])
+  assessments_violations_mines[, violnames[i]] = gsub("corp", "", assessments_violations_mines[, violnames[i]])
+  assessments_violations_mines[, violnames[i]] = gsub("ltd", "", assessments_violations_mines[, violnames[i]])
+}
+assessments_violations_mines$violator_name = ifelse(assessments_violations_mines$violatortype == "operator" & !is.na(assessments_violations_mines$operatorname), assessments_violations_mines$operatorname, 
+                                                    assessments_violations_mines$violator_name)
+names(assessments_violations_mines)[names(assessments_violations_mines) == "violatorname"] = "oldviolatorname"
+names(assessments_violations_mines)[names(assessments_violations_mines) == "violator_name"] = "violatorname"
 
 saveRDS(assessments_violations_mines, file = "X:/Projects/Mining/NIOSH/analysis/data/3_merged/assessments_violations_mines.rds")
 rm(clean_mines, assessments_violations)
+
+#Now that data will be partially merged on eventno we do some basic cleaning
+clean_Inspections$eventno = ifelse(nchar(clean_Inspections$eventno) < 7, paste("0", clean_Inspections$eventno, sep = ""), clean_Inspections$eventno)
+assessments_violations_mines$eventno = ifelse(nchar(assessments_violations_mines$eventno) < 7, paste("0", assessments_violations_mines$eventno, sep = ""), assessments_violations_mines$eventno)
 
 assessments_violations_mines$inspecid = paste("L", assessments_violations_mines$eventno, sep = "")
 clean_Inspections$inspecid = paste("L", clean_Inspections$eventno, sep = "")
@@ -102,9 +131,13 @@ merged_assessments[, "inspecmerge"] = ifelse(!is.na(merged_assessments$inspecid.
 merged_assessments[, "inspecmerge"] = ifelse(is.na(merged_assessments$inspecid.x) & !is.na(merged_assessments$inspecid.y), 2, merged_assessments[, "inspecmerge"])
 merged_assessments[, "inspecmerge"] = ifelse(is.na(merged_assessments$inspecid.y) & !is.na(merged_assessments$inspecid.x), 1, merged_assessments[, "inspecmerge"])
 table(merged_assessments$inspecmerge)
-#Open Data Only:
+#Open Data Only: 
 #1       2       3 
-#80 2037704 1180354
+#71 2037701 1180363
 
+merged_assessments = merged_assessments[!is.na(merged_assessments$violationno), c(-grep("nooftailingponds", names(merged_assessments)), -grep("timevacated", names(merged_assessments)), 
+                                                                                  -grep("minegascategorycode", names(merged_assessments)), -grep("merge", names(merged_assessments)), 
+                                                                                  -grep("coalcormetalmmine", names(merged_assessments)), -grep("coalcormetalm", names(merged_assessments)))]
 
-
+saveRDS(merged_assessments, file = "X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_assessments.rds")
+rm(clean_Inspections, common_varstbs, violnames, i)
