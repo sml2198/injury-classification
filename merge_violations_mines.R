@@ -15,6 +15,9 @@ table(assessments_violations$merge)
 #observations noted at the end of "clean_violations.do"
 #1       2       3 
 #55668 1616855 2821359
+#Open Data Only:
+#2       3 
+#54144 2107492 
 
 common_varstbs = sub(".x", "", names(assessments_violations)[grep(".x", names(assessments_violations), fixed = T)], fixed = T)
 for (i in 1:length(common_varstbs)) {
@@ -46,6 +49,8 @@ assessments_violations[(assessments_violations$violator_name != assessments_viol
 assessments_violations[(assessments_violations$violator_name != assessments_violations$violatorname) & !is.na(assessments_violations$violator_name) & !is.na(assessments_violations$violatorname), "violatorname"] = gsub(" llc", "", assessments_violations[(assessments_violations$violator_name != assessments_violations$violatorname) & !is.na(assessments_violations$violator_name) & !is.na(assessments_violations$violatorname), "violatorname"])
 
 #Clean up occurrencedate field
+assessments_violations$occurrencedate = as.character(assessments_violations$occurrencedate)
+assessments_violations$violation_occur_dt = as.character(assessments_violations$violation_occur_dt)
 sum(assessments_violations$occurrencedate != assessments_violations$violation_occur_dt, na.rm = T) #214
 assessments_violations = assessments_violations[(assessments_violations$occurrencedate == assessments_violations$violation_occur_dt) | is.na(assessments_violations$occurrencedate) | is.na(assessments_violations$violation_occur_dt),]
 assessments_violations[is.na(assessments_violations$occurrencedate) & !is.na(assessments_violations$violation_occur_dt),]$occurrencedate = assessments_violations[is.na(assessments_violations$occurrencedate) & !is.na(assessments_violations$violation_occur_dt),]$violation_occur_dt
@@ -59,10 +64,10 @@ names(assessments_violations)[names(assessments_violations) == "good_faith_ind"]
 
 #Uses the "calendaryear" field from violations data to purge post-1999 data from Carolyn's pull
 #This line causes assessments_violations to have all NA's
-assessments_violations = assessments_violations[(assessments_violations$src == "early" & assessments_violations$calendaryear <= 1999 &
-                                                   !is.na(assessments_violations$src) & !is.na(assessments_violations$calendaryear)) |
-                                                  (assessments_violations$src == "open_data") & !is.na(assessments_violations$src) | 
-                                                  assessments_violations$merge == 1 | assessments_violations$merge == 2,]
+#assessments_violations = assessments_violations[(assessments_violations$src == "early" & assessments_violations$calendaryear <= 1999 &
+#                                                   !is.na(assessments_violations$src) & !is.na(assessments_violations$calendaryear)) |
+#                                                  (assessments_violations$src == "open_data") & !is.na(assessments_violations$src) | 
+#                                                  assessments_violations$merge == 1 | assessments_violations$merge == 2,]
 assessments_violations = assessments_violations[, -grep("merge", names(assessments_violations))]
 saveRDS(assessments_violations, file = "X:/Projects/Mining/NIOSH/analysis/data/3_merged/assessments_violations.rds") #should we name to align w/ STATA version?
 rm(clean_violations, clean_assessments)
@@ -77,12 +82,15 @@ assessments_violations_mines[, "minesmerge"] = ifelse(is.na(assessments_violatio
 table(assessments_violations_mines$minesmerge)
 #1       2       3 
 #5   39288 4493661
+#Open Data Only:
+#2       3 
+#59710 2161422 
 
 #Drop mines without inspections/assessments and 5 obs from contractor with US DOE at a Waste Isolation Plant in NM (MSHA Data Retrieval System) without mine data (mineid = 2901857). Nikhil 5/1/16
 #Number of assessments_violations_mines$coalcormetalm == 1 observations higher in R than in STATA. Nikhil 5/23/16
 assessments_violations_mines = assessments_violations_mines[assessments_violations_mines$minesmerge == 3 & assessments_violations_mines$coalcormetalm == 1,]
 
-#Insert clean violator names code here.
+##Insert clean violator names code here.##
 
 saveRDS(assessments_violations_mines, file = "X:/Projects/Mining/NIOSH/analysis/data/3_merged/assessments_violations_mines.rds")
 rm(clean_mines, assessments_violations)
@@ -94,5 +102,9 @@ merged_assessments[, "inspecmerge"] = ifelse(!is.na(merged_assessments$inspecid.
 merged_assessments[, "inspecmerge"] = ifelse(is.na(merged_assessments$inspecid.x) & !is.na(merged_assessments$inspecid.y), 2, merged_assessments[, "inspecmerge"])
 merged_assessments[, "inspecmerge"] = ifelse(is.na(merged_assessments$inspecid.y) & !is.na(merged_assessments$inspecid.x), 1, merged_assessments[, "inspecmerge"])
 table(merged_assessments$inspecmerge)
+#Open Data Only:
+#1       2       3 
+#80 2037704 1180354
+
 
 
