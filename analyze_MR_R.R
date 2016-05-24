@@ -230,9 +230,6 @@ mr.data[, "oil"] = ifelse(grepl("(^| )(oil).{1,25}(can|drum|barrel)", mr.data[,"
 mr.data[, "dismantl"] = ifelse(grepl("dismant(el|le|al|il|l)", mr.data[,"narrative"]), 1, 0) 
 mr.data[, "rethread"] = ifelse(grepl("re( )*thr(ea|e)d", mr.data[,"narrative"]), 1, 0)
 mr.data[, "remove"] = ifelse(grepl("remov(e|ed|ing)", mr.data[,"narrative"]), 1, 0) 
-#                             & grepl("broken", mr.data[,"narrative"]) & grepl("flanged", mr.data[,"narrative"])
-#                             & grepl("old", mr.data[,"narrative"]) & grepl("bent", mr.data[,"narrative"]) 
-#                             & grepl("busted", mr.data[,"narrative"]) , 1, 0) 
 
 # *MAINTENANCE* 
 
@@ -252,8 +249,8 @@ mr.data[, "battery"] = ifelse(grepl("bat(t)*(e)*r(y|ies)", mr.data[,"narrative"]
 
 # DEAL WITH THE WORD "INSTALLATION". INSTALLS ARE NOT M&R IF RELEVANT TO CONSTRUCTION/PRODUCTION, LIKE WITH ROOF BOLTING
 
-mr.data[, "roof.bolt"] = ifelse(grepl("(roof|rib)*( )*(bolt)(er|ing| |$|\\.|,).{1,20}(^| |e|n)i(s|n|t)(s|n|t)(s|n|t)al[a-z]*", mr.data[,"narrative"]) | 
-                                grepl("(roof|rib)*( )*(bolt)(er|ing| |$|\\.|,).{1,20}(^| |e|n)i(s|n|t)(s|n|t)(s|n|t)al[a-z]*", mr.data[,"narrative"]), 1, 0)  
+mr.data[, "roof.bolt"] = ifelse(grepl("(roof|rib)*( )*(bolt)(er|s|ing| |$|\\.|,).{1,20}(^| |e|n)i(s|n|t)(s|n|t)(s|n|t)al[a-z]*", mr.data[,"narrative"]) | 
+                                grepl("(^| |e|n)i(s|n|t)(s|n|t)(s|n|t)al[a-z]*.{1,20}(roof|rib)*( )*(bolt)(er|s|ing| |$|\\.|,)", mr.data[,"narrative"]), 1, 0)  
 mr.data[, "rib.hole"] = ifelse(grepl("(rib)( )*(hole).{1,20}(^| |e|n)i(s|n|t)(s|n|t)(s|n|t)al[a-z]*", mr.data[,"narrative"]) | 
                                grepl("(^| |e|n)i(s|n|t)(s|n|t)(s|n|t)al[a-z]*.{1,20}(rib)( )*(hole)", mr.data[,"narrative"]), 1, 0)  
 # Accounts for install, reinstall, uninstall (but not "an installed cable" or something like that)
@@ -764,8 +761,8 @@ adaboost.pred$confusion
 #YES   3  93
 
 #Predicted Class  NO YES - INCLUDED
-#NO  155  15
-#YES   8  96
+#NO  155   12
+#YES   11  96
 
 adaboost_test = cbind(simple[701:1019,], adaboost.pred$class)
 names(adaboost_test)[names(adaboost_test) == 'adaboost.pred$class'] = 'adaboost'
