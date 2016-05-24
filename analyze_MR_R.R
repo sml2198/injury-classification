@@ -180,7 +180,7 @@ names(mr.data)[names(mr.data) == "MR"] = "MR"
 
 # IF CLASSIFYING REAL ACCIDENTS, MAKE SURE MR IS FLAGGED - WE CALL IT "3" INSTEAD OF "?" SO IT'S VALUE IS NOT IMPUTED LATER ON
 if (data.type == "real accidents data") {
-  mr.data[, "MR"] = factor(ifelse(mr.data[, "type"] == "unclassified", "3", mr.data$MR))
+  mr.data[, "MR"] = factor(ifelse(mr.data[, "type"] == "unclassified", "2", mr.data$MR))
 }
 
 ######################################################################################################
@@ -797,8 +797,10 @@ if (data.type == "real accidents data") {
     set.seed(625)
     mr.adaboost = boosting(MR ~ . , data = simple[simple$MR != 3,!(names(simple) %in% c('documentno','narrative'))], boos = T, mfinal = 300, coeflearn = 'Freund')
     adaboost.pred = predict.boosting(mr.adaboost, newdata = simple[simple$MR==3,!(names(simple) %in% c('documentno','narrative'))])
-    adaboost_test = cbind(simple[simple$MR==3,], adaboost.pred$class)
-    names(adaboost_test)[names(adaboost_test) == 'adaboost.pred$class'] = 'adaboost'
+    accidents.data = cbind(simple[simple$MR==3,], adaboost.pred$class)
+    names(accidents.data)[names(adaboost_test) == 'adaboost.pred$class'] = 'adaboost'
+    write.csv(accidents.data, file = "C:/Users/slevine2/Dropbox (Stanford Law School)/R-code/accidents_with_predictions.csv", row.names = FALSE)
+    
 }
 
 ######################################################################################################
