@@ -38,73 +38,101 @@ imputation.method = 3
 # Different people at NIOSH told us different things about whether or not to include accidents that occur during MR
 # but are not related in nature to MR activities, for example falling rock/metal accidents, or an employee walking
 # into a piece of equipment. If "excluded", this code will replace MR with 0 for observations I've identified as
-# these types of accidents.
-
+# these types of accidents. UPDATE: We're moving forward with the "included" version.
 #falling.accidents = "excluded"
 falling.accidents = "included"
 
-# LOAD IN CODED TRAINING SET (1000 OBSERVATIONS, CODED FOR "MR")
-mr.data = read.csv("X:/Projects/Mining/NIOSH/analysis/data/training/coded_sets/Training_Set_Maintenance_And_Repair_Accidents_August_2015_2.csv", header = TRUE, sep = ",", nrows = 1001, stringsAsFactors = FALSE)
+#data.type = "training data"
+data.type = "real accidents data"
 
-# LOAD IN DATASET OF ADDITIONAL FATALITIES (FROM OPEN DATA) TO APPEND TO OUR TRAINING SET - ALL "MR"
-mr.fatalities = read.csv("X:/Projects/Mining/NIOSH/analysis/data/4_coded/coded_MR_fatalities.csv", header = TRUE, sep = ",", nrows = 24, stringsAsFactors = FALSE)
+if (data.type == "training data") {
+  # LOAD IN CODED TRAINING SET (1000 OBSERVATIONS, CODED FOR "MR")
+  mr.data = read.csv("X:/Projects/Mining/NIOSH/analysis/data/training/coded_sets/Training_Set_Maintenance_And_Repair_Accidents_August_2015_2.csv", header = TRUE, sep = ",", nrows = 1001, stringsAsFactors = FALSE)
+  # LOAD IN DATASET OF ADDITIONAL FATALITIES (FROM OPEN DATA) TO APPEND TO OUR TRAINING SET - ALL "MR"
+  mr.fatalities = read.csv("X:/Projects/Mining/NIOSH/analysis/data/4_coded/coded_MR_fatalities.csv", header = TRUE, sep = ",", nrows = 24, stringsAsFactors = FALSE)
+}
+
+if (data.type == "real accidents data") {
+  # LOAD IN REAL ACCIDENTS DATA FOR CLASSIFICATION
+  mr.data = read.csv("C:/Users/slevine2/Dropbox (Stanford Law School)/R-code/prepped_mines_accidents.csv", header = TRUE, sep = ",", nrows = 1001, stringsAsFactors = FALSE)
+}
 
 ######################################################################################################
-# MAKE SURE TRAINING SET AND FATALITIES DATASETS HAVE ALL THE SAME VAR NAMES BEFORE APPENDING
+# MAKE SURE TRAINING SET AND FATALITIES DATASETS HAVE ALL THE SAME VAR NAMES BEFORE APPENDING - IF USING TRAINING DATA
 
-mr.data$MR = as.factor(mr.data$M.R.)
-mr.data = mr.data[, c(-match("M.R.", names(mr.data)))]
-mr.data[, "death"] = ifelse(grepl("fatality", mr.data[,"degreeofinjury"]), 1, 0)
+if (data.type == "training data") {
+    mr.data$MR = as.factor(mr.data$M.R.)
+    mr.data = mr.data[, c(-match("M.R.", names(mr.data)))]
+    mr.data[, "death"] = ifelse(grepl("fatality", mr.data[,"degreeofinjury"]), 1, 0)
+    
+    # CLEAN UP FATALITIES VARIABLES - DROP VARIABLES NOT PRESENT IN TRAINING SET BEFORE APPENDING
+    mr.fatalities$MR = as.factor(mr.fatalities$MR_fatality)
+    mr.fatalities = mr.fatalities[, c(-grep("MR_fatality", names(mr.fatalities)), -grep("v56", names(mr.fatalities)),
+                                      -grep("v57", names(mr.fatalities)), -grep("v58", names(mr.fatalities)), 
+                                      -grep("v59", names(mr.fatalities)))]
+    
+    # THESE FOUR FATALGRAMS ARE CONSIDERED M&R AND WERE INCLUDED IN A STUDY BY JOHN H. FROM NIOSH AS M&R. 
+    # HOWEVER, IT'S REALLY ONLY EVIDENT FROM THE FATALGRAMS (SEE OPEN DATA FOLDER) THAT THESE WERE SUSTAINED
+    # DURING LARGER GROUP M&R ACTIVITIES. NOTHING FROM THE NARRATIVE FIELD/OCCUPATION INDICATES THAT M&R WAS THE
+    # ACTIVITY AT THE TIME. ESSENTIALLY, TRAINING ON THESE OBSERVATIONS WILL STACK THE DECK AGAINST US.
+    # LET'S DELETE THEM FOR NOW.
+    mr.fatalities = mr.fatalities[!(mr.fatalities$documentno=="220030290001") & !(mr.fatalities$documentno=="220030290002") &
+                                  !(mr.fatalities$documentno=="220030290003") & !(mr.fatalities$documentno=="220030130149"),]
+    
+    # CLEAN NARRATIVE FIELDS: DROP REDUNDANT VARS AND KEEP LOWERCASE VERSION
+    drops <- c("narrativemodified", "degreeofinjury", "accidentclassification", "accidenttype", "natureofinjury", "mineractivity")
+    mr.data = mr.data[, !(names(mr.data) %in% drops)]
+    names(mr.data)[names(mr.data) == 'narrativemodified.1'] = 'narrative'
+    mr.data$narrative = tolower(mr.data$narrative)
+    names(mr.data)[names(mr.data) == 'degreeofinjury.1'] = 'degreeofinjury'
+    mr.data$degreeofinjury = tolower(mr.data$degreeofinjury)
+    names(mr.data)[names(mr.data) == 'accidentclassification.1'] = 'accidentclassification'
+    mr.data$accidentclassification = tolower(mr.data$accidentclassification)
+    names(mr.data)[names(mr.data) == 'accidenttype.1'] = 'accidenttype'
+    mr.data$accidenttype = tolower(mr.data$accidenttype)
+    names(mr.data)[names(mr.data) == 'natureofinjury.1'] = 'natureofinjury'
+    mr.data$natureofinjury = tolower(mr.data$natureofinjury)
+    names(mr.data)[names(mr.data) == 'mineractivity.1'] = 'mineractivity'
+    mr.data$mineractivity = tolower(mr.data$mineractivity)
+    mr.data$occupation = tolower(mr.data$occupation)
+    mr.data$typeofequipment = tolower(mr.data$typeofequipment)
+    mr.data$sourceofinjury = tolower(mr.data$sourceofinjury)
+    mr.data$bodypart = tolower(mr.data$bodypart)
+    mr.data$equipmanufacturer = tolower(mr.data$equipmanufacturer)
+    mr.data$immediatenotificationclass = tolower(mr.data$immediatenotificationclass)
+    mr.data$uglocation = tolower(mr.data$uglocation)
+    
+    # APPEND DATASET OF ADDITIONAL FATALITY OBSERVATIONS FOR TRAINING SET
+    mr.data <- rbind(mr.data, mr.fatalities) 
+    
+    # MAKE MR A FACTOR VARIABLE
+    mr.data[, "MR"] = factor(ifelse(mr.data[, "MR"] == 1, "YES", "NO"))
+    names(mr.data)[names(mr.data) == "MR"] = "MR"
+    
+    # RECODE MISCODED INJURIES AS NON-M&R. See email with J. Heberger from NIOSH on May 2, 2016. About the following injury,
+    # he explains "even though mine worker activity is M&R, installing roof bolts is not considered M&R.  Should be coded  2."
+    # Here we manually recode this one observation. 
+    mr.data$MR[mr.data$documentno=="219932950056"] = "NO"
+}
 
-# CLEAN UP FATALITIES VARIABLES - DROP VARIABLES NOT PRESENT IN TRAINING SET BEFORE APPENDING
-mr.fatalities$MR = as.factor(mr.fatalities$MR_fatality)
-mr.fatalities = mr.fatalities[, c(-grep("MR_fatality", names(mr.fatalities)), -grep("v56", names(mr.fatalities)),
-                                  -grep("v57", names(mr.fatalities)), -grep("v58", names(mr.fatalities)), 
-                                  -grep("v59", names(mr.fatalities)))]
-
-# THESE FOUR FATALGRAMS ARE CONSIDERED M&R AND WERE INCLUDED IN A STUDY BY JOHN H. FROM NIOSH AS M&R. 
-# HOWEVER, IT'S REALLY ONLY EVIDENT FROM THE FATALGRAMS (SEE OPEN DATA FOLDER) THAT THESE WERE SUSTAINED
-# DURING LARGER GROUP M&R ACTIVITIES. NOTHING FROM THE NARRATIVE FIELD/OCCUPATION INDICATES THAT M&R WAS THE
-# ACTIVITY AT THE TIME. ESSENTIALLY, TRAINING ON THESE OBSERVATIONS WILL STACK THE DECK AGAINST US.
-# LET'S DELETE THEM FOR NOW.
-mr.fatalities = mr.fatalities[!(mr.fatalities$documentno=="220030290001") & !(mr.fatalities$documentno=="220030290002") &
-                              !(mr.fatalities$documentno=="220030290003") & !(mr.fatalities$documentno=="220030130149"),]
-
-# CLEAN NARRATIVE FIELDS: DROP REDUNDANT VARS AND KEEP LOWERCASE VERSION
-drops <- c("narrativemodified", "degreeofinjury", "accidentclassification", "accidenttype", "natureofinjury", "mineractivity")
-mr.data = mr.data[, !(names(mr.data) %in% drops)]
-names(mr.data)[names(mr.data) == 'narrativemodified.1'] = 'narrative'
-mr.data$narrative = tolower(mr.data$narrative)
-names(mr.data)[names(mr.data) == 'degreeofinjury.1'] = 'degreeofinjury'
-mr.data$degreeofinjury = tolower(mr.data$degreeofinjury)
-names(mr.data)[names(mr.data) == 'accidentclassification.1'] = 'accidentclassification'
-mr.data$accidentclassification = tolower(mr.data$accidentclassification)
-names(mr.data)[names(mr.data) == 'accidenttype.1'] = 'accidenttype'
-mr.data$accidenttype = tolower(mr.data$accidenttype)
-names(mr.data)[names(mr.data) == 'natureofinjury.1'] = 'natureofinjury'
-mr.data$natureofinjury = tolower(mr.data$natureofinjury)
-names(mr.data)[names(mr.data) == 'mineractivity.1'] = 'mineractivity'
-mr.data$mineractivity = tolower(mr.data$mineractivity)
-mr.data$occupation = tolower(mr.data$occupation)
-mr.data$typeofequipment = tolower(mr.data$typeofequipment)
-mr.data$sourceofinjury = tolower(mr.data$sourceofinjury)
-mr.data$bodypart = tolower(mr.data$bodypart)
-mr.data$equipmanufacturer = tolower(mr.data$equipmanufacturer)
-mr.data$immediatenotificationclass = tolower(mr.data$immediatenotificationclass)
-mr.data$uglocation = tolower(mr.data$uglocation)
-
-# APPEND DATASET OF ADDITIONAL FATALITY OBSERVATIONS FOR TRAINING SET
-mr.data <- rbind(mr.data, mr.fatalities) 
-
-# MAKE MR A FACTOR VARIABLE
-mr.data[, "MR"] = factor(ifelse(mr.data[, "MR"] == 1, "YES", "NO"))
-names(mr.data)[names(mr.data) == "MR"] = "MR"
-
-# RECODE MISCODED INJURIES AS NON-M&R. See email with J. Heberger from NIOSH on May 2, 2016. About the following injury,
-# he explains "even though mine worker activity is M&R, installing roof bolts is not considered M&R.  Should be coded  2."
-# Here we manually recode this one observation. 
-mr.data$MR[mr.data$documentno=="219932950056"] = "NO"
-
+######################################################################################################
+# DO THIS CODE IF YOU'RE RUNNING ON THE REAL ACCIDENTS DATA (NOT THE TRAINING SET)
+if (data.type == "real accidents data") {
+      # CLEAN NARRATIVE FIELDS: DROP REDUNDANT VARS AND KEEP LOWERCASE VERSION
+      mr.data$narrative = tolower(mr.data$narrative)
+      mr.data$degreeofinjury = tolower(mr.data$degreeofinjury)
+      mr.data$accidentclassification = tolower(mr.data$accidentclassification)
+      mr.data$accidenttype = tolower(mr.data$accidenttype)
+      mr.data$natureofinjury = tolower(mr.data$natureofinjury)
+      mr.data$mineractivity = tolower(mr.data$mineractivity)
+      mr.data$occupation = tolower(mr.data$occupation)
+      mr.data$typeofequipment = tolower(mr.data$typeofequipment)
+      mr.data$sourceofinjury = tolower(mr.data$sourceofinjury)
+      mr.data$bodypart = tolower(mr.data$bodypart)
+      mr.data$equipmanufacturer = tolower(mr.data$equipmanufacturer)
+      mr.data$immediatenotificationclass = tolower(mr.data$immediatenotificationclass)
+      mr.data$uglocation = tolower(mr.data$uglocation)
+}
 ######################################################################################################
 # CLEAN UP ALL VARS 
 
