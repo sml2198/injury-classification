@@ -1,5 +1,8 @@
 ##HEADER##
 
+library(plyr)
+library(zoo)
+
 merged_assessments = readRDS("X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_assessments.rds")
 merged_cfr_key = readRDS("X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_cfr_key.rds")
 
@@ -38,16 +41,31 @@ for (i in 1:length(datevars)) {
 
 merge_mine_quarters$quarter = as.yearqtr(merge_mine_quarters$dateissued)
 merge_mine_quarters$total_violations = 1
-temp = aggregate.data.frame(merge_mine_quarters$total_violations, list(merge_mine_quarters$mineid), sum)
+relevancevars = names(merge_mine_quarters)[grep("_relevant", names(merge_mine_quarters))]
+for (i in 1:length(relevancevars)) {
+  merge_mine_quarters[, paste(relevancevars[i], "_viols", sep = "")] = ifelse(merge_mine_quarters[, relevancevars[i]] == 1, 1, 0)
+}
+temp = aggregate.data.frame(merge_mine_quarters[, c(grep("_viols", names(merge_mine_quarters)), grep("total_violations", names(merge_mine_quarters)))], list(merge_mine_quarters$mineid), sum)
 names(temp)[names(temp) == "Group.1"] = "mineid"
-names(temp)[names(temp) == "x"] = "total_violations"
-merge_mine_quarters = merge_mine_quarters[, -grep("total_violations", names(merge_mine_quarters))]
+merge_mine_quarters = merge_mine_quarters[, c(-grep("total_violations", names(merge_mine_quarters)), -grep("_viols", names(merge_mine_quarters)))]
 merge_mine_quarters = merge(merge_mine_quarters, temp, by = "mineid", all = T)
-
-##But how to create category-specific total_viols?
-
+rm(temp)
 merge_mine_quarters$inspect_length = merge_mine_quarters$endingdate - merge_mine_quarters$beginningdate
 merge_mine_quarters$maint_qtrly_hrs = merge_mine_quarters$numberofemployees * merge_mine_quarters$maintenanceshiftsperday * merge_mine_quarters$hourspershift * merge_mine_quarters$daysperweek * 13
 merge_mine_quarters$prod_qtrly_hrs = merge_mine_quarters$numberofemployees * merge_mine_quarters$productionshiftsperday * merge_mine_quarters$hourspershift * merge_mine_quarters$daysperweek * 13
 
-##But how to aggregate using different FUNs at once?
+summed = ddply(merge_mine_quarters[, c(grep("_viols", names(merge_mine_quarters)), grep("total_violations", names(merge_mine_quarters)), 
+                                       grep("mineid", names(merge_mine_quarters)), match("quarter", names(merge_mine_quarters)))], c("mineid", "quarter"), 
+                                       function(x) sapply(x[, c(grep("_viols", names(x)), grep("total_violations", names(x)))], sum))
+averaged = ddply(merge_mine_quarters[, c(grep("numberofemployees", names(merge_mine_quarters)), grep("proposed_penalty", names(merge_mine_quarters)),
+                                         grep("total_inspections", names(merge_mine_quarters)), grep("inspect_length", names(merge_mine_quarters)),
+                                         grep("maint_qtrly_hrs", names(merge_mine_quarters)), grep("prod_qtrly_hrs", names(merge_mine_quarters)),
+                                         grep("mineid", names(merge_mine_quarters)), match("quarter", names(merge_mine_quarters)))], c("mineid", "quarter"), 
+                                         function(x) sapply(x[, c(grep("numberofemployees", names(x)), grep("proposed_penalty", names(x)),
+                                                                  grep("total_inspections", names(x)), grep("inspect_length", names(x)),
+                                                                  grep("maint_qtrly_hrs", names(x)), grep("prod_qtrly_hrs", names(x)))], mean))
+
+merge_mine_quarters = merge(summed, averaged, by = c("mineid", "quarter"), all = T)
+
+saveRDS(merge_mine_quarters, file = "X:/Projects/Mining/NIOSH/analysis/data/4_collapsed/collapsed_mine_quarters.rds")
+
