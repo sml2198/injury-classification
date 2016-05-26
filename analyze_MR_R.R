@@ -1,9 +1,9 @@
 # This code pulls in 1000 observations from the manually coded training set for maintenance and repair (MR)
 # injuries. It then appends 23 MR fatalities that were scraped from MSHA: http://arlweb.msha.gov/fatals/coal/2014/
 # It then prepares all variables for analyses in CART-RF-MR.R by formatting, imputing missing values, 
-# dropping extraneous parameters, and dummying out large factor variables. We produce two datasets: A "training"
-# set contianing all potentially relevant variables, and a "simple" dataset, containing only those variables
-# used in the "simple-algorithm."
+# dropping extraneous parameters, and dummying out large factor variables. It then performs a number of modeling
+# strategies and prints their accuracy. If the data.type is set to "real accidents data", this file will read in
+# and classify all accidents by the algorithm with the highest accuracy.
 
 install.packages("zoo")
 install.packages("rpart")
@@ -34,7 +34,7 @@ library(caret)
 rm(list = ls())
 
 # SET PREFERENCES - IMPUTATION METHOD - METHOD 3 IS RANDOM DRAWS FROM DISTRIBUTION (OUR BEST METHOD)
-imputation.method = 3
+imputation.method = 0
 
 # Different people at NIOSH told us different things about whether or not to include accidents that occur during MR
 # but are not related in nature to MR activities, for example falling rock/metal accidents, or an employee walking
@@ -178,11 +178,6 @@ mr.data$MR[mr.data$MR == "YES" & mr.data$accident.only == 1] = 0
 mr.data[, "MR"] = factor(ifelse(mr.data[, "MR"] == 1, "YES", "NO"))
 names(mr.data)[names(mr.data) == "MR"] = "MR"
 
-# IF CLASSIFYING REAL ACCIDENTS, MAKE SURE MR IS FLAGGED - WE CALL IT "3" INSTEAD OF "?" SO IT'S VALUE IS NOT IMPUTED LATER ON
-if (data.type == "real accidents data") {
-  mr.data[, "MR"] = factor(ifelse(mr.data[, "type"] == "unclassified", "2", mr.data$MR))
-}
-
 ######################################################################################################
 # 60 NARRATIVE FIELDS ARE POLLUTED WITH OTHER COLUMNS - SPLIT AND REPLACE THESE 
 
@@ -224,34 +219,36 @@ mr.data[, "rplace"] = ifelse(grepl("(^| )replac(e|i)[a-z]*", mr.data[,"narrative
 # We don't want to see the noun "service" because that often refers to hoist service, but "serviced" and "servicing" are good indicators.
 mr.data[, "service"] = ifelse(grepl("serviced", mr.data[,"narrative"]) | grepl("servicing", mr.data[,"narrative"]), 1, 0)
 mr.data[, "fix"] = ifelse(grepl("(^| )fix[a-z]*", mr.data[,"narrative"]) & !grepl("(^| )fixture", mr.data[,"narrative"]), 1, 0) 
-mr.data[, "changing"] = ifelse(grepl("chang(e|ing|ed)( |-)*out", mr.data[,"narrative"]), 1, 0)
+mr.data[, "changing"] = ifelse(grepl("chang(e|ing|ed)( |-)*out", mr.data[,"narrative"]) |
+                               (grepl("chang(e|ing|ed)", mr.data[,"narrative"]) & !grepl("chang(e|ing|ed).{1,10}(shift|place|positi)", mr.data[,"narrative"])), 1, 0)
 mr.data[, "retrack"] = ifelse(grepl("re(rail|track|trakc)(ed|ing)", mr.data[,"narrative"]) |
                               grepl("pull(ing|ed)*.{1,5}track", mr.data[,"narrative"]), 1, 0)
 mr.data[, "pullbelt"] = ifelse(grepl("pull( |ing|ed|s)*.{1,15}(belt|rope|tube|tubing)", mr.data[,"narrative"]) |
                                grepl("(belt|rope|spool|tube|tubing).{1,15}pull( |ing|ed|s)*", mr.data[,"narrative"]) |
                                grepl("(belt|rope|spool|tube|tubing).{1,15}load( |ing|ed|s)*", mr.data[,"narrative"]) |
                                grepl("load( |ing|ed|s)*.{1,15}(belt|rope|tube|tubing)", mr.data[,"narrative"]), 1, 0)
-mr.data[, "reposition"] = ifelse(grepl("re( )*pos(i|t)(i|t)(i|o)(i|o)n", mr.data[,"narrative"]), 1, 0) 
+mr.data[, "reposition"] = ifelse(grepl("re( |-)*pos(i|t)(i|t)(i|o)(i|o)n", mr.data[,"narrative"]), 1, 0) 
 # Sometimes even when the occupation field isn't MR, the narrative field refers to the job of the injured, or to the injured ee helping an MR worker. 
 mr.data[, "mrworker"] = ifelse(grepl("(mechanic|electrician|repairm(a|e)n)", mr.data[,"narrative"]), 1, 0) 
-mr.data[, "cover"] = ifelse(grepl("(replac|lift).{1,20}(panel|cover| lid)", mr.data[,"narrative"]) |
-                            grepl("(panel|cover| lid){1,5}fell", mr.data[,"narrative"]) &
-                            !grepl("eye.{1,5}lid)", mr.data[,"narrative"]), 1, 0) 
+mr.data[, "cover"] = ifelse((grepl("(replac|lift).{1,20}(panel|cover| lid|hood)", mr.data[,"narrative"]) |
+                            grepl("(panel|cover| lid|hood){1,5}fell", mr.data[,"narrative"]) | 
+                            grepl("drop.{1,10}(panel|cover| lid|hood)", mr.data[,"narrative"])) &
+                            !grepl("eye.{1,5}lid", mr.data[,"narrative"]), 1, 0) 
 mr.data[, "toolbox"] = ifelse(grepl("( |^)tool", mr.data[,"narrative"]), 1, 0)
                             
 # *MAINTENANCE* 
 
 # "Cleaning the rib" refers to using a scoop to grab extra coal, but this is in fact a production activity.
-mr.data[, "cleaning"] = ifelse(grepl("clean", mr.data[,"narrative"]) & !grepl("clean.{1,10} rib", mr.data[,"narrative"]), 1, 0) 
-mr.data[, "maintain"] = ifelse(grepl("(^| )maintain[a-z]*", mr.data[,"narrative"]), 1, 0)
+mr.data[, "cleaning"] = ifelse(grepl("cl(ean|(e)*aning)", mr.data[,"narrative"]) & !grepl("clean.{1,10} rib", mr.data[,"narrative"]), 1, 0) 
+mr.data[, "maintain"] = ifelse(grepl("(^| )maint(ain|en)[a-z]*", mr.data[,"narrative"]), 1, 0)
 # Try to avoid inspection/inspector
 mr.data[, "inspect"] = ifelse(grepl("inspect( |ed|s|ing|\\.|,|$)", mr.data[,"narrative"]), 1, 0)
 mr.data[, "shovel"] = ifelse(grepl("shovel(ing|ed).{1,5}coal)", mr.data[,"narrative"]) |
                              grepl("coal.{1,15}shovel(ing|ed)", mr.data[,"narrative"]) |
                              grepl("shovel(ing|ed).{1,20}belt", mr.data[,"narrative"]) |
                              grepl("shovel(ing|ed).{1,20}convey(e|o)r", mr.data[,"narrative"]) |
-                             grepl("shovel(ing|ed).{1,20}tail( )*p(e|i)(e|i)ce", mr.data[,"narrative"]) |
-                             grepl("shovel(ing|ed).{1,20}(head|drive|guide|bend|lagged|tail)*( )*pull(y|ey|ies|ys)", mr.data[,"narrative"]) |
+                             grepl("shovel(ing|ed).{1,20}tail( |-)*p(e|i)(e|i)ce", mr.data[,"narrative"]) |
+                             grepl("shovel(ing|ed).{1,20}(head|drive|guide|bend|lagged|tail)*( |-)*pull(y|ey|ies|ys)", mr.data[,"narrative"]) |
                              grepl("shovel(ing|ed).{1,20}(roller|idler)", mr.data[,"narrative"]) |
                              grepl("shovel(ing|ed).{1,20}(west|header|drive)", mr.data[,"narrative"]), 1, 0)
 # We don't want the noun "hose" (or "whose") just the verb - also dont want "bullhose" or any of that nonsense
@@ -270,26 +267,29 @@ mr.data[, "tests"] = ifelse(grepl("test(ing|ed)", mr.data[,"narrative"]) &
                           !grepl("emergency", mr.data[,"narrative"]) &
                           !grepl("clinic", mr.data[,"narrative"]), 1, 0) 
 # Oil in mention of can/drum/barrel often means something is being greased. Otherwise it usually apears in some other context (being slipped on, lit, etc...)
-mr.data[, "oil"] = ifelse(grepl("(^| )(oil).{1,25}(can|drum|barrel)", mr.data[,"narrative"]) |
-                          grepl("(can|drum|barrel).{1,25}oil", mr.data[,"narrative"]), 1, 0) 
+mr.data[, "oil"] = ifelse(grepl("(^| )(oil).{1,25}(can|drum|barrel|container)", mr.data[,"narrative"]) |
+                          grepl("(can|drum|barrel|container).{1,25}oil", mr.data[,"narrative"]) | 
+                          grepl("chang(e|ing).{1,6}oil", mr.data[,"narrative"])
+                          , 1, 0) 
 
 # GENERATE POTENTIALLY POSITIVE KEYWORDS (MAYBE INDICATE POSITIVE OUTCOMES?) 
 
 # *REPAIR* 
 
 mr.data[, "dismantl"] = ifelse(grepl("dismant(el|le|al|il|l)", mr.data[,"narrative"]), 1, 0) 
-mr.data[, "rethread"] = ifelse(grepl("re( )*thr(ea|e)d", mr.data[,"narrative"]), 1, 0)
-mr.data[, "remove"] = ifelse(grepl("remov(e|ed|ing)", mr.data[,"narrative"]), 1, 0) 
+mr.data[, "rethread"] = ifelse(grepl("re( |-)*thr(ea|e)d", mr.data[,"narrative"]), 1, 0)
+mr.data[, "remove"] = ifelse(grepl("re(m)*ov(e|ed|ing|al)", mr.data[,"narrative"]), 1, 0) 
 
 # *MAINTENANCE* 
 
-mr.data[, "bits"] = ifelse(grepl("set(t)*(ing)*( )*bits", mr.data[,"narrative"]), 1, 0)
+mr.data[, "bits"] = ifelse(grepl("set(t)*(ing)*( |-)*bits", mr.data[,"narrative"]), 1, 0)
 mr.data[, "conveyor"] = ifelse(grepl("convey(o|e)r", mr.data[,"narrative"]), 1, 0)
 # We don't want "help" 
-mr.data[, "helping"] = ifelse(grepl("help(ed|ing)", mr.data[,"narrative"]) |
-                               grepl("assis(s)*t(ed|ing)*", mr.data[,"narrative"]), 1, 0)
+mr.data[, "helping"] = ifelse(grepl("help(ed|in(g)*|er)", mr.data[,"narrative"]) |
+                               grepl("assis(s)*t(ed|in(g)**", mr.data[,"narrative"]), 1, 0)
 mr.data[, "belt"] = ifelse(grepl("belt|spool|tube|tubing", mr.data[,"narrative"]), 1, 0)
 mr.data[, "tighten"] = ifelse(grepl("tighten", mr.data[,"narrative"]), 1, 0)
+mr.data[, "loosen"] = ifelse(grepl("loosen", mr.data[,"narrative"]), 1, 0)
 # Most cases of changing batteries are M&R, but sometimes someone might just trip on a charger, or
 # be operating a "battery personnel carrier", and we want to avoid these.
 mr.data[, "battery"] = ifelse(grepl("bat(t)*(e)*r(y|ies)", mr.data[,"narrative"]) &
@@ -299,10 +299,10 @@ mr.data[, "battery"] = ifelse(grepl("bat(t)*(e)*r(y|ies)", mr.data[,"narrative"]
 
 # DEAL WITH THE WORD "INSTALLATION". INSTALLS ARE NOT M&R IF RELEVANT TO CONSTRUCTION/PRODUCTION, LIKE WITH ROOF BOLTING
 
-mr.data[, "roof.bolt"] = ifelse(grepl("(roof|rib)*( )*(bolt)(er|s|ing| |$|\\.|,).{1,20}(^| |e|n)i(s|n|t)(s|n|t)(s|n|t)al[a-z]*", mr.data[,"narrative"]) | 
-                                grepl("(^| |e|n)i(s|n|t)(s|n|t)(s|n|t)al[a-z]*.{1,20}(roof|rib)*( )*(bolt)(er|s|ing| |$|\\.|,)", mr.data[,"narrative"]), 1, 0)  
-mr.data[, "rib.hole"] = ifelse(grepl("(rib)( )*(hole).{1,20}(^| |e|n)i(s|n|t)(s|n|t)(s|n|t)al[a-z]*", mr.data[,"narrative"]) | 
-                               grepl("(^| |e|n)i(s|n|t)(s|n|t)(s|n|t)al[a-z]*.{1,20}(rib)( )*(hole)", mr.data[,"narrative"]), 1, 0)  
+mr.data[, "roof.bolt"] = ifelse(grepl("(roof|rib)*( |-)*(bolt)(er|s|ing| |$|\\.|,).{1,20}(^| |e|n)i(s|n|t)(s|n|t)(s|n|t)al[a-z]*", mr.data[,"narrative"]) | 
+                                grepl("(^| |e|n)i(s|n|t)(s|n|t)(s|n|t)al[a-z]*.{1,20}(roof|rib)*( |-)*(bolt)(er|s|ing| |$|\\.|,)", mr.data[,"narrative"]), 1, 0)  
+mr.data[, "rib.hole"] = ifelse(grepl("(rib)( |-)*(hole).{1,20}(^| |e|n)i(s|n|t)(s|n|t)(s|n|t)al[a-z]*", mr.data[,"narrative"]) | 
+                               grepl("(^| |e|n)i(s|n|t)(s|n|t)(s|n|t)al[a-z]*.{1,20}(rib)( |-)*(hole)", mr.data[,"narrative"]), 1, 0)  
 # Accounts for install, reinstall, uninstall (but not "an installed cable" or something like that)
 mr.data[, "install"] = ifelse(grepl("(^| |e|n)i(s|n|t)(s|n|t)(s|n|t)al[a-z]*", mr.data[,"narrative"]) &
                              !grepl("(^| )an( |e|n)i(s|n|t)(s|n|t)(s|n|t)alled", mr.data[,"narrative"]) 
@@ -310,12 +310,17 @@ mr.data[, "install"] = ifelse(grepl("(^| |e|n)i(s|n|t)(s|n|t)(s|n|t)al[a-z]*", m
 
 # NEGATIVE KEYWORDS (LIKELY TO INDICATE NEGATIVE OUTCOMES) 
 
-mr.data[, "pain"] = ifelse(grepl("(^| )pain( |$|\\.|,|:|)", mr.data[,"narrative"]), 1, 0)
+mr.data[, "pain"] = ifelse(grepl("(^| )(pain|hurt)(s)*( |$|\\.|,|:)", mr.data[,"narrative"]), 1, 0)
+mr.data[, "injured"] = ifelse(grepl("injur", mr.data[,"narrative"]), 1, 0)
 # Make sure "hoisting" or "hoisted" aren't grabbed
 mr.data[, "hoist"] = ifelse(((grepl("(^| )hoist(s| |$|\\.|,|:)", mr.data[,"narrative"]) |
-                              grepl("(^| )el(e|a|i)vat(o|e)r*", mr.data[,"narrative"])) & mr.data[, "pain"] == 0), 1, 0) 
+                              grepl("(^| )el(e|a|i)vat(o|e)r", mr.data[,"narrative"]))
+                              & !grepl("(elevat(o|e)r|hoist).{1,10}(door|cable|hous|cylinder|hook|rope|convey(o|e)r|drum|jack|motor|chain|grip|brake|pedal|slope|cage|frame)", mr.data[,"narrative"])
+                              & !grepl("(door|cable|hous|cylinder|hook|rope|convey(o|e)r|drum|jack|motor|chain|grip|brake|pedal|slope|cage|frame).{1,10}(elevat(o|e)r|hoist)", mr.data[,"narrative"])
+                              & !grepl("(^| )us(e|ing).{1,10}(elevat(o|e)r|hoist)", mr.data[,"narrative"])
+                              & mr.data[, "pain"] == 0 & mr.data[, "injured"] == 0), 1, 0) 
 mr.data[, "surgery"] = ifelse((grepl("surger[a-z]*", mr.data[,"narrative"]) | 
-                              grepl("surgic[a-z]*", mr.data[,"narrative"])) & mr.data[, "pain"] == 0, 1, 0)
+                              grepl("surgic[a-z]*", mr.data[,"narrative"])) & mr.data[, "pain"] == 0 & mr.data[, "injured"] == 0, 1, 0)
 
 ######################################################################################################
 # GENERATE ADDITIONAL KEYWORDS WE HAVE NO PRIORS ABOUT TO FEED INTO RANDOM FOREST 
@@ -328,8 +333,10 @@ mr.data[, "lug"] = ifelse(grepl("( |^)lug(g)*", mr.data[,"narrative"]) & (mr.dat
 mr.data[, "wrench"] = ifelse(grepl("wrench", mr.data[,"narrative"]), 1, 0)
 mr.data[, "trash"] = ifelse(grepl("(trash|garbage)", mr.data[,"narrative"]), 1, 0)
 mr.data[, "roller"] = ifelse(grepl("roller", mr.data[,"narrative"]), 1, 0)
-mr.data[, "moretools"] = ifelse(grepl("(pry|crow|jack)( )*bar", mr.data[,"narrative"]), 1, 0)
-mr.data[, "welding"] = ifelse(grepl("(( |^)tank|ac(c)*etyle(ne|en)|weld)", mr.data[,"narrative"]), 1, 0)
+mr.data[, "moretools"] = ifelse(grepl("(pry|crow|jack)( |-)*bar", mr.data[,"narrative"]) | 
+                                grepl("(hammer|screw( |-)*driver)", mr.data[,"narrative"]), 1, 0)
+mr.data[, "welding"] = ifelse(grepl("(( |^)tank|ac(c)*etyle(ne|en)|weld)", mr.data[,"narrative"]) &
+                              !grepl("chemic.{1,10}tank)", mr.data[,"narrative"]), 1, 0)
 mr.data[, "tire"] = ifelse(grepl("(chang|pump)(e|ed|ing).{1,5}tire", mr.data[,"narrative"]), 1, 0)
 
 # GENERATE OTHER USEFUL FLAGS ABOUT ACCIDENT 
@@ -526,8 +533,8 @@ simple.data = mr.data[, c(match("MR", names(mr.data)), match("repair", names(mr.
                           match("tighten", names(mr.data)), match("battery", names(mr.data)),
                           match("install", names(mr.data)), match("wrench", names(mr.data)), 
                           match("hoist", names(mr.data)), match("surgery", names(mr.data)),                          
-                          match("pain", names(mr.data)), match("trash", names(mr.data)), 
-                          match("roller", names(mr.data)), 
+                          match("pain", names(mr.data)), match("trash", names(mr.data)), match("mineid", names(mr.data)), 
+                          match("roller", names(mr.data)), match("loosen", names(mr.data)), match("type", names(mr.data)), 
                           match("mineractivity", names(mr.data)), match("sourceofinjury", names(mr.data)), 
                           match("occupation", names(mr.data)), match("degreeofinjury", names(mr.data)),
                           match("accidentclassification", names(mr.data)), match("accidenttype", names(mr.data)),
@@ -606,7 +613,14 @@ if (falling.accidents == "included") {
                                            & simple.data$accident.only == 0, 1, 0)
 }
 
-simple.data$false.keyword = ifelse(simple.data$hoist == 1 | simple.data$surgery == 1, 1, 0)
+# ALL "SURGERIES" ARE FALSE KEYWORDS, BUT ONLY "HOIST/ELEVATOR" IN COMBO WITH WORDS THAT REFER TO ELEVATOR SERVICE ARE FALSE KEYWORDS
+simple.data$false.keyword = ifelse((simple.data$repair & simple.data$surgery == 1 ) |
+                                  (simple.data$fix & simple.data$surgery == 1 ) |
+                                  (simple.data$rplace & simple.data$surgery == 1 ) |
+                                  (simple.data$repair & simple.data$hoist == 1 ) |
+                                  (simple.data$maintain & simple.data$hoist == 1 ) |
+                                  (simple.data$service & simple.data$hoist == 1 ) |
+                                  (simple.data$fix & simple.data$hoist == 1 ), 1, 0)
 
 if (falling.accidents == "excluded") {
 simple.data$likely.keyword = ifelse((simple.data$repair == 1 | simple.data$fix == 1 | 
@@ -639,7 +653,7 @@ if (falling.accidents == "included") {
 }
 if (falling.accidents == "excluded") {
 simple.data$maybe.keyword = ifelse( (simple.data$remove == 1 | simple.data$dismantl == 1 | 
-                                       simple.data$rethread == 1 | 
+                                       simple.data$rethread == 1 | simple.data$welding == 1 | 
                                        simple.data$bits == 1 | simple.data$helping == 1 |
                                        simple.data$conveyor == 1 | simple.data$belt == 1 |
                                        simple.data$tighten == 1 | simple.data$battery == 1 ) &
@@ -648,7 +662,7 @@ simple.data$maybe.keyword = ifelse( (simple.data$remove == 1 | simple.data$disma
 }
 if (falling.accidents == "included") {
   simple.data$maybe.keyword = ifelse( (simple.data$remove == 1 | simple.data$dismantl == 1 | 
-                                         simple.data$rethread == 1 | 
+                                         simple.data$rethread == 1 | simple.data$welding == 1 | 
                                          simple.data$bits == 1 | simple.data$helping == 1 |
                                          simple.data$conveyor == 1 | simple.data$belt == 1 |
                                          simple.data$tighten == 1 | simple.data$battery == 1 ) & simple.data$accident.only == 0 &
@@ -789,18 +803,69 @@ if (data.type == "training" ) {
       adaboost_test = cbind(simple[701:1019,], adaboost.pred$class)
       names(adaboost_test)[names(adaboost_test) == 'adaboost.pred$class'] = 'adaboost'
       #View(adaboost_test[adaboost_test$MR == "YES" & adaboost_test$adaboost == "NO",]$documentno)
-      #View(adaboost_test[adaboost_test$MR == "NO" & adaboost_test$adaboost == "YES",]$documentno)
 }
 
 if (data.type == "real accidents data") {
     # USE BOOSTING TO CLASSIFY REAL ACCIDENTS DATA WITH UNKNOWN "MR" STATUS
     set.seed(625)
-    mr.adaboost = boosting(MR ~ . , data = simple[simple$MR != 3,!(names(simple) %in% c('documentno','narrative'))], boos = T, mfinal = 300, coeflearn = 'Freund')
-    adaboost.pred = predict.boosting(mr.adaboost, newdata = simple[simple$MR==3,!(names(simple) %in% c('documentno','narrative'))])
-    accidents.data = cbind(simple[simple$MR==3,], adaboost.pred$class)
-    names(accidents.data)[names(adaboost_test) == 'adaboost.pred$class'] = 'adaboost'
-    write.csv(accidents.data, file = "C:/Users/slevine2/Dropbox (Stanford Law School)/R-code/accidents_with_predictions.csv", row.names = FALSE)
+    mr.adaboost = boosting(MR ~ . , data = simple[simple$type!="unclassified",!(names(simple) %in% c('documentno','narrative','type','mineid'))], boos = T, mfinal = 300, coeflearn = 'Freund')
+    adaboost.pred = predict.boosting(mr.adaboost, newdata = simple[simple$type=="unclassified",!(names(simple) %in% c('documentno','narrative','type','mineid'))])
+    accidents.data = cbind(simple[simple$type=="unclassified",], adaboost.pred$class)
+    names(accidents.data)[names(accidents.data) == 'adaboost.pred$class'] = 'adaboost'
     
+    ######################################################################################################
+    # POST-PROCESSING
+    
+    accidents.data$manual.predict = ifelse(((accidents.data$likely.activy == 1 & accidents.data$likely.class == 1 & accidents.data$false.keyword == 0) |
+                                           (accidents.data$likely.occup == 1 & 
+                                                (accidents.data$maybe.activy == 1 | accidents.data$likely.activy == 1 | accidents.data$likely.class == 1 | accidents.data$maybe.keyword == 1)) |
+                                           (accidents.data$likely.activy == 1 & 
+                                                (accidents.data$maybe.occup == 1 | accidents.data$likely.class == 1 | accidents.data$maybe.keyword == 1)) |
+                                           (accidents.data$maybe.occup == 1 & 
+                                                ((accidents.data$maybe.activy == 1 & accidents.data$likely.class == 1) | 
+                                                 (accidents.data$likely.class == 1 & accidents.data$maybe.keyword == 1) | 
+                                                 (accidents.data$maybe.activy == 1 & accidents.data$maybe.keyword == 1))) |
+                                           accidents.data$likely.keyword == 1) & accidents.data$accident.only == 0, 1, 0)
+    
+    # false negatives #
+    accidents.data[, "working.on"] = ifelse(grepl("work(ing)* on", accidents.data[,"narrative"]), 1, 0)
+    accidents.data[, "barring"] = ifelse(grepl("barr(ed|ing).{1,10}rock", accidents.data[,"narrative"]), 1, 0)
+    accidents.data[, "flashburn"] = ifelse(grepl("weld.{1,40}flash( )*burn", accidents.data[,"narrative"]) | 
+                                           grepl("flash( )*burn.{1,40}weld", accidents.data[,"narrative"]), 1, 0)
+    
+    accidents.data$other.keyword = ifelse((accidents.data$trash == 1 | accidents.data$wrench == 1 |
+                                           accidents.data$moretools == 1 | accidents.data$loosen == 1 |
+                                           accidents.data$tire == 1 | accidents.data$splice == 1 |
+                                           accidents.data$working.on == 1 | accidents.data$barring == 1) &
+                                           accidents.data$accident.only == 0, 1, 0)
+    
+    accidents.data$false.neg = ifelse(accidents.data$flashburn == 1 & accidents.data$adaboost == "NO", 1, 0)
+    
+    # false positives #  
+    accidents.data[, "carpal.tunnel"] = ifelse((grepl("carp(a|u)l( )*tun(n)*(e|l)(e|l)", accidents.data[,"narrative"]) | 
+                                                grepl("bursitis", accidents.data[,"narrative"])) &
+                                                !grepl("fracture", accidents.data[,"narrative"]), 1, 0)
+    accidents.data[, "cumulative"] = ifelse(grepl("repet(e|a|i)tive", accidents.data[,"narrative"]) | 
+                                            grepl("cumulative", accidents.data[,"narrative"]) |
+                                            grepl("repeated(ed)*.{1,10}(mo(tion|vement)|trauma)", accidents.data[,"narrative"]) |
+                                            grepl("long( )*term", accidents.data[,"narrative"]), 1, 0)
+    accidents.data[, "hearingloss"] = ifelse(grepl("hearing los", accidents.data[,"narrative"]) | 
+                                             grepl("n(o|i)(o|i)se exposur", accidents.data[,"narrative"]) |
+                                             grepl("dimini.{1,10}hearing", accidents.data[,"narrative"]) |
+                                             grepl("exposur(e)*.{1,20}noise", accidents.data[,"narrative"]), 1, 0)
+    accidents.data[, "exposure"] = ifelse(grepl("((prolon|occupation|long( )*term).{1,8}exposur)|(exposur.{1,20}(noise|we(a)*ther))|pneumoconiosis", accidents.data[,"narrative"]), 1, 0)
+    accidents.data[, "unrelated"] = ifelse(grepl("not work relat", accidents.data[,"narrative"]) | 
+                                           (grepl("no (accident|incident|injury)", accidents.data[,"narrative"]) & !grepl("no (accident|incident|injury).{1,5}report", accidents.data[,"narrative"])), 1, 0)
+    
+    accidents.data$false.pos = ifelse((accidents.data$carpal.tunnel == 1 | accidents.data$cumulative == 1 |
+                                      accidents.data$hearingloss == 1 | accidents.data$exposure == 1 |
+                                      accidents.data$unrelated == 1 | accidents.data$accident.only == 1) & accidents.data$adaboos == "YES", 1, 0)
+    accidents.data$false.pos = ifelse(accidents.data$adaboos == "YES" & accidents.data$likely.keyword == 0 &
+                                      accidents.data$maybe.keyword == 0 & accidents.data$likely.occup == 0 & accidents.data$other.keyword == 0, 1, accidents.data$false.pos)
+    
+    # SAVE FINAL MR PREDICTION AND DATASET WITH JUST DOC NO'S  & PREDICTIONS
+    accidents.data$MR  = ifelse((accidents.data$adaboost == "YES" & accidents.data$false.pos == 0) | accidents.data$false.neg == 1, 1, 0)
+    write.csv(accidents.data, file = "C:/Users/slevine2/Dropbox (Stanford Law School)/R-code/accidents_with_predictions.csv", row.names = FALSE)
 }
 
 ######################################################################################################
