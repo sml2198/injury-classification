@@ -98,6 +98,22 @@ ps_data$PS[ps_data$documentno=="219912970040"] = "NO"
 ps_data$PS[ps_data$documentno=="220053110050"] = "NO"
 ps_data$PS[ps_data$documentno=="219952260148"] = "NO"
 
+#Recoded in light of Miguel's 5/27/16 response to our questions
+ps_data$PS[ps_data$documentno=="220011070020"] = "NO"
+ps_data$PS[ps_data$documentno=="219892570061"] = "NO"
+ps_data$PS[ps_data$documentno=="219893100251"] = "NO"
+ps_data$PS[ps_data$documentno=="219872990054"] = "NO"
+ps_data$PS[ps_data$documentno=="219983280016"] = "NO"
+ps_data$PS[ps_data$documentno=="220082800043"] = "NO"
+ps_data$PS[ps_data$documentno=="219830320021"] = "NO"
+ps_data$PS[ps_data$documentno=="219912970040"] = "NO"
+ps_data$PS[ps_data$documentno=="219942900032"] = "NO"
+ps_data$PS[ps_data$documentno=="219982380025"] = "NO"
+
+ps_data$PS[ps_data$documentno=="219891280164"] = "YES"
+ps_data$PS[ps_data$documentno=="219852170075"] = "YES"
+ps_data$PS[ps_data$documentno=="219901620109"] = "YES"
+
 # How to destring a variable
 ps_data[,grep("numberofemployees", names(ps_data))] = gsub(pattern = ",",replacement =  "", ps_data[,grep("numberofemployees", names(ps_data))])
 ps_data[,grep("numberofemployees", names(ps_data))] = as.numeric(ps_data[,grep("numberofemployees", names(ps_data))])
@@ -318,6 +334,9 @@ ps_data[, "caught"] = ifelse(grepl("caught.{1,15}(between| in )", ps_data[,"old_
 ps_data[, "hit"] = ifelse(grepl("( |^)hit.{1,5}(by|him|his|her|employee|ee)", ps_data[,"old_narrative"]) |
                             grepl("( |^)hit.{1,10}BODY", ps_data[,"narrative"]), 1, 0)
 ps_data[, "dropped"] = ifelse(grepl("(lowe(r)*(ing|ed)*|drop(p)*(ing|ed)*).{1,15}(bucket|drill( |-)*head|drill( |-)*pod|pinner( |-)*head).{1,15}BODY", ps_data[,"narrative"]), 1, 0)
+
+ps_data[, "neg_wrench"] = ifelse(ps_data$wrench == 1 & (grepl("(burst|ben(t|d)|br(eak|oke)|loose|dislodge|shifted|drop(ped|ping)*|c(a|o)*me( )*( )*(out|off)|f(a|e)ll|stuck|clog|slipped)+", ps_data[, "old_narrative"]) | 
+                                                          ps_data$flew == 1 | ps_data$caught == 1), 1, 0)
 
 # PIN/STRIKE/TRAP
 
@@ -726,7 +745,7 @@ if (imputation_method == 1 | imputation_method == 2) {
 # PRODUCE DATASETS WITH ONLY VARS OF INTEREST FOR RF/BOOSTING ANALYSIS 
 simple.data.grouped = ps_data[, c(match("documentno", names(ps_data)), match("PS", names(ps_data)), match("pin", names(ps_data)),
                                match("strike", names(ps_data)), match("strikerib", names(ps_data)), grep("maybs_", names(ps_data)),
-                               match("trap", names(ps_data)),  match("collided", names(ps_data)),
+                               match("trap", names(ps_data)),  match("collided", names(ps_data)), match("neg_wrench", names(ps_data)),
                                match("hit", names(ps_data)), match("ranover", names(ps_data)),
                                match("rolled", names(ps_data)), match("caught", names(ps_data)),
                                match("between", names(ps_data)), match("by", names(ps_data)),
@@ -855,7 +874,7 @@ post.smote.test = merge(smote.test, smote.test.aux, by = "documentno", all = T)
 post.smote.test = post.smote.test[, c(-grep("\\.y", names(post.smote.test)))]
 names(post.smote.test) = gsub("\\.[x|y]", "", names(post.smote.test))
 
-post.smote.test[, "smote_pred"] = ifelse(is.na(post.smote.test$rf.smote.pred), 1, post.smote.test$rf.smote.pred)
+post.smote.test[, "smote_pred"] = ifelse(is.na(post.smote.test$rf.smote.pred), 1, post.smote.test$rf.smote.pred) #Why is this line here? Collinear with "predict"
 
 # STEP THREE: RUN ANOTHER MODEL TO TRY AND CLASSIFY MORE FALSE NEGATIVES
 
