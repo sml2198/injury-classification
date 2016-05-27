@@ -807,27 +807,27 @@ rand <- runif(nrow(simple.data))
 simple.ps <- simple.data[order(rand),]
 remove(rand)
 # just to find out which col # PS is
-which( colnames(simple.ps)=="PS" )
+#which( colnames(simple.ps)=="PS" )
 
 # CART
-cart <- rpart(PS ~ . -documentno, data = simple.ps[1:600,], method="class")
-cart.predictions = predict(cart, simple.ps[601:1000,],type="class")
+#cart <- rpart(PS ~ . -documentno, data = simple.ps[1:600,], method="class")
+#cart.predictions = predict(cart, simple.ps[601:1000,],type="class")
 
 # RANDOM FOREST
-rf <- randomForest(PS ~ . -documentno, data = simple.ps[1:600,], mtry = 8, importance=TRUE, type="class",
-                   ntree = 200)
-rf.predictions = predict(rf, simple.ps[601:1000,],type="class")
+#rf <- randomForest(PS ~ . -documentno, data = simple.ps[1:600,], mtry = 8, importance=TRUE, type="class",
+#                   ntree = 200)
+#rf.predictions = predict(rf, simple.ps[601:1000,],type="class")
 
 # RANDOM FOREST WITH SMOTE
-smote.trainx = simple.ps[1:600,]
-smote.test = simple.ps[601:1000,]
-smote <- SMOTE(PS ~ ., smote.trainx, perc.over = 600,perc.under=100)
-rf.smo <- randomForest(PS ~ . -documentno, data = smote, mtry = 15, ntree = 1000)
-rf.smo.pred = predict(rf.smo, smote.test, type="class")
+#smote.trainx = simple.ps[1:600,]
+#smote.test = simple.ps[601:1000,]
+#smote <- SMOTE(PS ~ ., smote.trainx, perc.over = 600,perc.under=100)
+#rf.smo <- randomForest(PS ~ . -documentno, data = smote, mtry = 15, ntree = 1000)
+#rf.smo.pred = predict(rf.smo, smote.test, type="class")
 
 # BOOSTING
-ps.adaboost = boosting(PS ~ . -documentno, data = simple.ps[1:600,], boos = T, mfinal = 100, coeflearn = 'Freund')
-simple.adaboost.pred = predict.boosting(ps.adaboost, newdata = simple.ps[601:1000,])
+#ps.adaboost = boosting(PS ~ . -documentno, data = simple.ps[1:600,], boos = T, mfinal = 100, coeflearn = 'Freund')
+#simple.adaboost.pred = predict.boosting(ps.adaboost, newdata = simple.ps[601:1000,])
 
 ##################################################################################################
 # COMPOSITE ALGORITHM
