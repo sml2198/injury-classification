@@ -606,8 +606,8 @@ ps_data$neg_pts = rowSums(ps_data[,c('unlikely_class', 'unlikely_equip', 'unlike
 # A FEW MORE KEYWORDS, USING EXISTING KEYWORD FLAGS 
 
 ps_data[, "no_vehcl"] = ifelse(!grepl("VEHICLE", ps_data[, "narrative"]), 1, 0)
-ps_data[, "v_to_v"] = ifelse((grepl("(VEHICLE|drill|steel|bolter|shear|cutter|tire).{1,20}PINNED/STRUCK.{1,20}VEHICLE", ps_data[, "narrative"]) |
-                                grepl("VEHICLE.{1,20}PINNED/STRUCK.{1,20}(VEHICLE|drill|steel|bolter|shear|cutter|tire)", ps_data[, "narrative"])) & ps_data$hole == 0, 1, 0)
+ps_data[, "v_to_v"] = ifelse((grepl("(VEHICLE|drill|steel|bolter|shear|cutter|tire).{1,35}PINNED/STRUCK.{1,35}VEHICLE", ps_data[, "narrative"]) |
+                                grepl("VEHICLE.{1,35}PINNED/STRUCK.{1,35}(VEHICLE|drill|steel|bolter|shear|cutter|tire)", ps_data[, "narrative"])) & ps_data$hole == 0, 1, 0)
 ps_data[, "v_to_p"] = ifelse((grepl("(VEHICLE).{1,20}PINNED/STRUCK.{1,20}(PERSON|BODY)", ps_data[, "narrative"]) |
                                 grepl("(PERSON|BODY).{1,20}PINNED/STRUCK.{1,20}(VEHICLE)", ps_data[, "narrative"])) & ps_data$false_keyword == 0, 1, 0)
 
@@ -874,7 +874,7 @@ post.smote.test = merge(smote.test, smote.test.aux, by = "documentno", all = T)
 post.smote.test = post.smote.test[, c(-grep("\\.y", names(post.smote.test)))]
 names(post.smote.test) = gsub("\\.[x|y]", "", names(post.smote.test))
 
-post.smote.test[, "smote_pred"] = ifelse(is.na(post.smote.test$rf.smote.pred), 1, post.smote.test$rf.smote.pred) #Why is this line here? Collinear with "predict"
+post.smote.test[, "smote_pred"] = ifelse(is.na(post.smote.test$rf.smote.pred), 1, post.smote.test$rf.smote.pred)
 
 # STEP THREE: RUN ANOTHER MODEL TO TRY AND CLASSIFY MORE FALSE NEGATIVES
 
