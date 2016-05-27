@@ -390,7 +390,7 @@ ps_data$num.pinstrike <- str_count(ps_data$narrative, "PINNED/STRUCK")
 ps_data$num.person <- str_count(ps_data$narrative, "PERSON")
 ps_data$num.body <- str_count(ps_data$narrative, "BODY")
 
-ps_data$num_unique_vehcl = length(unique(substr(unlist(regmatches(ps_data$narrative, gregexpr("VEHICLE[0-9]", ps_data$narrative))), 8, 8)))
+ps_data$num_unique_vehcl = length(unique(substr(unlist(regmatches(ps_data$narrative, gregexpr("VEHICLE[0-9][0-9]*", ps_data$narrative))), 8, 9)))
 ps_data$mult_vehcl = ifelse(ps_data$num_unique_vehcl > 1, 1, 0)
 
 # CREATE A FEW MORE KEYWORDS ON THE NEW NARRATIVE FIELDS
