@@ -837,8 +837,6 @@ if (data.type == "real accidents data") {
                                            accidents.data$likely.keyword == 1) & accidents.data$accident.only == 0, 1, 0)
     
     # false negatives #
-    accidents.data[, "working.on"] = ifelse(grepl("(to work|workin(g)*)( |-)*(on|in|under|out|at)", accidents.data[,"narrative"]), 1, 0)
-    accidents.data[, "barring"] = ifelse(grepl("barr(ed|ing).{1,10}(rock|motor)", accidents.data[,"narrative"]), 1, 0)
     accidents.data[, "flashburn"] = ifelse(grepl("weld.{1,40}flash( |-)*burn", accidents.data[,"narrative"]) | 
                                            grepl("flash( |-)*burn.{1,40}weld", accidents.data[,"narrative"]), 1, 0)
     
@@ -867,6 +865,8 @@ if (data.type == "real accidents data") {
                                           !grepl("no (accident|incident|injury).{1,5}report", accidents.data[,"narrative"])), 1, 0)
     
     # last ditch attempt to find likely verbs and nouns before dropping false positives # 
+    accidents.data[, "working.on"] = ifelse(grepl("(to work|workin(g)*)( |-)*(on|in|under|out|at)", accidents.data[,"narrative"]), 1, 0)
+    accidents.data[, "barring"] = ifelse(grepl("barr(ed|ing).{1,10}(rock|motor)", accidents.data[,"narrative"]), 1, 0)
     accidents.data[, "otherverb"] = ifelse(grepl("( |^)patch", accidents.data[,"narrative"]) | 
                                            grepl("re(-)*(build|pack|fuel|assembl|lin)", accidents.data[,"narrative"]) | 
                                            grepl("(re)*adjust", accidents.data[,"narrative"]) | 
