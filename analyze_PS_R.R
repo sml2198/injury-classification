@@ -901,6 +901,12 @@ names(post.smote.test) = gsub("\\.[x|y]", "", names(post.smote.test))
 post.smote.test[, "smote_pred"] = ifelse((post.smote.test$`adaboost.pred$class` == "YES" | post.smote.test$rf.smote.pred == "YES"), "YES", "NO")
 table(post.smote.test$smote_pred, post.smote.test$PS)
 
+# BEST PREDICTION SO FAR
+
+#NO YES
+#NO  239  19
+#YES  19  86
+
 ##################################################################################################
 # PERFORMANCE OF ALL MODELS 
 
@@ -918,11 +924,5 @@ simple.adaboost.pred$confusion
 
 # random forest then adaboost
 table(post.smote.test$smote_pred, post.smote.test$PS)
-
-# BEST PREDICTION SO FAR
-
-#NO YES
-#NO  232  19
-#YES  24  88
 
 View(post.smote.test[post.smote.test$PS=="NO" & post.smote.test$smote_pred =="YES",]$documentno)
