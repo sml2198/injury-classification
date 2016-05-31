@@ -375,7 +375,6 @@ ps_data$narrative <- gsub("injured was", "PERSON", ps_data$narrative)
 ps_data$narrative <- gsub("( |^)(s)*he(r|rs)*( |$|,|\\.)", " PERSON ", ps_data$narrative)
 ps_data$narrative <- gsub("( |^)hi(s|m)( |$|,|\\.)", " PERSON ", ps_data$narrative)
 ps_data$narrative <- gsub("(wo)*m(a|e)n( |$|,|\\.)", "PERSON ", ps_data$narrative)
-
 # these are less likely
 ps_data$narrative <- gsub("operat(o|e)r", "PERSON", ps_data$narrative)
 ps_data$narrative <- gsub("passenger", "PERSON", ps_data$narrative)
@@ -394,6 +393,14 @@ ps_data$num_unique_vehcl = length(unique(substr(unlist(regmatches(ps_data$narrat
 ps_data$mult_vehcl = ifelse(ps_data$num_unique_vehcl > 1, 1, 0)
 
 # CREATE A FEW MORE KEYWORDS ON THE NEW NARRATIVE FIELDS
+ps_data[, "operating"] = ifelse((grepl("((operat|driv|back|tram(m)*)ing|makin(g)*( )*(a)*( )*tu(r)*n).{1,18}VEHICLE", ps_data[,"narrative"]) | 
+                                 grepl("run(n)*ing.{1,8}VEHICLE", ps_data[,"narrative"])) &
+                                !grepl("remote.{1,5}control.{1,30}VEHICLE", ps_data[,"narrative"]), 1, 0)
+ps_data[, "in_vehicle"] = ifelse(grepl("riding.{1,10}(passenger|driver|operat(o|e)r)", ps_data[,"old_narrative"]) | 
+                                 grepl("PERSON{1,8}riding", ps_data[,"narrative"]) |
+                                !grepl("riding{1,15}VEHICLE", ps_data[,"narrative"]), 1, 0)
+ps_data[, "dif_vehicle"] = ifelse(grepl("(second|another|different).{1,5}VEHICLE", ps_data[,"narrative"]), 1, 0)
+
 ps_data[, "loose_rbolting"] = ifelse(grepl("(plate|bit|bolt)+.{1,10}PINNED/STRUCK", ps_data[,"narrative"]), 1, 0)
 ps_data[, "drill_action"] = ifelse(grepl("(plate|bit|bolt)+.{1,10}PINNED/STRUCK", ps_data[,"narrative"]), 1, 0)
 # OPERATOR ARM OF HAND TRAILING OUTSIDE VEHICLE
@@ -773,8 +780,8 @@ simple.data.grouped = ps_data[, c(match("documentno", names(ps_data)), match("PS
                                match("num.vehicles", names(ps_data)), match("potential_ps", names(ps_data)), 
                                match("num.pinstrike", names(ps_data)), match("likely_ps", names(ps_data)), 
                                match("num.person", names(ps_data)), 
-                               match("num.body", names(ps_data)), 
-                               match("keyword_pts", names(ps_data)), 
+                               match("num.body", names(ps_data)),   match("mult_vehcl", names(ps_data)), match("operating", names(ps_data)),
+                               match("keyword_pts", names(ps_data)), match("in_vehicle", names(ps_data)), match("dif_vehicle", names(ps_data)),
                                match("neg_keyword_pts", names(ps_data)), 
                                match("pos_pts", names(ps_data)), 
                                match("neg_pts", names(ps_data)), 
@@ -919,7 +926,7 @@ table(post.smote.test$smote_pred, post.smote.test$PS)
 # BEST PREDICTION SO FAR
 
 #NO YES
-#NO  232  19
-#YES  24  88
+#NO  238  17
+#YES  20  88
 
 View(post.smote.test[post.smote.test$PS=="NO" & post.smote.test$smote_pred =="YES",]$documentno)
