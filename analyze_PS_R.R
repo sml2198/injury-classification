@@ -389,7 +389,10 @@ ps_data$num.pinstrike <- str_count(ps_data$narrative, "PINNED/STRUCK")
 ps_data$num.person <- str_count(ps_data$narrative, "PERSON")
 ps_data$num.body <- str_count(ps_data$narrative, "BODY")
 
-ps_data$num_unique_vehcl = length(unique(substr(unlist(regmatches(ps_data$narrative, gregexpr("VEHICLE[0-9][0-9]*", ps_data$narrative))), 8, 9)))
+uniq_vehcls = function(x) {
+  return(length(unique(substr(unlist(regmatches(x, gregexpr("VEHICLE[0-9][0-9]*", x))), 8, 9))))
+}
+ps_data$num_unique_vehcl = sapply(ps_data$narrative, uniq_vehcls)
 ps_data$mult_vehcl = ifelse(ps_data$num_unique_vehcl > 1, 1, 0)
 
 # CREATE A FEW MORE KEYWORDS ON THE NEW NARRATIVE FIELDS
@@ -758,7 +761,7 @@ if (imputation_method == 1 | imputation_method == 2) {
 simple.data.grouped = ps_data[, c(match("documentno", names(ps_data)), match("PS", names(ps_data)), match("pin", names(ps_data)),
                                match("strike", names(ps_data)), match("strikerib", names(ps_data)), grep("maybs_", names(ps_data)),
                                match("trap", names(ps_data)),  match("collided", names(ps_data)), match("neg_wrench", names(ps_data)),
-                               match("hit", names(ps_data)), match("ranover", names(ps_data)),
+                               match("hit", names(ps_data)), match("ranover", names(ps_data)), match("num_unique_vehcl", names(ps_data)),
                                match("rolled", names(ps_data)), match("caught", names(ps_data)),
                                match("between", names(ps_data)), match("by", names(ps_data)),
                                match("brakes", names(ps_data)), match("jarring", names(ps_data)), 
@@ -904,6 +907,12 @@ names(post.smote.test) = gsub("\\.[x|y]", "", names(post.smote.test))
 
 post.smote.test[, "smote_pred"] = ifelse((post.smote.test$`adaboost.pred$class` == "YES" | post.smote.test$rf.smote.pred == "YES"), "YES", "NO")
 table(post.smote.test$smote_pred, post.smote.test$PS)
+
+# BEST PREDICTION SO FAR
+
+#NO YES
+#NO  239  19
+#YES  19  86
 
 ##################################################################################################
 # PERFORMANCE OF ALL MODELS 
