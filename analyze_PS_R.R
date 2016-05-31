@@ -85,19 +85,6 @@ ps_data$narrative <- gsub("ag(a)*( )*(in)*st", "against", ps_data$narrative)
 ps_data[, "X"] = factor(ifelse(ps_data[, "X"] == 1, "YES", "NO"))
 names(ps_data)[names(ps_data) == "X"] = "PS"
 
-# RECODE SEVEN INJURIES THAT DO NOT JIVE WITH OUR AGREE UPON DEFINITION OF PINNING AND STRIKING. THESE INURIES
-# REFLECT ONE OF TWO TYPES OF ACCIDENTS: (1) THE BRAKES ON A VEHICLE FAIL, CAUSING A V-TO-V OR V-TO-P INCIDENT.
-# PROXIMITY DETECTION COULD NOT BE USED PREVENTATIVELY IN THESE CASES. (2) AN EMPLOYEE IS EITHER OPERATING A
-# VEHICLE OR IS A PASSENGER IN A VEHICLE, WHEN SOME PART OF THEIR BODY IS TRAILING OUTSIDE THE VEHICLE AND IS STRUCK,
-# OR THE VEHICLE IS JOSTLED BY SOME NON-VEHICLE OBJECT, AND THE EMPLOYEE IS HIT AGAINST SOME PART OF THE VEHICLE.
-ps_data$PS[ps_data$documentno=="219982290067"] = "NO"
-ps_data$PS[ps_data$documentno=="219893100251"] = "NO"
-ps_data$PS[ps_data$documentno=="220001180052"] = "NO"
-ps_data$PS[ps_data$documentno=="219893520099"] = "NO"
-ps_data$PS[ps_data$documentno=="219912970040"] = "NO"
-ps_data$PS[ps_data$documentno=="220053110050"] = "NO"
-ps_data$PS[ps_data$documentno=="219952260148"] = "NO"
-
 #Recoded in light of Miguel's 5/27/16 response to our questions
 ps_data$PS[ps_data$documentno=="220011070020"] = "NO"
 ps_data$PS[ps_data$documentno=="219892570061"] = "NO"
@@ -447,7 +434,7 @@ ps_data$keyword = ifelse((ps_data$pin == 1 | ps_data$strike == 1 | ps_data$drill
                             ps_data$trap == 1 | ps_data$collided == 1 | ps_data$hit == 1 | ps_data$dropped == 1 |
                             ps_data$ranover == 1 | ps_data$bumped == 1 | ps_data$caught == 1 |
                             ps_data$rolled == 1 | ps_data$between == 1 | ps_data$wheel == 1) &
-                           (ps_data$accident.only == 0 & ps_data$falling.accident == 0), 1, 0)
+                           (ps_data$falling.accident == 0), 1, 0)
 
 ps_data$false_keyword = ifelse((ps_data$brakes == 1 | ps_data$jarring == 1 | ps_data$outsidevehicle == 1 | ps_data$steering == 1 |
                                   ps_data$bounced == 1 | ps_data$rock == 1 | ps_data$derail == 1 | ps_data$cable == 1 | ps_data$tool_break == 1 |
@@ -635,11 +622,11 @@ ps_data[, "holistic"] = ifelse((((ps_data$likely_type == 1) | (ps_data$maybs_typ
 
 # GENERATE LIKELY PINNING AND STRIKING ACCIDENT FLAG
 ps_data$potential_ps = ifelse((ps_data$keyword == 1 | ps_data$likely_class == 1 | ps_data$v_to_v == 1 | ps_data$v_to_p == 1) &
-                                (ps_data$accident.only == 0 & ps_data$falling.accident == 0) , 1, 0)
+                                (ps_data$accident.only == 0) , 1, 0)
 
 # GENERATE OUR BEST SIMPLE ALGORITHM PINNING AND STRIKING ACCIDENT FLAG
 ps_data$likely_ps = ifelse((ps_data$keyword == 1 | ps_data$likely_class == 1 | ps_data$v_to_v == 1 | ps_data$v_to_p == 1) &
-                             (ps_data$accident.only == 0 & ps_data$falling.accident == 0) &
+                             (ps_data$falling.accident == 0) &
                              (ps_data$bodyseat == 0 & ps_data$headroof == 0 & ps_data$hole == 0 & ps_data$cable == 0 & ps_data$strap == 0 & ps_data$tool_break == 0 &
                               ps_data$outsidevehicle == 0 & ps_data$derail == 0 & ps_data$bounced == 0 & ps_data$brakes == 0 & ps_data$trolleypole == 0 &
                               ps_data$unlikely_nature == 0 & ps_data$unlikely_source == 0) &
@@ -867,10 +854,10 @@ if (strict) {
     smote.ps[, num_vars[i]] = as.numeric(smote.ps[, num_vars[i]])
     smote.trainx[, num_vars[i]] = as.numeric(smote.trainx[, num_vars[i]])
     smote.test[, num_vars[i]] = as.numeric(smote.test[, num_vars[i]])
-    smote.test[, "predict"] = ifelse((smote.test$accident.only == 1 & smote.test$falling.accident == 1), 1, 0)
+    smote.test[, "predict"] = ifelse((smote.test$falling.accident == 1), 1, 0)
   }
 } else {
-    smote.test[, "predict"] = ifelse((smote.test$accident.only == 0 & smote.test$falling.accident == 0), 1, 0)
+    smote.test[, "predict"] = ifelse((smote.test$falling.accident == 0), 1, 0)
 }
 
 # STEP TWO: MODEL
