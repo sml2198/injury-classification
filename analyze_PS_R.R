@@ -754,7 +754,7 @@ if (imputation_method == 1 | imputation_method == 2) {
 simple.data.grouped = ps_data[, c(match("documentno", names(ps_data)), match("PS", names(ps_data)), match("pin", names(ps_data)),
                                match("strike", names(ps_data)), match("strikerib", names(ps_data)), grep("maybs_", names(ps_data)),
                                match("trap", names(ps_data)),  match("collided", names(ps_data)), match("neg_wrench", names(ps_data)),
-                               match("hit", names(ps_data)), match("ranover", names(ps_data)),
+                               match("hit", names(ps_data)), match("ranover", names(ps_data)), match("num_unique_vehcl", names(ps_data)),
                                match("rolled", names(ps_data)), match("caught", names(ps_data)),
                                match("between", names(ps_data)), match("by", names(ps_data)),
                                match("brakes", names(ps_data)), match("jarring", names(ps_data)), 
