@@ -375,8 +375,8 @@ ps_data$mult_vehcl = ifelse(ps_data$num_unique_vehcl > 1, 1, 0)
 ##################################################################################################
 # CREATE A FEW MORE KEYWORDS ON THE NEW NARRATIVE FIELDS
 ps_data[, "in_vehicle"] = ifelse(grepl("riding.{1,10}(passenger|driver|operat(o|e)r)", ps_data[,"old_narrative"]) | 
-                                 grepl("PERSON{1,8}riding", ps_data[,"narrative"]) |
-                                !grepl("riding{1,15}VEHICLE", ps_data[,"narrative"]), 1, 0)
+                                 grepl("PERSON.{1,8}riding", ps_data[,"narrative"]) |
+                                !grepl("riding.{1,15}VEHICLE", ps_data[,"narrative"]), 1, 0)
 # if two different types of vehicles are mentioned, it's much more likely to be a V-to-V striking accident
 ps_data[, "dif_vehicle"] = ifelse(grepl("(second|another|different).{1,5}VEHICLE", ps_data[,"narrative"]), 1, 0)
 ps_data[, "loose_rbolting"] = ifelse(grepl("(plate|bit|bolt)+.{1,10}PINNED/STRUCK", ps_data[,"narrative"]), 1, 0)
