@@ -381,8 +381,8 @@ ps_data$mult_vehcl = ifelse(ps_data$num_unique_vehcl > 1, 1, 0)
 ##################################################################################################
 # CREATE A FEW MORE KEYWORDS ON THE NEW NARRATIVE FIELDS
 ps_data[, "in_vehicle"] = ifelse(grepl("riding.{1,10}(passenger|driver|operat(o|e)r)", ps_data[,"old_narrative"]) | 
-                                 grepl("PERSON{1,8}riding", ps_data[,"narrative"]) |
-                                !grepl("riding{1,15}VEHICLE", ps_data[,"narrative"]), 1, 0)
+                                 grepl("PERSON.{1,8}riding", ps_data[,"narrative"]) |
+                                !grepl("riding.{1,15}VEHICLE", ps_data[,"narrative"]), 1, 0)
 # if two different types of vehicles are mentioned, it's much more likely to be a V-to-V striking accident
 ps_data[, "dif_vehicle"] = ifelse(grepl("(second|another|different).{1,5}VEHICLE", ps_data[,"narrative"]), 1, 0)
 ps_data[, "loose_rbolting"] = ifelse(grepl("(plate|bit|bolt)+.{1,10}PINNED/STRUCK", ps_data[,"narrative"]), 1, 0)
@@ -794,9 +794,9 @@ simple.data.grouped = ps_data[, c(match("documentno", names(ps_data)), match("PS
                                match("vcomp_test", names(ps_data)), match("psobject_test", names(ps_data)), 
                                match("loose_rbolting", names(ps_data)), match("drill_action", names(ps_data)),
                                    match("likely_equip", names(ps_data)), match("unlikely_equip", names(ps_data)),
-                                   match("likely_class", names(ps_data)), match("unlikely_class", names(ps_data)),
+                                   match("likely_class", names(ps_data)), 
                                    match("likely_type", names(ps_data)), match("unlikely_type", names(ps_data)),
-                                   match("unlikely_nature", names(ps_data)), match("likely_source", names(ps_data)),                          
+                                   match("likely_source", names(ps_data)),                          
                                    match("unlikely_source", names(ps_data)), match("likely_actvty", names(ps_data)), 
                                    match("unlikely_activity", names(ps_data)), match("uncertain_activity", names(ps_data)),
                                    match("uncertain_class", names(ps_data)),
@@ -932,7 +932,7 @@ table(post.smote.test$smote_pred, post.smote.test$PS)
 # BEST PREDICTION SO FAR
 
 #NO YES
-#NO  233  21
-#YES  22  87
+#NO  231  18
+#YES  23  89
 
 View(post.smote.test[post.smote.test$PS=="NO" & post.smote.test$smote_pred =="YES",]$documentno)
