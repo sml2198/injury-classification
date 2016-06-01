@@ -787,9 +787,9 @@ simple.data.grouped = ps_data[, c(match("documentno", names(ps_data)), match("PS
                                match("vcomp_test", names(ps_data)), match("psobject_test", names(ps_data)), 
                                match("loose_rbolting", names(ps_data)), match("drill_action", names(ps_data)),
                                    match("likely_equip", names(ps_data)), match("unlikely_equip", names(ps_data)),
-                                   match("likely_class", names(ps_data)), match("unlikely_class", names(ps_data)),
+                                   match("likely_class", names(ps_data)), 
                                    match("likely_type", names(ps_data)), match("unlikely_type", names(ps_data)),
-                                   match("unlikely_nature", names(ps_data)), match("likely_source", names(ps_data)),                          
+                                   match("likely_source", names(ps_data)),                          
                                    match("unlikely_source", names(ps_data)), match("likely_actvty", names(ps_data)), 
                                    match("unlikely_activity", names(ps_data)), match("uncertain_activity", names(ps_data)),
                                    match("uncertain_class", names(ps_data)),
@@ -925,7 +925,7 @@ table(post.smote.test$smote_pred, post.smote.test$PS)
 # BEST PREDICTION SO FAR
 
 #NO YES
-#NO  233  21
-#YES  22  87
+#NO  231  18
+#YES  23  89
 
 View(post.smote.test[post.smote.test$PS=="NO" & post.smote.test$smote_pred =="YES",]$documentno)
