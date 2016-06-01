@@ -254,6 +254,13 @@ ps_data[!grepl("to tram", ps_data[,"narrative"]) &
 ps_data[, "operating"] = ifelse((grepl("((operat|driv|back|tram(m)*)ing|makin(g)*( )*(a)*( )*tu(r)*n).{1,18}VEHICLE", ps_data[,"narrative"]) | 
                                    grepl("run(n)*ing.{1,8}VEHICLE", ps_data[,"narrative"])) &
                                   !grepl("remote.{1,5}control.{1,30}VEHICLE", ps_data[,"narrative"]), 1, 0)
+
+#There are 8 accidents in the validation set where the victim was the operator that this does not grab (and "operating" does). But it grabs more than 100
+#accidents with an operator victim that "operator" does not.
+ps_data[, "operating_2"] = ifelse((grepl("( |^|was|while|had)(tr(a)*m(m)*[^ ]{0,3}|op(e)*r(a)*t[^ ]{0,3}|backin.{1,10}VEHICLE|r(a|u)n|makin(g)*( )*(a)*( )*tu(r)*n|remote.{1,5}control|driv)", ps_data$narrative) &
+                                     !grepl("PERSON.{1,20}(splic(e|ing)|crawl(ing)*|repair|fix)", ps_data$narrative) &
+                                     (grepl("operat", ps_data$mineractivity) | grepl("roof bolt", ps_data$mineractivity)) &
+                                     (!grepl("(side of|right|left|beside).{1,10}VEHICLE", ps_data$narrative) | grepl("remote.{1,5}control", ps_data$narrative))), 1, 0)
 # USE HEAD/ROOF TO REMOVE DRIVER HITTING HEAD AGAINST VEHICLE ROOF
 # do this before "body" masks so that we can use "head/neck" - althought maybe let's move this since it doesn't require vehicle flags? Hmmm...
 ps_data[, "headroof"] = ifelse((grepl("(head|neck).{1,5}(on|str(ike|uck)|hit|against).{1,5}(roof|top)", ps_data[,"narrative"]) |
