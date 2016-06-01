@@ -397,8 +397,7 @@ ps_data[, "entrapment"] = ifelse((ps_data$drillsteel == 1 | ps_data$roofbolt == 
                                  (grepl("(caught|catching|snagg(ed|ing)).{1,10}glove", ps_data[,"old_narrative"]) | 
                                  grepl("glove.{1,10}(caught|catching|snagg(ed|ing))", ps_data[,"old_narrative"])), 1, 0)
 # now create positive and negative roof bolting flags 
-ps_data[, "pos_roofbolt"] = ifelse(ps_data$roofbolt == 1 & grepl("PINNED/STRUCK.{1,15}between.{1,15}(roof( bolt)*|canopy|boom|(bolter|drill)( |-)*(pot|guide|head)|(drill|roof)*( |-)*(steel|guide)|( |^)rib|(bolt(er)*|torque)( |-)*wrench|lead|top).{1,30}(top|roof( bolt)*|canopy|boom|(bolter|drill)( |-)*(pot|guide|(h|l)ead)|(drill|roof)*( |-)*(steel|guide)|( |^)rib|(bolt(er)*|torque)( |-)*wrench|lead)
-", ps_data[,"narrative"]), 1, 0)
+ps_data[, "pos_roofbolt"] = ifelse(ps_data$roofbolt == 1 & grepl("PINNED/STRUCK.{1,15}between.{1,15}(roof( bolt)*|canopy|boom|(bolter|drill)( |-)*(pot|guide|head)|(drill|roof)*( |-)*(steel|guide)|( |^)rib|(bolt(er)*|torque)( |-)*wrench|lead|top).{1,30}(top|roof( bolt)*|canopy|boom|(bolter|drill)( |-)*(pot|guide|(h|l)ead)|(drill|roof)*( |-)*(steel|guide)|( |^)rib|(bolt(er)*|torque)( |-)*wrench|lead)", ps_data[,"narrative"]), 1, 0)
 ps_data[, "neg_roofbolt"] = ifelse(ps_data$roofbolt == 1 & (ps_data$entrapment == 1 | ps_data$brokensteel == 1), 1, 0)
                                                                       
 # OPERATOR ARM OF HAND TRAILING OUTSIDE VEHICLE
@@ -636,9 +635,9 @@ ps_data$potential_ps = ifelse(ps_data$keyword == 1 | ps_data$likely_class == 1 |
 ps_data$likely_ps = ifelse((ps_data$keyword == 1 | ps_data$likely_class == 1 | ps_data$v_to_v == 1 | ps_data$v_to_p == 1) &
                              (ps_data$falling.accident == 0) &
                              (ps_data$bodyseat == 0 & ps_data$headroof == 0 & ps_data$hole == 0 & ps_data$cable == 0 & ps_data$strap == 0 & ps_data$tool_break == 0 &
-                              ps_data$outsidevehicle == 0 & ps_data$derail == 0 & ps_data$bounced == 0 & ps_data$brakes == 0 & ps_data$trolleypole == 0 & ps_data$neg_roof_bolt == 0
+                              ps_data$outsidevehicle == 0 & ps_data$derail == 0 & ps_data$bounced == 0 & ps_data$brakes == 0 & ps_data$trolleypole == 0 & ps_data$neg_roofbolt == 0 & 
                               ps_data$unlikely_nature == 0 & ps_data$unlikely_source == 0) &
-                             (ps_data$neg_keyword_pts < 2 & ps_data$pos_pts >1 & ps_data$neg_pts < 3), 1, 0)
+                             (ps_data$neg_keyword_pts < 2 & ps_data$pos_pts > 1 & ps_data$neg_pts < 3), 1, 0)
 
 ##################################################################################################
 # DUMMY-OUT FACTOR VARS WITH TOO MANY VALUES FOR RANDOM FOREST - MAYBE BETTER THAN THE ABOVE
@@ -779,7 +778,7 @@ simple.data.grouped = ps_data[, c(match("documentno", names(ps_data)), match("PS
                                match("num.person", names(ps_data)), 
                                match("num.body", names(ps_data)),   match("mult_vehcl", names(ps_data)), match("operating", names(ps_data)),
                                match("keyword_pts", names(ps_data)), match("in_vehicle", names(ps_data)), match("dif_vehicle", names(ps_data)),
-                               match("neg_keyword_pts", names(ps_data)), match("pos_roof_bolt", names(ps_data)), match("neg_roof_bolt", names(ps_data)),
+                               match("neg_keyword_pts", names(ps_data)), match("pos_roofbolt", names(ps_data)), match("neg_roofbolt", names(ps_data)),
                                match("pos_pts", names(ps_data)), 
                                match("neg_pts", names(ps_data)), 
                                match("vcomp_test", names(ps_data)), match("psobject_test", names(ps_data)), 
@@ -923,7 +922,7 @@ table(post.smote.test$smote_pred, post.smote.test$PS)
 # BEST PREDICTION SO FAR
 
 #NO YES
-#NO  238  17
-#YES  20  88
+#NO  233  21
+#YES  22  87
 
 View(post.smote.test[post.smote.test$PS=="NO" & post.smote.test$smote_pred =="YES",]$documentno)
