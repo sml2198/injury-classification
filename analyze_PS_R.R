@@ -177,9 +177,6 @@ ps_data[, "steering"] = ifelse(grepl("ste(e|a)ring( )*wheel.{1,15}sp(u|i)n", ps_
 
 # GENERATE LESS GOOD NEGATIVE KEYWORDS
 ps_data[, "roofbolt"] = ifelse(grepl("(roof|rib)( )*bolt", ps_data[,"narrative"]), 1, 0)
-ps_data[, "driving"] = ifelse(grepl("was.{1,5}(driv|operat|tram)(m)*(e|ing)", ps_data[,"narrative"]) |
-                              grepl("^(driv|operat|tram)(m)*ing", ps_data[,"narrative"]), 1, 0)
-ps_data[, "riding"] = ifelse(grepl("was.{1,5}rid(e|ing)( )*in(side)*", ps_data[,"narrative"]), 1, 0)
 ps_data[, "passenger"] = ifelse(grepl("passenger", ps_data[,"narrative"]), 1, 0)
 ps_data[, "wrench"] = ifelse(grepl("wrench", ps_data[,"narrative"]), 1, 0)
 ps_data[, "controls"] = ifelse(grepl("(lever|stick)", ps_data[,"narrative"]), 1, 0)
@@ -200,15 +197,6 @@ ps_data[, "strikerib"] = ifelse(grepl("str(i|u)(.*)k[a-z]*.{1,15} rib", ps_data[
 ps_data[, "bodyseat"] = ifelse(grepl("(back|head|neck).{1,10}seat", ps_data[,"narrative"]) &
                                  !grepl("backward.{1,10}seat", ps_data[,"narrative"]) &
                                  !grepl("(bolt|over|drill)( )*head.{1,10}seat", ps_data[,"narrative"]), 1, 0) 
-# USE HEAD/ROOF TO REMOVE DRIVER HITTING HEAD AGAINST VEHICLE ROOF
-ps_data[, "headroof"] = ifelse((grepl("(head|neck).{1,5}(on|str(ike|uck)|hit|against).{1,5}(roof|top)", ps_data[,"narrative"]) |
-                                grepl("(bump|str(ike|uck)|hit).{1,5}(head|neck).{1,5}(roof|top)", ps_data[,"narrative"]) | 
-                               (grepl("whip( )*lash", ps_data[,"narrative"]) & ps_data$driving == 1) | 
-                                grepl("jerked.{1,10}(head|neck)", ps_data[,"narrative"])) &
-                                 !grepl("drill( )*head.{1,10}roof", ps_data[,"narrative"]) &
-                                 !grepl("over( )*head.{1,10}roof", ps_data[,"narrative"]) &
-                                 !grepl("head(ing|er|ed).{1,10}roof", ps_data[,"narrative"]) &
-                                 !grepl("head.{1,10}roof.{1,5}bolt", ps_data[,"narrative"]), 1, 0) 
 # HITTING HEAD AGAINST CANOPY
 ps_data[, "headcanopy"] = ifelse((grepl("(head|neck).{1,5}(on|str(ike|uck)|hit|against).{1,5}(canopy)", ps_data[,"narrative"]) |
                                   grepl("(bump|str(ike|uck)|hit).{1,5}(head|neck).{1,5}(canopy)", ps_data[,"narrative"])) &
@@ -273,6 +261,20 @@ ps_data[!grepl("to tram", ps_data[,"narrative"]) &
           !grepl("tram.{1,5}(lever|sprocket|pedal|chain)", ps_data[,"narrative"]),]$narrative <- gsub("tram( |$|\\.|,)", " VEHICLE44 ", ps_data[!grepl("to tram", ps_data[,"narrative"]) & 
                                                                                                                                       !grepl("tram.{1,5}(lever|sprocket|pedal|chain)", ps_data[,"narrative"]),]$narrative)
 
+# DEFINE A FEW NARRATIVES USING THE VEHICLE FLAGS - BEFORE REPLACING BODY PARTS 
+ps_data[, "operating"] = ifelse((grepl("((operat|driv|back|tram(m)*)ing|makin(g)*( )*(a)*( )*tu(r)*n).{1,18}VEHICLE", ps_data[,"narrative"]) | 
+                                   grepl("run(n)*ing.{1,8}VEHICLE", ps_data[,"narrative"])) &
+                                  !grepl("remote.{1,5}control.{1,30}VEHICLE", ps_data[,"narrative"]), 1, 0)
+# USE HEAD/ROOF TO REMOVE DRIVER HITTING HEAD AGAINST VEHICLE ROOF
+ps_data[, "headroof"] = ifelse((grepl("(head|neck).{1,5}(on|str(ike|uck)|hit|against).{1,5}(roof|top)", ps_data[,"narrative"]) |
+                                  grepl("(bump|str(ike|uck)|hit).{1,5}(head|neck).{1,5}(roof|top)", ps_data[,"narrative"]) | 
+                                  (grepl("whip( )*lash", ps_data[,"narrative"]) & ps_data$operating == 1) | 
+                                  grepl("jerked.{1,10}(head|neck)", ps_data[,"narrative"])) &
+                                 !grepl("drill( )*head.{1,10}roof", ps_data[,"narrative"]) &
+                                 !grepl("over( )*head.{1,10}roof", ps_data[,"narrative"]) &
+                                 !grepl("head(ing|er|ed).{1,10}roof", ps_data[,"narrative"]) &
+                                 !grepl("head.{1,10}roof.{1,5}bolt", ps_data[,"narrative"]), 1, 0) 
+
 # BODY PARTS
 ps_data$narrative <- gsub("hand(s| |\\.|,|$)", "BODY ", ps_data$narrative)
 ps_data$narrative <- gsub("finger(s)*", "BODY", ps_data$narrative)
@@ -334,9 +336,9 @@ ps_data$narrative <- gsub("(s)*tr(u|i)(c)*k(e|ing)*", "PINNED/STRUCK", ps_data$n
 ps_data$narrative <- gsub("r(a|u)n( )*(into|over)", "PINNED/STRUCK", ps_data$narrative)
 ps_data$narrative <- gsub("col(l)*ided( w| with)*", "PINNED/STRUCK", ps_data$narrative)
 ps_data$narrative <- gsub("( |^)trap(p)*(ed|ing)", " PINNED/STRUCK", ps_data$narrative)
-ps_data$narrative <- gsub("col(l)*ided( w| with)*", "PINNED/STRUCK", ps_data$narrative)
 ps_data$narrative <- gsub("rolled (into|onto|over)", "PINNED/STRUCK", ps_data$narrative)
 ps_data$narrative <- gsub("c(a|u)(a|u)ght", "PINNED/STRUCK", ps_data$narrative)
+ps_data$narrative <- gsub("catching|to catch", "PINNED/STRUCK", ps_data$narrative)
 ps_data[ps_data$hole == 0,]$narrative <- gsub("( |^)hit(t)*(ing)*( |$|\\.|,|s)", "PINNED/STRUCK", 
           ps_data[ps_data$hole == 0,]$narrative)
 ps_data[grepl("VEHICLE.{1,5}got on{1,5}BODY", ps_data[,"narrative"]),]$narrative <- gsub("got on", "PINNED/STRUCK", 
@@ -383,9 +385,6 @@ ps_data$num_unique_vehcl = sapply(ps_data$narrative, uniq_vehcls)
 ps_data$mult_vehcl = ifelse(ps_data$num_unique_vehcl > 1, 1, 0)
 
 # CREATE A FEW MORE KEYWORDS ON THE NEW NARRATIVE FIELDS
-ps_data[, "operating"] = ifelse((grepl("((operat|driv|back|tram(m)*)ing|makin(g)*( )*(a)*( )*tu(r)*n).{1,18}VEHICLE", ps_data[,"narrative"]) | 
-                                 grepl("run(n)*ing.{1,8}VEHICLE", ps_data[,"narrative"])) &
-                                !grepl("remote.{1,5}control.{1,30}VEHICLE", ps_data[,"narrative"]), 1, 0)
 ps_data[, "in_vehicle"] = ifelse(grepl("riding.{1,10}(passenger|driver|operat(o|e)r)", ps_data[,"old_narrative"]) | 
                                  grepl("PERSON{1,8}riding", ps_data[,"narrative"]) |
                                 !grepl("riding{1,15}VEHICLE", ps_data[,"narrative"]), 1, 0)
@@ -393,6 +392,7 @@ ps_data[, "dif_vehicle"] = ifelse(grepl("(second|another|different).{1,5}VEHICLE
 
 ps_data[, "loose_rbolting"] = ifelse(grepl("(plate|bit|bolt)+.{1,10}PINNED/STRUCK", ps_data[,"narrative"]), 1, 0)
 ps_data[, "drill_action"] = ifelse(grepl("(plate|bit|bolt)+.{1,10}PINNED/STRUCK", ps_data[,"narrative"]), 1, 0)
+
 # OPERATOR ARM OF HAND TRAILING OUTSIDE VEHICLE
 ps_data[, "outsidevehicle"] = ifelse(((grepl("BODY.{1,15}(resting| hanging).{1,5}(over|out|on)", ps_data[,"narrative"]) & grepl("VEHICLE", ps_data[,"narrative"])) |
                                      grepl("BODY.{1,15}out( )*side.{1,30}VEHICLE", ps_data[,"narrative"])) &
@@ -441,8 +441,8 @@ ps_data$false_keyword = ifelse((ps_data$brakes == 1 | ps_data$jarring == 1 | ps_
                                   ps_data$bodyseat == 1 | ps_data$headroof == 1 | ps_data$strap == 1 | ps_data$trolleypole == 1 |
                                   ps_data$hole == 1), 1, 0)
 
-ps_data$maybe_false_keyword = ifelse((ps_data$roofbolt == 1 | ps_data$driving == 1 | ps_data$digit == 1 |
-                                      ps_data$riding == 1 | ps_data$bent == 1 | ps_data$strikerib == 1 |
+ps_data$maybe_false_keyword = ifelse((ps_data$roofbolt == 1 |  ps_data$digit == 1 | ps_data$operating == 1 |
+                                      ps_data$bent == 1 | ps_data$strikerib == 1 |
                                       ps_data$passenger == 1 | ps_data$wrench == 1 |
                                       ps_data$controls == 1 | ps_data$resin == 1 | ps_data$flew == 1 |
                                       ps_data$loose == 1 | ps_data$broke == 1 | 
@@ -754,8 +754,8 @@ simple.data.grouped = ps_data[, c(match("documentno", names(ps_data)), match("PS
                                match("brakes", names(ps_data)), match("jarring", names(ps_data)), 
                                match("bounced", names(ps_data)), match("rock", names(ps_data)),                                    
                                match("digit", names(ps_data)), match("derail", names(ps_data)),
-                               match("roofbolt", names(ps_data)), match("driving", names(ps_data)),
-                               match("riding", names(ps_data)), match("drill_steel_simple", names(ps_data)),
+                               match("roofbolt", names(ps_data)), 
+                               match("drill_steel_simple", names(ps_data)),
                                match("passenger", names(ps_data)), match("wrench", names(ps_data)), match("cable", names(ps_data)),
                                match("controls", names(ps_data)), match("resin", names(ps_data)), match("bent", names(ps_data)), 
                                match("atrs", names(ps_data)), match("flew", names(ps_data)), match("trolleypole", names(ps_data)),
