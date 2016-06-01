@@ -178,7 +178,6 @@ ps_data[, "loose"] = ifelse(grepl("loose", ps_data[,"narrative"]), 1, 0)
 ps_data[, "broke"] = ifelse(grepl("br(oke|eak)", ps_data[,"narrative"]), 1, 0)
 ps_data[, "bent"] = ifelse(grepl("bent", ps_data[,"narrative"]) & !grepl("bent( )*over", ps_data[,"narrative"]), 1, 0)
 ps_data[, "canopy"] = ifelse(grepl("canopy", ps_data[,"narrative"]), 1, 0)
-ps_data[, "strikerib"] = ifelse(grepl("str(i|u)(.*)k[a-z]*.{1,15} rib", ps_data[,"narrative"]), 1, 0)
 
 ##################################################################################################
 # GENERATE KEYWORDS TO IDENTIFY FALSE POSITIVE ACCIDENTS BY CIRUMSTANCES
@@ -422,6 +421,8 @@ ps_data[, "tool_break"] = ifelse(grepl("(wrench|roof bolt).{1,15}(br(eak|oke)|be
 
 ps_data[, "vcomp_test"] = ifelse(grepl("(seat|rail|canopy|battery|drill|steel|chain|cable)+.{1,20}VEHICLE", ps_data[,"narrative"]) | grepl("VEHICLE.{1,20}(seat|rail|canopy|battery|drill|steel|chain|cable)+", ps_data[,"narrative"]), 1, 0)
 ps_data[, "psobject_test"] = ifelse(grepl("(corner|beam|overcast|rib|wall|coal|rock|header|top|seat|canopy)+.{1,20}PINNED/STRUCK", ps_data[,"narrative"]) | grepl("PINNED/STRUCK.{1,20}(corner|beam|overcast|rib|wall|coal|rock|header|top|seat|canopy)+", ps_data[,"narrative"]), 1, 0)
+ps_data[, "strikerib"] = ifelse((grepl("PINNED/STRUCK.{0,20}( )rib", ps_data[, "narrative"]) | grepl("( )rib.{1,20}PINNED/STRUCK", ps_data[, "narrative"])) &
+                                   (!grepl("(lower|upper|side|cage|right|left| in |fractured|bruised).{0,10}( )rib", ps_data[, "old_narrative"]) & !grepl("PERSON.{0,10}( )rib", ps_data[, "old_narrative"]) & !grepl(" ribs", ps_data[, "old_narrative"])), 1, 0)
 
 ##################################################################################################
 # GENERATE LIKELY CIRCUMSTANCES
@@ -429,7 +430,9 @@ ps_data[, "psobject_test"] = ifelse(grepl("(corner|beam|overcast|rib|wall|coal|r
 ps_data$falling.class = ifelse(ps_data$accidentclassification == "fall of roof or back", 1, 0)
 ps_data[, "falling.word"] = ifelse(grepl("rock( )*fell", ps_data[,"narrative"]) |
                                    grepl("fell.{1,20}roof", ps_data[,"narrative"]) |
-                                   grepl("roof( )*f(a|e)ll", ps_data[,"narrative"]), 1, 0)
+                                   grepl("roof( )*f(a|e)ll", ps_data[,"narrative"]) |
+                                   grepl("(rolled|fell) (from|.ff|out).{0,}( )rib", ps_data[,"narrative"]) |
+                                   grepl("( )rib.{0,15}(rolled|fell) (from|.ff|out)", ps_data[,"narrative"]), 1, 0)
 ps_data$falling.accident = ifelse(ps_data$falling.class == 1 | ps_data$falling.word == 1, 1, 0)
 ps_data = ps_data[, c(-match("falling.class", names(ps_data)), -match("falling.word", names(ps_data)))]
 
