@@ -251,13 +251,8 @@ ps_data[!grepl("to tram", ps_data[,"narrative"]) &
                                                                                                                                       !grepl("tram.{1,5}(lever|sprocket|pedal|chain)", ps_data[,"narrative"]),]$narrative)
 
 # DEFINE A FEW NARRATIVES USING THE VEHICLE FLAGS - BEFORE REPLACING BODY PARTS 
-ps_data[, "operating"] = ifelse((grepl("((operat|driv|back|tram(m)*)ing|makin(g)*( )*(a)*( )*tu(r)*n).{1,18}VEHICLE", ps_data[,"narrative"]) | 
-                                   grepl("run(n)*ing.{1,8}VEHICLE", ps_data[,"narrative"])) &
-                                  !grepl("remote.{1,5}control.{1,30}VEHICLE", ps_data[,"narrative"]), 1, 0)
 
-#There are 8 accidents in the validation set where the victim was the operator that this does not grab (and "operating" does). But it grabs more than 120
-#accidents with an operator victim that "operator" does not.
-ps_data[, "operating_2"] = ifelse((grepl("( |^|was|while|had)(tr(a)*m(m)*[^ ]{0,3}|op(e)*r(a)*t[^ ]{0,3}|backin.{1,10}VEHICLE|r(a|u)n|makin(g)*( )*(a)*( )*tu(r)*n|remote.{1,5}control|driv)", ps_data$narrative) &
+ps_data[, "operating"] = ifelse((grepl("( |^|was|while|had)(tr(a)*m(m)*[^ ]{0,3}|op(e)*r(a)*t[^ ]{0,3}|backin.{1,10}VEHICLE|r(a|u)n|makin(g)*( )*(a)*( )*tu(r)*n|remote.{1,5}control|driv)", ps_data$narrative) &
                                      (!grepl("PERSON.{1,20}(splic(e|ing)|crawl(ing)*|repair|fix)", ps_data$narrative) & grepl("(splic(e|ing)|crawl(ing)*|repair|fix).{1,20}PERSON", ps_data$narrative)) &
                                      (grepl("operat", ps_data$mineractivity) | (grepl("roof bolt", ps_data$mineractivity) & !grepl("help(ing|er|)", ps_data$old_narrative))) &
                                      (!grepl("(side of|right|left|beside).{1,10}VEHICLE", ps_data$narrative) | grepl("remote.{1,5}control", ps_data$narrative))), 1, 0)
@@ -265,7 +260,7 @@ ps_data[, "operating_2"] = ifelse((grepl("( |^|was|while|had)(tr(a)*m(m)*[^ ]{0,
 # do this before "body" masks so that we can use "head/neck" - althought maybe let's move this since it doesn't require vehicle flags? Hmmm...
 ps_data[, "headroof"] = ifelse((grepl("(head|neck).{1,5}(on|str(ike|uck)|hit|against).{1,5}(roof|top)", ps_data[,"narrative"]) |
                                   grepl("(bump|str(ike|uck)|hit).{1,5}(head|neck).{1,5}(roof|top)", ps_data[,"narrative"]) | 
-                                  (grepl("whip( )*lash", ps_data[,"narrative"]) & ps_data$operating_2 == 1) | 
+                                  (grepl("whip( )*lash", ps_data[,"narrative"]) & ps_data$operating == 1) | 
                                   grepl("jerked.{1,10}(head|neck)", ps_data[,"narrative"])) &
                                  !grepl("drill( )*head.{1,10}roof", ps_data[,"narrative"]) &
                                  !grepl("over( )*head.{1,10}roof", ps_data[,"narrative"]) &
@@ -458,7 +453,7 @@ ps_data$false_keyword = ifelse((ps_data$brakes == 1 | ps_data$jarring == 1 | ps_
                                 ps_data$bodyseat == 1 | ps_data$headroof == 1 | ps_data$strap == 1 | ps_data$trolleypole == 1 |
                                 ps_data$hole == 1), 1, 0)
 
-ps_data$maybe_false_keyword = ifelse((ps_data$digit == 1 | ps_data$operating_2 == 1 |
+ps_data$maybe_false_keyword = ifelse((ps_data$digit == 1 | ps_data$operating == 1 |
                                       ps_data$bent == 1 | ps_data$strikerib == 1 |
                                       ps_data$passenger == 1 | ps_data$wrench == 1 |
                                       ps_data$controls == 1 | ps_data$resin == 1 |
@@ -786,7 +781,7 @@ simple.data.grouped = ps_data[, c(match("documentno", names(ps_data)), match("PS
                                match("num.vehicles", names(ps_data)), match("potential_ps", names(ps_data)), 
                                match("num.pinstrike", names(ps_data)), match("likely_ps", names(ps_data)), 
                                match("num.person", names(ps_data)), 
-                               match("num.body", names(ps_data)),   match("mult_vehcl", names(ps_data)), match("operating_2", names(ps_data)),
+                               match("num.body", names(ps_data)),   match("mult_vehcl", names(ps_data)), match("operating", names(ps_data)),
                                match("keyword_pts", names(ps_data)), match("in_vehicle", names(ps_data)), match("dif_vehicle", names(ps_data)),
                                match("neg_keyword_pts", names(ps_data)), match("pos_roofbolt", names(ps_data)), match("neg_roofbolt", names(ps_data)),
                                match("pos_pts", names(ps_data)), 
