@@ -899,8 +899,40 @@ if (data.type == "real accidents data") {
     
     # SAVE FINAL MR PREDICTION AND DATASET WITH JUST DOC NO'S  & PREDICTIONS
     accidents.data$MR  = ifelse((accidents.data$adaboost == "YES" & accidents.data$false.pos == 0) | accidents.data$false.neg == 1, 1, 0)
+    accidents.data = accidents.data[, c(-grep("accident.only", names(accidents.data)), -grep("adaboost", names(accidents.data)),
+                                      -grep("barring", names(accidents.data)), -grep("battery", names(accidents.data)),
+                                      -grep("bits", names(accidents.data)), -grep("belt", names(accidents.data)),
+                                      -grep("carpal.tunnel", names(accidents.data)), -grep("belt", names(accidents.data)) 
+                                      -grep("changing", names(accidents.data)), -grep("check", names(accidents.data)),
+                                      -grep("cleaning", names(accidents.data)), -grep("cover", names(accidents.data)),
+                                      -grep("conveyor", names(accidents.data)), -grep("cumulative", names(accidents.data)),
+                                      -grep("datasource", names(accidents.data)), -grep("dismantl", names(accidents.data)),
+                                      -grep("district", names(accidents.data)), -grep("exposure", names(accidents.data)),
+                                      -match("falling.accident", names(accidents.data)), -grep("false.", names(accidents.data)),
+                                      -grep("fix", names(accidents.data)), -grep("flashburn", names(accidents.data)),
+                                      -grep("grease", names(accidents.data)), -grep("hearingloss", names(accidents.data)),
+                                      -grep("heartattack", names(accidents.data)), -grep("helping", names(accidents.data)),
+                                      -grep("hoist", names(accidents.data)), -grep("inspect", names(accidents.data)),
+                                      -grep("install", names(accidents.data)), -grep("latitude", names(accidents.data)),
+                                      -grep("longitude", names(accidents.data)), -grep("likely", names(accidents.data)),
+                                      -grep("like", names(accidents.data)), -grep("loosen", names(accidents.data)),
+                                      -grep("lug", names(accidents.data)), -grep("maintain", names(accidents.data)),
+                                      -grep("manual.predict", names(accidents.data)), -grep("maybe", names(accidents.data)),
+                                      -grep("moretools", names(accidents.data)), -grep("mrworker", names(accidents.data)),  
+                                      -grep("oil", names(accidents.data)), -grep("other", names(accidents.data)),
+                                      -grep("pain", names(accidents.data)), -grep("power", names(accidents.data)), -grep("pullbelt", names(accidents.data)),
+                                      -grep("repair", names(accidents.data)), -grep("reposition", names(accidents.data)),
+                                      -grep("rethread", names(accidents.data)), -grep("retrack", names(accidents.data)),
+                                      -grep("rethread", names(accidents.data)), -grep("roller", names(accidents.data)), -grep("remove", names(accidents.data)),
+                                      -grep("rplace", names(accidents.data)), -grep("shovel", names(accidents.data)), -grep("splice", names(accidents.data)),
+                                      -grep("surgery", names(accidents.data)), -grep("tests", names(accidents.data)), -grep("service", names(accidents.data)),
+                                      -grep("tighten", names(accidents.data)), -grep("tire", names(accidents.data)),
+                                      -grep("toolbox", names(accidents.data)), -grep("trash", names(accidents.data)),
+                                      -grep("type", names(accidents.data)), -grep("unrelated", names(accidents.data)),
+                                      -grep("washingdown", names(accidents.data)), -grep("welding", names(accidents.data)),
+                                      -grep("working.on", names(accidents.data)), -grep("wrench", names(accidents.data)))]
     
-    write.csv(accidents.data, file = "C:/Users/slevine2/Dropbox (Stanford Law School)/R-code/accidents_with_predictions.csv", row.names = FALSE)
+write.csv(accidents.data, file = "C:/Users/slevine2/Dropbox (Stanford Law School)/R-code/accidents_with_predictions.csv", row.names = FALSE)
 }
 
 ######################################################################################################
