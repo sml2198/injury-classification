@@ -135,9 +135,16 @@ table(merged_assessments$inspecmerge)
 #1       2       3 
 #71 2037701 1180363
 
+common_varstbs = sub(".x", "", names(merged_assessments)[grep(".x", names(merged_assessments), fixed = T)], fixed = T)
+for (i in 1:length(common_varstbs)) {
+  merged_assessments[, paste(common_varstbs[i], ".x", sep = "")] = ifelse(merged_assessments[, "inspecmerge"] == 2, merged_assessments[, paste(common_varstbs[i], ".y", sep = "")], merged_assessments[, paste(common_varstbs[i], ".x", sep = "")])
+}
+merged_assessments = merged_assessments[, -grep(".y", names(merged_assessments), fixed = T)]
+names(merged_assessments)[grep(".x", names(merged_assessments), fixed = T)] = common_varstbs
+
 merged_assessments = merged_assessments[!is.na(merged_assessments$violationno), c(-grep("nooftailingponds", names(merged_assessments)), -grep("timevacated", names(merged_assessments)), 
                                                                                   -grep("minegascategorycode", names(merged_assessments)), -grep("merge", names(merged_assessments)), 
                                                                                   -grep("coalcormetalmmine", names(merged_assessments)), -grep("coalcormetalm", names(merged_assessments)))]
 
 saveRDS(merged_assessments, file = "X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_assessments.rds")
-rm(clean_Inspections, common_varstbs, violnames, i)
+rm(assessments_violations_mines, clean_Inspections, common_varstbs, violnames, i)
