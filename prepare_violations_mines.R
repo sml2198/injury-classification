@@ -35,6 +35,12 @@ rm(merged_assessments, merged_cfr_key, common_varstbs, i)
 
 #Dummy out CFR codes (at the subpart and subsection levels) only for *relevant types and mark all non-relevant CFR codes
 
+MR_relevant_subsectcodes = levels(factor(merged_assessments_cfrkey[merged_assessments_cfrkey$MR_relevant == 1 | merged_assessments_cfrkey$MR_maybe_relevant == 1,]$subsection_code))
+
+for (i in 1:length(MR_relevant_subsectcodes)) {
+  merged_assessments_cfrkey[, MR_relevant_subsectcodes[i]] = ifelse(merged_assessments_cfrkey$subsection_code == MR_relevant_subsectcodes[i], 1, 0)
+}
+
 #Create CFR-code (only for *relevant) specific for penalty variables:
 #penalty pts, good faith, gravity and its components as well & sig. and sub., negligence, # of repeat violations for operators and ind. contractors,
 ## of overall violations for operators and ind. contractors, create our own previous violations var and compare to the given version for verification,
