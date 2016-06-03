@@ -251,9 +251,11 @@ ps_data[!grepl("to tram", ps_data[,"narrative"]) &
                                                                                                                                       !grepl("tram.{1,5}(lever|sprocket|pedal|chain)", ps_data[,"narrative"]),]$narrative)
 
 # DEFINE A FEW NARRATIVES USING THE VEHICLE FLAGS - BEFORE REPLACING BODY PARTS 
-ps_data[, "operating"] = ifelse((grepl("((operat|driv|back|tram(m)*)ing|makin(g)*( )*(a)*( )*tu(r)*n).{1,18}VEHICLE", ps_data[,"narrative"]) | 
-                                   grepl("run(n)*ing.{1,8}VEHICLE", ps_data[,"narrative"])) &
-                                  !grepl("remote.{1,5}control.{1,30}VEHICLE", ps_data[,"narrative"]), 1, 0)
+
+ps_data[, "operating"] = ifelse((grepl("( |^|was|while|had)(tr(a)*m(m)*[^ ]{0,3}|op(e)*r(a)*t[^ ]{0,3}|backin.{1,10}VEHICLE|r(a|u)n|makin(g)*( )*(a)*( )*tu(r)*n|remote.{1,5}control|driv)", ps_data$narrative) &
+                                     (!grepl("PERSON.{1,20}(splic(e|ing)|crawl(ing)*|repair|fix)", ps_data$narrative) & grepl("(splic(e|ing)|crawl(ing)*|repair|fix).{1,20}PERSON", ps_data$narrative)) &
+                                     (grepl("operat", ps_data$mineractivity) | (grepl("roof bolt", ps_data$mineractivity) & !grepl("help(ing|er|)", ps_data$old_narrative))) &
+                                     (!grepl("(side of|right|left|beside).{1,10}VEHICLE", ps_data$narrative) | grepl("remote.{1,5}control", ps_data$narrative))), 1, 0)
 # USE HEAD/ROOF TO REMOVE DRIVER HITTING HEAD AGAINST VEHICLE ROOF
 # do this before "body" masks so that we can use "head/neck" - althought maybe let's move this since it doesn't require vehicle flags? Hmmm...
 ps_data[, "headroof"] = ifelse((grepl("(head|neck).{1,5}(on|str(ike|uck)|hit|against).{1,5}(roof|top)", ps_data[,"narrative"]) |
@@ -925,7 +927,7 @@ table(post.smote.test$smote_pred, post.smote.test$PS)
 # BEST PREDICTION SO FAR
 
 #NO YES
-#NO  231  18
-#YES  23  89
+#NO  233  16
+#YES  21  91
 
 View(post.smote.test[post.smote.test$PS=="NO" & post.smote.test$smote_pred =="YES",]$documentno)
