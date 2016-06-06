@@ -3,6 +3,8 @@
 library(plyr)
 library(zoo)
 library(glarma)
+library(pglm)
+library(stats)
 
 merged_assessments = readRDS("X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_assessments.rds")
 merged_cfr_key = readRDS("X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_cfr_key.rds")
@@ -125,7 +127,7 @@ summed_coded_accidents = ddply(mines.accidents.coded[, c(grep("totalinjuries", n
 
 mines_assessments_accidents = merge(summed_assessments_cfrkey, summed_coded_accidents, by = c("mineid", "quarter"), all = T)
 prediction_data = merge(mines_assessments_accidents, summed_inspcs, by = c("mineid", "quarter"), all = T)
-
+rm(multi_qtr_inspcs, merged_assessments_cfrkey, mines.accidents.coded, summed_coded_accidents, summed_assessments_cfrkey, summed_inspcs)
 #To provide an intercept for the prediction stage:
 prediction_data$constant = 1
 #WARNING: Fails to converge with these initial values
@@ -133,4 +135,12 @@ N = nrow(prediction_data)
 K = ncol(prediction_data) - 3
 X = as.matrix(prediction_data[, c(-grep("MR", names(prediction_data)), -grep("mineid", names(prediction_data)), -grep("quarter", names(prediction_data)))])
 Y = as.vector(prediction_data$MR)
+
+#Model Selection
+#PCA
+pca_output = prcomp(na.omit(X))
+pca_results = pca_output$rotation
+
 test_pred = glarma(Y, X, type = "NegBin", phiLags = c(1, 2), thetaLags = c(1, 2), phiInit = c(0.5, 0.5), thetaInit = c(0.25, 0.25), beta = rep(1, K), alphaInit = 1)
+#For some reason, unable to use usual formula abbreviations in this command
+test_pred_2 = pglm(MR ~  penaltypoints_47.41 + totalinjuries, prediction_data, na.action = na.omit, family = "negbin", effect = "time", model = "within")
