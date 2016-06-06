@@ -6,6 +6,7 @@ library(glarma)
 
 merged_assessments = readRDS("X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_assessments.rds")
 merged_cfr_key = readRDS("X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_cfr_key.rds")
+mines.accidents = readRDS("X:/Projects/Mining/NIOSH/analysis/data/3_merged/mines_accidents.rds")
 
 merged_assessments = merged_assessments[, c(-grep("datevacated", names(merged_assessments)), -grep("primarymill", names(merged_assessments)), -grep("generatedbyassessmt", names(merged_assessments)),
                                             -grep("sigandsubindicator", names(merged_assessments)), -grep("dup", names(merged_assessments)), -grep("source", names(merged_assessments)),
@@ -90,3 +91,9 @@ summed_assessments_cfrkey = ddply(merged_assessments_cfrkey[, c(grep("_*[0-9][0-
 
 #Hours, # of regular inspections, # of special inspections (work out issue of over-counting inspection hours over violations data)
 
+mines.accidents$accidentdate = as.Date(as.character(mines.accidents$accidentdate), "%m/%d/%Y")
+mines.accidents$quarter = as.yearqtr(mines.accidents$accidentdate)
+
+#Collapse mines_accidents data here.
+
+mines_assessments_accidents = merge(summed_assessments_cfrkey, mines.accidents, by = c("mineid", "quarter"), all = T)
