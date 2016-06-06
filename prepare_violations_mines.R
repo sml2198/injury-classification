@@ -128,6 +128,9 @@ prediction_data = merge(mines_assessments_accidents, summed_inspcs, by = c("mine
 
 #To provide an intercept for the prediction stage:
 prediction_data$constant = 1
-#UNDER CONSTRUCTION
-test_pred = glarma(as.vector(prediction_data$MR), as.matrix(prediction_data[, -grep("MR", names(prediction_data))]), type = "NegBin", 
-                   phiLags = c(1, 2), thetaLags = c(1, 2), )
+#WARNING: Fails to converge with these initial values
+N = nrow(prediction_data)
+K = ncol(prediction_data) - 3
+X = as.matrix(prediction_data[, c(-grep("MR", names(prediction_data)), -grep("mineid", names(prediction_data)), -grep("quarter", names(prediction_data)))])
+Y = as.vector(prediction_data$MR)
+test_pred = glarma(Y, X, type = "NegBin", phiLags = c(1, 2), thetaLags = c(1, 2), phiInit = c(0.5, 0.5), thetaInit = c(0.25, 0.25), beta = rep(1, K), alphaInit = 1)
