@@ -10,3 +10,15 @@ employment = employment[!(employment$subunit=="UNDERGROUND" & employment$coal_me
 employment = employment[, c(-grep("coal_metal_ind", names(employment)), -match("state", names(employment)), -match("subunit", names(employment)), -match("subunit_cd", names(employment)))]
 
 saveRDS(employment, file = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_employment.rds")
+
+employment_yearly = read.table("X:\Projects\Mining\NIOSH\analysis\data\0_originals\MSHA\open_data\MinesProdYearly.txt", header = T, sep = "|")
+names(employment)[names(employment) == "cal_yr"] = "calendaryear"
+names(employment)[names(employment) == "mine_id"] = "mineid"
+names(employment)[names(employment) == "cal_yr"] = "calendaryear"
+names(employment)[names(employment) == "avg_employee_cnt"] = "avg_employee_cnt_yrly"
+names(employment)[names(employment) == "avg_employee_hours"] = "avg_employee_hours_yrly"
+
+employment = employment[!(employment$subunit=="UNDERGROUND" & employment$coal_metal_ind=="C"),]
+employment = employment[, c(-grep("coal_metal_ind", names(employment)), -match("state", names(employment)), -match("subunit", names(employment)), -match("subunit_cd", names(employment)))]
+
+saveRDS(employment, file = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_employment_yrly.rds")
