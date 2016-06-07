@@ -101,6 +101,18 @@ ps_data$PS[ps_data$documentno=="219891280164"] = "YES"
 ps_data$PS[ps_data$documentno=="219852170075"] = "YES"
 ps_data$PS[ps_data$documentno=="219901620109"] = "YES"
 
+#Recoded in light of Miguel's 6/7/16 response to our questions
+
+ps_data$PS[ps_data$documentno=="219871460076"] = "NO"
+ps_data$PS[ps_data$documentno=="219861280065"] = "NO"
+ps_data$PS[ps_data$documentno=="220000310115"] = "NO"
+ps_data$PS[ps_data$documentno=="220001180052"] = "NO"
+ps_data$PS[ps_data$documentno=="219831430047"] = "NO"
+ps_data$PS[ps_data$documentno=="219943180016"] = "NO"
+ps_data$PS[ps_data$documentno=="220112090013"] = "NO"
+
+ps_data$PS[ps_data$documentno=="219912970040"] = "YES"
+
 # How to destring a variable
 ps_data[,grep("numberofemployees", names(ps_data))] = gsub(pattern = ",",replacement =  "", ps_data[,grep("numberofemployees", names(ps_data))])
 ps_data[,grep("numberofemployees", names(ps_data))] = as.numeric(ps_data[,grep("numberofemployees", names(ps_data))])
@@ -154,8 +166,8 @@ ps_data[, "by"] = ifelse(grepl("by", ps_data[,"narrative"]), 1, 0)
 
 # GENERATE NEGATIVE KEYWORDS
 
-ps_data[, "brakes"] = ifelse(grepl("brakes.{1,10}(off|lost|not engage|did not|were not|fail)", ps_data[,"narrative"]) |
-                             grepl("lost.{1,10}brakes", ps_data[,"narrative"]), 1, 0)
+#ps_data[, "brakes"] = ifelse(grepl("brakes.{1,10}(off|lost|not engage|did not|were not|fail)", ps_data[,"narrative"]) |
+#                             grepl("lost.{1,10}brakes", ps_data[,"narrative"]), 1, 0)
 # jarred, jolted, jostled
 ps_data[, "jarring"] = ifelse(grepl("jar(r)*(ed|ing)", ps_data[,"narrative"]) |
                               grepl("jo(lt|stl)(ed|ing)", ps_data[,"narrative"]), 1, 0)
@@ -256,6 +268,9 @@ ps_data[, "operating"] = ifelse((grepl("( |^|was|while|had)(tr(a)*m(m)*[^ ]{0,3}
                                      (!grepl("PERSON.{1,20}(splic(e|ing)|crawl(ing)*|repair|fix)", ps_data$narrative) & grepl("(splic(e|ing)|crawl(ing)*|repair|fix).{1,20}PERSON", ps_data$narrative)) &
                                      (grepl("operat", ps_data$mineractivity) | (grepl("roof bolt", ps_data$mineractivity) & !grepl("help(ing|er|)", ps_data$old_narrative))) &
                                      (!grepl("(side of|right|left|beside).{1,10}VEHICLE", ps_data$narrative) | grepl("remote.{1,5}control", ps_data$narrative))), 1, 0)
+
+ps_data[, "shuttlecar_or_rbolter"] = ifelse((grepl("VEHICLE(8|10|36)", ps_data$narrative) | grepl("(s(ch|h)uttle).{1,30}( |-|- |v)*(trip|car)( car)*", ps_data$old_narrative)), 1, 0)
+
 # USE HEAD/ROOF TO REMOVE DRIVER HITTING HEAD AGAINST VEHICLE ROOF
 # do this before "body" masks so that we can use "head/neck" - althought maybe let's move this since it doesn't require vehicle flags? Hmmm...
 ps_data[, "headroof"] = ifelse((grepl("(head|neck).{1,5}(on|str(ike|uck)|hit|against).{1,5}(roof|top)", ps_data[,"narrative"]) |
@@ -448,7 +463,7 @@ ps_data$keyword = ifelse((ps_data$pin == 1 | ps_data$strike == 1 | ps_data$pos_r
                           ps_data$rolled == 1 | ps_data$between == 1 | ps_data$wheel == 1) &
                           (ps_data$falling.accident == 0), 1, 0)
 
-ps_data$false_keyword = ifelse((ps_data$brakes == 1 | ps_data$jarring == 1 | ps_data$outsidevehicle == 1 | ps_data$steering == 1 | ps_data$neg_roofbolt == 1 |
+ps_data$false_keyword = ifelse(( ps_data$jarring == 1 | ps_data$outsidevehicle == 1 | ps_data$steering == 1 | ps_data$neg_roofbolt == 1 |
                                 ps_data$bounced == 1 | ps_data$rock == 1 | ps_data$derail == 1 | ps_data$cable == 1 | ps_data$tool_break == 1 |
                                 ps_data$bodyseat == 1 | ps_data$headroof == 1 | ps_data$strap == 1 | ps_data$trolleypole == 1 |
                                 ps_data$hole == 1), 1, 0)
@@ -612,7 +627,7 @@ ps_data$unlikely_body = ifelse((ps_data$bodypartcode == "200" | ps_data$bodypart
 
 ps_data$keyword_pts = rowSums(ps_data[,c('pin', 'strike', 'drillsteel', 'trap', 'collided', 'hit', 'dropped', 'ranover', 
                                          'bumped', 'caught', 'rolled', 'between', 'wheel')], na.rm=TRUE)
-ps_data$neg_keyword_pts = rowSums(ps_data[,c('brakes', 'jarring', 'outsidevehicle', 'steering', 'bounced', 'rock', 'derail', 'cable', 'strap', 'trolleypole', 
+ps_data$neg_keyword_pts = rowSums(ps_data[,c( 'jarring', 'outsidevehicle', 'steering', 'bounced', 'rock', 'derail', 'cable', 'strap', 'trolleypole', 
                                              'tool_break', 'bodyseat', 'headroof', 'hole')], na.rm=TRUE)
 ps_data$pos_pts = rowSums(ps_data[,c('likely_class', 'likely_equip', 'likely_nature', 'likely_source', 'likely_type')], na.rm=TRUE)
 ps_data$neg_pts = rowSums(ps_data[,c('unlikely_class', 'unlikely_equip', 'unlikely_source', 'unlikely_nature', 'unlikely_type', 'uncertain_activity')], na.rm=TRUE)
@@ -640,7 +655,7 @@ ps_data$potential_ps = ifelse(ps_data$keyword == 1 | ps_data$likely_class == 1 |
 ps_data$likely_ps = ifelse((ps_data$keyword == 1 | ps_data$likely_class == 1 | ps_data$v_to_v == 1 | ps_data$v_to_p == 1) &
                              (ps_data$falling.accident == 0) &
                              (ps_data$bodyseat == 0 & ps_data$headroof == 0 & ps_data$hole == 0 & ps_data$cable == 0 & ps_data$strap == 0 & ps_data$tool_break == 0 &
-                              ps_data$outsidevehicle == 0 & ps_data$derail == 0 & ps_data$bounced == 0 & ps_data$brakes == 0 & ps_data$trolleypole == 0 & ps_data$neg_roofbolt == 0 & 
+                              ps_data$outsidevehicle == 0 & ps_data$derail == 0 & ps_data$bounced == 0  & ps_data$trolleypole == 0 & ps_data$neg_roofbolt == 0 & 
                               ps_data$unlikely_nature == 0 & ps_data$unlikely_source == 0) &
                              (ps_data$neg_keyword_pts < 2 & ps_data$pos_pts > 1 & ps_data$neg_pts < 3), 1, 0)
 
@@ -761,9 +776,9 @@ simple.data.grouped = ps_data[, c(match("documentno", names(ps_data)), match("PS
                                match("strike", names(ps_data)), match("strikerib", names(ps_data)), grep("maybs_", names(ps_data)),
                                match("trap", names(ps_data)),  match("collided", names(ps_data)), match("neg_wrench", names(ps_data)),
                                match("hit", names(ps_data)), match("ranover", names(ps_data)), match("num_unique_vehcl", names(ps_data)),
-                               match("rolled", names(ps_data)), match("caught", names(ps_data)),
+                               match("rolled", names(ps_data)), match("caught", names(ps_data)), match("shuttlecar_or_rbolter", names(ps_data)),
                                match("between", names(ps_data)), match("by", names(ps_data)),
-                               match("brakes", names(ps_data)), match("jarring", names(ps_data)), 
+                               match("jarring", names(ps_data)), 
                                match("bounced", names(ps_data)), match("rock", names(ps_data)),                                    
                                match("digit", names(ps_data)), match("derail", names(ps_data)), match("brokensteel", names(ps_data)), 
                                match("roofbolt", names(ps_data)), match("drillsteel", names(ps_data)), match("entrapment", names(ps_data)), 
@@ -927,7 +942,7 @@ table(post.smote.test$smote_pred, post.smote.test$PS)
 # BEST PREDICTION SO FAR
 
 #NO YES
-#NO  233  16
-#YES  21  91
+#NO  239  19
+#YES  17  86
 
 View(post.smote.test[post.smote.test$PS=="NO" & post.smote.test$smote_pred =="YES",]$documentno)
