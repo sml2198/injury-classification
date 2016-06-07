@@ -98,23 +98,68 @@ rm(assessments_to_sum)
 ##INSPECTIONS##
 
 #Hours, # of regular inspections, # of special inspections (work out issue of over-counting inspection hours over violations data)
+
+# CLEAN UP THE FIELD THAT REPORTS THE TYPE OF INSPECTION
 merged_assessments_cfrkey$inspacty = tolower(merged_assessments_cfrkey$inspacty)
 merged_assessments_cfrkey[, "inspacty"] = ifelse(merged_assessments_cfrkey[, "inspacty"] == "mine idle activity", "mine idle", merged_assessments_cfrkey[, "inspacty"])
 merged_assessments_cfrkey[, "inspacty"] = ifelse(merged_assessments_cfrkey[, "inspacty"] == "na", "n", merged_assessments_cfrkey[, "inspacty"])
 merged_assessments_cfrkey[, "inspacty"] = ifelse(merged_assessments_cfrkey[, "inspacty"] == "part 50 audit", "part 50 audits", merged_assessments_cfrkey[, "inspacty"])
-merged_assessments_cfrkey[, "inspacty"] = ifelse(merged_assessments_cfrkey[, "inspacty"] == "resp dust tech insp - surface mines", "resp dust tech insp - u. g. mines", merged_assessments_cfrkey[, "inspacty"])
-merged_assessments_cfrkey[, "inspacty"] = ifelse(merged_assessments_cfrkey[, "inspacty"] == "roof control technical investigation", "roof control technical investigtion", merged_assessments_cfrkey[, "inspacty"])
 merged_assessments_cfrkey[, "inspacty"] = ifelse(merged_assessments_cfrkey[, "inspacty"] == "non-fatal accident investigation", "nonfatal injury accident inv", merged_assessments_cfrkey[, "inspacty"])
 merged_assessments_cfrkey[, "inspacty"] = ifelse(merged_assessments_cfrkey[, "inspacty"] == "shaft, slope or major construction spot inspection", "shft, slpe, or maj constr spot insp", merged_assessments_cfrkey[, "inspacty"])
 
-multi_qtr_inspcs = ddply(merged_assessments_cfrkey[, c(grep("sumtotal_insp_hours", names(merged_assessments_cfrkey)), grep("sumtotal_on_site_hours", names(merged_assessments_cfrkey)), grep("eventno", names(merged_assessments_cfrkey)),
-                                                       match("mineid", names(merged_assessments_cfrkey)), match("quarter", names(merged_assessments_cfrkey)))], c("mineid", "quarter", "eventno"), 
-                         function(x) colSums(x[, c(grep("sumtotal_insp_hours", names(x)), grep("sumtotal_on_site_hours", names(x)))], na.rm = T))
-multi_qtr_inspcs = multi_qtr_inspcs[duplicated(multi_qtr_inspcs$eventno) == F,]
-multi_qtr_inspcs$totalinspecs = 1
-summed_inspcs = ddply(multi_qtr_inspcs[, c(grep("sumtotal_insp_hours", names(multi_qtr_inspcs)), grep("sumtotal_on_site_hours", names(multi_qtr_inspcs)),
-                                           match("totalinspecs", names(multi_qtr_inspcs)), match("mineid", names(multi_qtr_inspcs)), match("quarter", names(multi_qtr_inspcs)))], c("mineid", "quarter"), 
-                         function(x) colSums(x[, c(grep("sumtotal_insp_hours", names(x)), grep("sumtotal_on_site_hours", names(x)), match("totalinspecs", names(x)))], na.rm = T))
+####### COUNT TOTAL # QUARTERS PER INSPECTION AND TOTAL # INSPECTIONS PER QUARTER #######
+
+# COLLAPSE TO MINE-QUARTER-EVENT LEVEL TO FLAG EACH INSPECTIONS PER MINE QUARTER WITH A "1"
+num_inspecs_per_qtr = ddply(merged_assessments_cfrkey[, c(match("sumtotal_insp_hours", names(merged_assessments_cfrkey)), match("sumtotal_on_site_hours", names(merged_assessments_cfrkey)),
+                                                       grep("mineid", names(merged_assessments_cfrkey)), match("quarter", names(merged_assessments_cfrkey)), 
+                                                       grep("eventno", names(merged_assessments_cfrkey)))], c("mineid", "quarter", "eventno"), 
+                            function(x) colSums(x[, c(match("sumtotal_insp_hours", names(x)), match("sumtotal_on_site_hours", names(x)))], na.rm = T))
+num_inspecs_per_qtr$num_insp = 1
+
+# COLLAPSE TO MINE-QUARTER LEVEL AND CREATE VARIABLE COUNTING THE TOTAL # OF INSPECTIONS PER MINE QUARTER
+# "sumtotal_insp_hours" IS ONLY IN THE LIST BECAUSE OTHER YOU GET AN ERROR THAT "X" MUST BE AN ARRAY OF TWO COLUMNS... 
+num_inspecs_per_qtr = ddply(num_inspecs_per_qtr[, c(match("num_insp", names(num_inspecs_per_qtr)), match("sumtotal_insp_hours", names(num_inspecs_per_qtr)), 
+                                                    match("mineid", names(num_inspecs_per_qtr)), 
+                                              match("quarter", names(num_inspecs_per_qtr)))], c("mineid", "quarter"), 
+                      function(x) colSums(x[, c(match("num_insp", names(x)), match("sumtotal_insp_hours", names(x)))], na.rm = T))
+# just get rid of it for now so it doesn't confuse us
+num_inspecs_per_qtr = num_inspecs_per_qtr[, c(-grep("sumtotal_insp_hours", names(num_inspecs_per_qtr)))]
+
+# COLLAPSE TO MINE-INSPECTION-QUARTER LEVEL TO FLAG EACH QUARTER PER INSPECTION WITH A "1"
+num_qtrs_per_inspec = ddply(merged_assessments_cfrkey[, c(match("sumtotal_insp_hours", names(merged_assessments_cfrkey)), match("sumtotal_on_site_hours", names(merged_assessments_cfrkey)), 
+                                                          match("mineid", names(merged_assessments_cfrkey)), grep("eventno", names(merged_assessments_cfrkey)),
+                                                          match("quarter", names(merged_assessments_cfrkey)))], c("mineid", "eventno", "quarter"), 
+                            function(x) colSums(x[, c(match("sumtotal_insp_hours", names(x)), match("sumtotal_on_site_hours", names(x)))], na.rm = T))
+num_qtrs_per_inspec$num_qtrs = 1
+
+# COLLAPSE TO MINE-INSPECTION LEVEL AND CREATE VARIABLE COUNTING THE TOTAL # OF QUARTERS PER INSPECTION (TO DIVIDE HOURS PER INSPECTION INTO QUARTERLY VARS)
+num_qtrs_per_inspec = ddply(num_qtrs_per_inspec[, c(match("num_qtrs", names(num_qtrs_per_inspec)), match("sumtotal_insp_hours", names(num_qtrs_per_inspec)), match("mineid", names(num_qtrs_per_inspec)), 
+                                                    match("quarter", names(num_qtrs_per_inspec)))], c("mineid", "quarter"), 
+                            function(x) colSums(x[, c(match("num_insp", names(x)), match("sumtotal_insp_hours", names(x)))], na.rm = T))
+# same - just get rid of it for now so it doesn't confuse us
+num_qtrs_per_inspec = num_qtrs_per_inspec[, c(-grep("sumtotal_insp_hours", names(num_qtrs_per_inspec)))]
+
+#multi_qtr_inspcs = ddply(merged_assessments_cfrkey[, c(grep("sumtotal_insp_hours", names(merged_assessments_cfrkey)), grep("sumtotal_on_site_hours", names(merged_assessments_cfrkey)), grep("eventno", names(merged_assessments_cfrkey)),
+#                                                       match("mineid", names(merged_assessments_cfrkey)), match("quarter", names(merged_assessments_cfrkey)))], c("mineid", "quarter", "eventno"), 
+#                         function(x) colSums(x[, c(grep("sumtotal_insp_hours", names(x)), grep("sumtotal_on_site_hours", names(x)))], na.rm = T))
+#multi_qtr_inspcs = multi_qtr_inspcs[duplicated(multi_qtr_inspcs$eventno) == F,]
+#multi_qtr_inspcs$totalinspecs = 1
+
+# COLLAPSE ALL INSPECTIONS DATA TO THE MINE-QUARTER LEVEL
+summed_inspcs = ddply(merged_assessments_inspections[, c(match("sumtotal_insp_hours", names(merged_assessments_inspections)), match("sumtotal_on_site_hours", names(merged_assessments_inspections)),
+                                           match("totalinspecs", names(merged_assessments_inspections)), match("mineid", names(merged_assessments_inspections)), match("quarter", names(merged_assessments_inspections)))], c("mineid", "quarter"), 
+                         function(x) colSums(x[, c(match("sumtotal_insp_hours", names(x)), match("sumtotal_on_site_hours", names(x)), match("totalinspecs", names(x)))], na.rm = T))
+
+# MERGE NUMBER OF INSPECTIONS PER QUARTER & NUMBER OF QUARTERS PER INSPECTION ONTO INSPECTIONS DATA
+summed_inspcs = merge(summed_inspcs, num_inspecs_per_qtr, by = c("mineid", "quarter"), all = T)
+summed_inspcs = merge(summed_inspcs, num_qtrs_per_inspec, by = c("mineid", "eventno"), all = T)
+
+# DIVIDE INSPECTION HOURS INTO QUARTERLY VARS (TOTAL HOURS PER INSPECTION/NUMBER OF QUARTERS PER INSPECTION)
+summed_inspcs$insp_hours_per_qtr = (summed_inspcs$sumtotal_insp_hours / summed_inspcs$num_qtrs)
+summed_inspcs$onsite_insp_hours_per_qtr = (summed_inspcs$sumtotal_on_site_hours / summed_inspcs$num_qtrs)
+
+
+###########################################
 
 mines.accidents.coded$accidentdate = as.Date(as.character(mines.accidents.coded$accidentdate), "%m/%d/%Y")
 mines.accidents.coded$quarter = as.yearqtr(mines.accidents.coded$accidentdate)
