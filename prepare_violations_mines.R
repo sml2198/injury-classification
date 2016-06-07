@@ -125,9 +125,33 @@ summed_coded_accidents = ddply(mines.accidents.coded[, c(grep("totalinjuries", n
                                                                 match("mineid", names(mines.accidents.coded)), match("quarter", names(mines.accidents.coded)))], c("mineid", "quarter"), 
                                   function(x) colSums(x[, c(grep("totalinjuries", names(x)), grep("MR", names(x)))], na.rm = T))
 
-mines_assessments_accidents = merge(summed_assessments_cfrkey, summed_coded_accidents, by = c("mineid", "quarter"), all = T)
+summed_assessments_cfrkey$row_id = seq.int(nrow(summed_assessments_cfrkey))
+averaged_assessments_cfrkey$row_id = seq.int(nrow(averaged_assessments_cfrkey))
+collapsed_assessments_cfrkey = merge(summed_assessments_cfrkey, averaged_assessments_cfrkey, by = c("mineid", "quarter"), all = T)
+collapsed_assessments_cfrkey[, "merge"] = ifelse(!is.na(collapsed_assessments_cfrkey$row_id.y) & !is.na(collapsed_assessments_cfrkey$row_id.x), 3, 0)
+collapsed_assessments_cfrkey[, "merge"] = ifelse(is.na(collapsed_assessments_cfrkey$row_id.x) & !is.na(collapsed_assessments_cfrkey$row_id.y), 2, collapsed_assessments_cfrkey[, "merge"])
+collapsed_assessments_cfrkey[, "merge"] = ifelse(is.na(collapsed_assessments_cfrkey$row_id.y) & !is.na(collapsed_assessments_cfrkey$row_id.x), 1, collapsed_assessments_cfrkey[, "merge"])
+table(collapsed_assessments_cfrkey$merge)
+collapsed_assessments_cfrkey$row_id = seq.int(nrow(collapsed_assessments_cfrkey))
+summed_coded_accidents$row_id = seq.int(nrow(summed_coded_accidents))
+mines_assessments_accidents = merge(collapsed_assessments_cfrkey, summed_coded_accidents, by = c("mineid", "quarter"), all = T)
+mines_assessments_accidents[, "merge"] = ifelse(!is.na(mines_assessments_accidents$row_id.y) & !is.na(mines_assessments_accidents$row_id.x), 3, 0)
+mines_assessments_accidents[, "merge"] = ifelse(is.na(mines_assessments_accidents$row_id.x) & !is.na(mines_assessments_accidents$row_id.y), 2, mines_assessments_accidents[, "merge"])
+mines_assessments_accidents[, "merge"] = ifelse(is.na(mines_assessments_accidents$row_id.y) & !is.na(mines_assessments_accidents$row_id.x), 1, mines_assessments_accidents[, "merge"])
+table(mines_assessments_accidents$merge) 
+
+mines_assessments_accidents$row_id = seq.int(nrow(mines_assessments_accidents))
+summed_inspcs$row_id = seq.int(nrow(summed_inspcs))
 prediction_data = merge(mines_assessments_accidents, summed_inspcs, by = c("mineid", "quarter"), all = T)
-rm(multi_qtr_inspcs, merged_assessments_cfrkey, mines.accidents.coded, summed_coded_accidents, summed_assessments_cfrkey, summed_inspcs)
+prediction_data[, "merge"] = ifelse(!is.na(prediction_data$row_id.y) & !is.na(prediction_data$row_id.x), 3, 0)
+prediction_data[, "merge"] = ifelse(is.na(prediction_data$row_id.x) & !is.na(prediction_data$row_id.y), 2, prediction_data[, "merge"])
+prediction_data[, "merge"] = ifelse(is.na(prediction_data$row_id.y) & !is.na(prediction_data$row_id.x), 1, prediction_data[, "merge"])
+table(prediction_data$merge)
+#Open Data Only:
+#1      3 
+#192974  67055 
+
+rm(multi_qtr_inspcs, merged_assessments_cfrkey, mines.accidents.coded, summed_coded_accidents, summed_assessments_cfrkey, summed_inspcs, averaged_assessments_cfrkey)
 #To provide an intercept for the prediction stage:
 prediction_data$constant = 1
 #WARNING: Fails to converge with these initial values
@@ -143,4 +167,6 @@ pca_results = pca_output$rotation
 
 test_pred = glarma(Y, X, type = "NegBin", phiLags = c(1, 2), thetaLags = c(1, 2), phiInit = c(0.5, 0.5), thetaInit = c(0.25, 0.25), beta = rep(1, K), alphaInit = 1)
 #For some reason, unable to use usual formula abbreviations in this command
-test_pred_2 = pglm(MR ~  penaltypoints_47.41 + totalinjuries, prediction_data, na.action = na.omit, family = "negbin", effect = "time", model = "within")
+names(prediction_data)[match("47.41", names(prediction_data))] = "subsection_47.41"
+test_pred_2 = pglm(MR ~  subsection_47.41 + penaltypoints_47.41 + totalinjuries ,
+                   prediction_data, na.action = na.omit, family = "negbin", effect = "time", model = "within")
