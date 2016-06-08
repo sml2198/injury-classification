@@ -85,7 +85,7 @@ merged_violations[, "inspecmerge"] = ifelse(is.na(merged_violations$inspecid.y) 
 table(merged_violations$inspecmerge)
 #Open Data Only: 
 #1       2       3 
-#59781 2037701 1180363
+#134 1812672 2161288
 
 common_varstbs = sub(".x", "", names(merged_violations)[grep(".x", names(merged_violations), fixed = T)], fixed = T)
 for (i in 1:length(common_varstbs)) {
