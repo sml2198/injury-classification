@@ -166,6 +166,7 @@ ps_data[, "by"] = ifelse(grepl("by", ps_data[,"narrative"]), 1, 0)
 
 # GENERATE NEGATIVE KEYWORDS
 
+#Commented out as per Miguel's 6/7/16 response to our questions
 #ps_data[, "brakes"] = ifelse(grepl("brakes.{1,10}(off|lost|not engage|did not|were not|fail)", ps_data[,"narrative"]) |
 #                             grepl("lost.{1,10}brakes", ps_data[,"narrative"]), 1, 0)
 # jarred, jolted, jostled
@@ -640,6 +641,10 @@ ps_data[, "v_to_v"] = ifelse((grepl("(VEHICLE|drill|steel|bolter|shear|cutter|ti
                                 grepl("VEHICLE.{1,35}PINNED/STRUCK.{1,35}(VEHICLE|drill|steel|bolter|shear|cutter|tire)", ps_data[, "narrative"])) & ps_data$hole == 0, 1, 0)
 ps_data[, "v_to_p"] = ifelse((grepl("(VEHICLE).{1,20}PINNED/STRUCK.{1,20}(PERSON|BODY)", ps_data[, "narrative"]) |
                                 grepl("(PERSON|BODY).{1,20}PINNED/STRUCK.{1,20}(VEHICLE)", ps_data[, "narrative"])) & ps_data$false_keyword == 0, 1, 0)
+ps_data[, "int_obj_strike"] = ifelse((grepl("( )(block|rock|cho(c)*k|chunk|rail|i-beam)( )", ps_data[, "old_narrative"]) & 
+                                         grepl("VEHICLE", ps_data[, "narrative"]) & grepl("PINNED/STRUCK", ps_data[, "narrative"]) &
+                                         grepl("(tr(a)*m(m)*[^ ]{0,3}|op(e)*r(a)*t[^ ]{0,3}|back(in|ed).{1,10}VEHICLE|VEHICLE.{1,10}back(in|ed)|r(a|u)n|makin(g)*( )*(a)*( )*tu(r)*n|remote.{1,5}control|driv|pull)", ps_data[, "narrative"]) &
+                                         (ps_data$accidenttypecode %in% c(8, 5)) & ps_data$falling.accident == 0 & ps_data$operating == 0), 1, 0)
 
 ##################################################################################################
 # VARIOUS SIMPLE ALGORITHMS
@@ -777,7 +782,7 @@ simple.data.grouped = ps_data[, c(match("documentno", names(ps_data)), match("PS
                                match("trap", names(ps_data)),  match("collided", names(ps_data)), match("neg_wrench", names(ps_data)),
                                match("hit", names(ps_data)), match("ranover", names(ps_data)), match("num_unique_vehcl", names(ps_data)),
                                match("rolled", names(ps_data)), match("caught", names(ps_data)), match("shuttlecar_or_rbolter", names(ps_data)),
-                               match("between", names(ps_data)), match("by", names(ps_data)),
+                               match("between", names(ps_data)), match("by", names(ps_data)), match("int_obj_strike", names(ps_data)),
                                match("jarring", names(ps_data)), 
                                match("bounced", names(ps_data)), match("rock", names(ps_data)),                                    
                                match("digit", names(ps_data)), match("derail", names(ps_data)), match("brokensteel", names(ps_data)), 
@@ -942,7 +947,7 @@ table(post.smote.test$smote_pred, post.smote.test$PS)
 # BEST PREDICTION SO FAR
 
 #NO YES
-#NO  235  17
-#YES  21  88
+#NO  240  20
+#YES  16  85
 
 View(post.smote.test[post.smote.test$PS=="NO" & post.smote.test$smote_pred =="YES",]$documentno)
