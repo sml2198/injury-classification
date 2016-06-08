@@ -169,26 +169,39 @@ summed_coded_accidents = ddply(mines.accidents.coded[, c(grep("totalinjuries", n
 summed_assessments_cfrkey$row_id = seq.int(nrow(summed_assessments_cfrkey))
 averaged_assessments_cfrkey$row_id = seq.int(nrow(averaged_assessments_cfrkey))
 collapsed_assessments_cfrkey = merge(summed_assessments_cfrkey, averaged_assessments_cfrkey, by = c("mineid", "quarter"), all = T)
-collapsed_assessments_cfrkey[, "merge"] = ifelse(!is.na(collapsed_assessments_cfrkey$row_id.y) & !is.na(collapsed_assessments_cfrkey$row_id.x), 3, 0)
-collapsed_assessments_cfrkey[, "merge"] = ifelse(is.na(collapsed_assessments_cfrkey$row_id.x) & !is.na(collapsed_assessments_cfrkey$row_id.y), 2, collapsed_assessments_cfrkey[, "merge"])
-collapsed_assessments_cfrkey[, "merge"] = ifelse(is.na(collapsed_assessments_cfrkey$row_id.y) & !is.na(collapsed_assessments_cfrkey$row_id.x), 1, collapsed_assessments_cfrkey[, "merge"])
-table(collapsed_assessments_cfrkey$merge)
+collapsed_assessments_cfrkey[, "merge1"] = ifelse(!is.na(collapsed_assessments_cfrkey$row_id.y) & !is.na(collapsed_assessments_cfrkey$row_id.x), 3, 0)
+collapsed_assessments_cfrkey[, "merge1"] = ifelse(is.na(collapsed_assessments_cfrkey$row_id.x) & !is.na(collapsed_assessments_cfrkey$row_id.y), 2, collapsed_assessments_cfrkey[, "merge1"])
+collapsed_assessments_cfrkey[, "merge1"] = ifelse(is.na(collapsed_assessments_cfrkey$row_id.y) & !is.na(collapsed_assessments_cfrkey$row_id.x), 1, collapsed_assessments_cfrkey[, "merge1"])
+table(collapsed_assessments_cfrkey$merge1)
+#Open Data only:
+#3 
+#69303
+
+collapsed_assessments_cfrkey = collapsed_assessments_cfrkey[, -grep("row_id", names(collapsed_assessments_cfrkey))]
 collapsed_assessments_cfrkey$row_id = seq.int(nrow(collapsed_assessments_cfrkey))
 summed_coded_accidents$row_id = seq.int(nrow(summed_coded_accidents))
 mines_assessments_accidents = merge(collapsed_assessments_cfrkey, summed_coded_accidents, by = c("mineid", "quarter"), all = T)
-mines_assessments_accidents[, "merge"] = ifelse(!is.na(mines_assessments_accidents$row_id.y) & !is.na(mines_assessments_accidents$row_id.x), 3, 0)
-mines_assessments_accidents[, "merge"] = ifelse(is.na(mines_assessments_accidents$row_id.x) & !is.na(mines_assessments_accidents$row_id.y), 2, mines_assessments_accidents[, "merge"])
-mines_assessments_accidents[, "merge"] = ifelse(is.na(mines_assessments_accidents$row_id.y) & !is.na(mines_assessments_accidents$row_id.x), 1, mines_assessments_accidents[, "merge"])
-table(mines_assessments_accidents$merge) 
+mines_assessments_accidents[, "merge2"] = ifelse(!is.na(mines_assessments_accidents$row_id.y) & !is.na(mines_assessments_accidents$row_id.x), 3, 0)
+mines_assessments_accidents[, "merge2"] = ifelse(is.na(mines_assessments_accidents$row_id.x) & !is.na(mines_assessments_accidents$row_id.y), 2, mines_assessments_accidents[, "merge2"])
+mines_assessments_accidents[, "merge2"] = ifelse(is.na(mines_assessments_accidents$row_id.y) & !is.na(mines_assessments_accidents$row_id.x), 1, mines_assessments_accidents[, "merge2"])
+table(mines_assessments_accidents$merge2) 
+#Open Data Only:
+#1      2      3 
+#52204 190726  17099
 
+mines_assessments_accidents = mines_assessments_accidents[, -grep("row_id", names(mines_assessments_accidents))]
 mines_assessments_accidents$row_id = seq.int(nrow(mines_assessments_accidents))
 summed_inspcs$row_id = seq.int(nrow(summed_inspcs))
 prediction_data = merge(mines_assessments_accidents, summed_inspcs, by = c("mineid", "quarter"), all = T)
-prediction_data[, "merge"] = ifelse(!is.na(prediction_data$row_id.y) & !is.na(prediction_data$row_id.x), 3, 0)
-prediction_data[, "merge"] = ifelse(is.na(prediction_data$row_id.x) & !is.na(prediction_data$row_id.y), 2, prediction_data[, "merge"])
-prediction_data[, "merge"] = ifelse(is.na(prediction_data$row_id.y) & !is.na(prediction_data$row_id.x), 1, prediction_data[, "merge"])
-table(prediction_data$merge)
+prediction_data[, "merge3"] = ifelse(!is.na(prediction_data$row_id.y) & !is.na(prediction_data$row_id.x), 3, 0)
+prediction_data[, "merge3"] = ifelse(is.na(prediction_data$row_id.x) & !is.na(prediction_data$row_id.y), 2, prediction_data[, "merge3"])
+prediction_data[, "merge3"] = ifelse(is.na(prediction_data$row_id.y) & !is.na(prediction_data$row_id.x), 1, prediction_data[, "merge3"])
+table(prediction_data$merge3)
 #Open Data Only:
+#As of 6/8/16
+#1      3 
+#190726  69303 
+#As of 6/7/16
 #1      3 
 #192974  67055 
 
