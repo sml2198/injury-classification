@@ -36,7 +36,7 @@ for (i in 1:length(common_varstbs)) {
 }
 merged_violations = merged_violations[, -grep(".y", names(merged_violations), fixed = T)]
 names(merged_violations)[grep(".x", names(merged_violations), fixed = T)] = common_varstbs
-rm(merged_assessments, merged_cfr_key, common_varstbs, i)
+rm(merged_cfr_key, common_varstbs, i)
 
 datevars = names(merged_violations)[grep("date", names(merged_violations))]
 for (i in 1:length(datevars)) {
@@ -82,17 +82,17 @@ for (i in 1:length(MR_relevant_subsectcodes)) {
 
 #Aggregation to mine-quarter level
 merged_violations$total_violations = 1
-assessments_to_sum = merged_violations[, c(grep("_*[0-9][0-9]\\..+", names(merged_violations)), match("total_violations", names(merged_violations)),
+violations_to_sum = merged_violations[, c(grep("_*[0-9][0-9]\\..+", names(merged_violations)), match("total_violations", names(merged_violations)),
                                                    match("mineid", names(merged_violations)), match("quarter", names(merged_violations)))]
-assessments_to_sum = assessments_to_sum[, c(-grep("operator_repeated_viol_pInspDay", names(assessments_to_sum)), -grep("contractor_repeated_viol_cnt", names(assessments_to_sum)))]
-summed_assessments_cfrkey = ddply(assessments_to_sum, c("mineid", "quarter"), function(x) colSums(x[, c(grep("_*[0-9][0-9]\\..+", names(x)), match("total_violations", names(x)))], na.rm = T))
+violations_to_sum = violations_to_sum[, c(-grep("operator_repeated_viol_pInspDay", names(violations_to_sum)), -grep("contractor_repeated_viol_cnt", names(violations_to_sum)))]
+summed_violations = ddply(violations_to_sum, c("mineid", "quarter"), function(x) colSums(x[, c(grep("_*[0-9][0-9]\\..+", names(x)), match("total_violations", names(x)))], na.rm = T))
 
-averaged_assessments_cfrkey = ddply(merged_violations[, c(grep("operator_repeated_viol_pInspDay", names(merged_violations)), grep("minesizepoints", names(merged_violations)), grep("controllersizepoints", names(merged_violations)),
+averaged_violations = ddply(merged_violations[, c(grep("operator_repeated_viol_pInspDay", names(merged_violations)), grep("minesizepoints", names(merged_violations)), grep("controllersizepoints", names(merged_violations)),
                                                                   grep("contractorsizepoints", names(merged_violations)), grep("contractor_repeated_viol_cnt", names(merged_violations)),
                                                                   match("mineid", names(merged_violations)), match("quarter", names(merged_violations)))], c("mineid", "quarter"), 
                                     function(x) colMeans(x[, c(grep("operator_repeated_viol_pInspDay", names(x)), grep("minesizepoints", names(x)), grep("controllersizepoints", names(x)),
                                                                grep("contractorsizepoints", names(x)), grep("contractor_repeated_viol_cnt", names(x)))], na.rm = T))
-rm(assessments_to_sum)
+rm(violations_to_sum)
 #Question: Check if operator variables vary by mine? Are indep. contractors the only operators @ a mine or are they only a part of the operation? A: Inspections generate
 #both contractor and operator violations. 6/6/16
 
@@ -164,16 +164,16 @@ contractor_quarterly_employment = readRDS("X:/Projects/Mining/NIOSH/analysis/dat
 contractor_yearly_employment = readRDS("X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_contractor_employment_yearly.rds")
 underreporting_employment = readRDS("X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_underreporting_employment.rds")
 
-merged_assessments_cfrkey[, "numberofemployees"] = ifelse(merged_assessments_cfrkey[, "numberofemployees"] == "NA", "", merged_assessments_cfrkey[, "numberofemployees"])
-merged_assessments_cfrkey$numberofemployees <- as.numeric(as.character(merged_assessments_cfrkey$numberofemployees))
-names(merged_assessments_cfrkey)[names(merged_assessments_cfrkey) == "calendaryear"] = "year"
+merged_violations[, "numberofemployees"] = ifelse(merged_violations[, "numberofemployees"] == "NA", "", merged_violations[, "numberofemployees"])
+merged_violations$numberofemployees <- as.numeric(as.character(merged_violations$numberofemployees))
+names(merged_violations)[names(merged_violations) == "calendaryear"] = "year"
 
 # MERGE IN ALL EMPLOYMENT/PRODUCTION/HOURS DATATSETS
-merged_assessments_cfrkey = merge(merged_assessments_cfrkey, quarterly_employment, by = c("mineid", "year", "quarter"), all = T)
-merged_assessments_cfrkey = merge(merged_assessments_cfrkey, yearly_employment, by = c("mineid", "year"), all = T)
-merged_assessments_cfrkey = merge(merged_assessments_cfrkey, contractor_quarterly_employment, by = c("mineid", "year", "quarter"), all = T)
-merged_assessments_cfrkey = merge(merged_assessments_cfrkey, contractor_yearly_employment, by = c("contractorid", "year"), all = T)
-merged_assessments_cfrkey = merge(merged_assessments_cfrkey, underreporting_employment, by = c("mineid", "year", "quarter"), all = T)
+merged_violations = merge(merged_violations, quarterly_employment, by = c("mineid", "year", "quarter"), all = T)
+merged_violations = merge(merged_violations, yearly_employment, by = c("mineid", "year"), all = T)
+merged_violations = merge(merged_violations, contractor_quarterly_employment, by = c("mineid", "year", "quarter"), all = T)
+merged_violations = merge(merged_violations, contractor_yearly_employment, by = c("contractorid", "year"), all = T)
+merged_violations = merge(merged_violations, underreporting_employment, by = c("mineid", "year", "quarter"), all = T)
 
 
 ######################################################################################################################################
@@ -188,41 +188,41 @@ summed_coded_accidents = ddply(mines.accidents.coded[, c(grep("totalinjuries", n
                                   function(x) colSums(x[, c(grep("totalinjuries", names(x)), grep("MR", names(x)))], na.rm = T))
 
 
-summed_assessments_cfrkey$row_id = seq.int(nrow(summed_assessments_cfrkey))
-averaged_assessments_cfrkey$row_id = seq.int(nrow(averaged_assessments_cfrkey))
-collapsed_assessments_cfrkey = merge(summed_assessments_cfrkey, averaged_assessments_cfrkey, by = c("mineid", "quarter"), all = T)
-collapsed_assessments_cfrkey[, "merge1"] = ifelse(!is.na(collapsed_assessments_cfrkey$row_id.y) & !is.na(collapsed_assessments_cfrkey$row_id.x), 3, 0)
-collapsed_assessments_cfrkey[, "merge1"] = ifelse(is.na(collapsed_assessments_cfrkey$row_id.x) & !is.na(collapsed_assessments_cfrkey$row_id.y), 2, collapsed_assessments_cfrkey[, "merge1"])
-collapsed_assessments_cfrkey[, "merge1"] = ifelse(is.na(collapsed_assessments_cfrkey$row_id.y) & !is.na(collapsed_assessments_cfrkey$row_id.x), 1, collapsed_assessments_cfrkey[, "merge1"])
-table(collapsed_assessments_cfrkey$merge1)
+summed_violations$row_id = seq.int(nrow(summed_violations))
+averaged_violations$row_id = seq.int(nrow(averaged_violations))
+collapsed_violations = merge(summed_violations, averaged_violations, by = c("mineid", "quarter"), all = T)
+collapsed_violations[, "merge1"] = ifelse(!is.na(collapsed_violations$row_id.y) & !is.na(collapsed_violations$row_id.x), 3, 0)
+collapsed_violations[, "merge1"] = ifelse(is.na(collapsed_violations$row_id.x) & !is.na(collapsed_violations$row_id.y), 2, collapsed_violations[, "merge1"])
+collapsed_violations[, "merge1"] = ifelse(is.na(collapsed_violations$row_id.y) & !is.na(collapsed_violations$row_id.x), 1, collapsed_violations[, "merge1"])
+table(collapsed_violations$merge1)
 #Open Data only:
 #3 
 #69303
 
 #To save time we save/load all constituent datasets in the prediction data after each of the following merges
-saveRDS(collapsed_assessments_cfrkey, file = "X:/Projects/Mining/NIOSH/analysis/data/4_collapsed/collapsed_assessments_cfrkey.rds")
+saveRDS(collapsed_violations, file = "X:/Projects/Mining/NIOSH/analysis/data/4_collapsed/collapsed_violations.rds")
 
-collapsed_assessments_cfrkey = collapsed_assessments_cfrkey[, -grep("row_id", names(collapsed_assessments_cfrkey))]
-collapsed_assessments_cfrkey$row_id = seq.int(nrow(collapsed_assessments_cfrkey))
+collapsed_violations = collapsed_violations[, -grep("row_id", names(collapsed_violations))]
+collapsed_violations$row_id = seq.int(nrow(collapsed_violations))
 summed_coded_accidents$row_id = seq.int(nrow(summed_coded_accidents))
-mines_assessments_accidents = merge(collapsed_assessments_cfrkey, summed_coded_accidents, by = c("mineid", "quarter"), all = T)
-mines_assessments_accidents[, "merge2"] = ifelse(!is.na(mines_assessments_accidents$row_id.y) & !is.na(mines_assessments_accidents$row_id.x), 3, 0)
-mines_assessments_accidents[, "merge2"] = ifelse(is.na(mines_assessments_accidents$row_id.x) & !is.na(mines_assessments_accidents$row_id.y), 2, mines_assessments_accidents[, "merge2"])
-mines_assessments_accidents[, "merge2"] = ifelse(is.na(mines_assessments_accidents$row_id.y) & !is.na(mines_assessments_accidents$row_id.x), 1, mines_assessments_accidents[, "merge2"])
-table(mines_assessments_accidents$merge2) 
+mines_violations_accidents = merge(collapsed_violations, summed_coded_accidents, by = c("mineid", "quarter"), all = T)
+mines_violations_accidents[, "merge2"] = ifelse(!is.na(mines_violations_accidents$row_id.y) & !is.na(mines_violations_accidents$row_id.x), 3, 0)
+mines_violations_accidents[, "merge2"] = ifelse(is.na(mines_violations_accidents$row_id.x) & !is.na(mines_violations_accidents$row_id.y), 2, mines_violations_accidents[, "merge2"])
+mines_violations_accidents[, "merge2"] = ifelse(is.na(mines_violations_accidents$row_id.y) & !is.na(mines_violations_accidents$row_id.x), 1, mines_violations_accidents[, "merge2"])
+table(mines_violations_accidents$merge2) 
 #Open Data Only:
 #1      2      3 
 #52204 190726  17099
 
-saveRDS(mines_assessments_accidents, file = "X:/Projects/Mining/NIOSH/analysis/data/4_collapsed/mines_assessments_accidents.rds")
+saveRDS(mines_violations_accidents, file = "X:/Projects/Mining/NIOSH/analysis/data/4_collapsed/mines_violations_accidents.rds")
 
-mines_assessments_accidents$totalinjuries = ifelse(is.na(mines_assessments_accidents$totalinjuries), 0, mines_assessments_accidents$totalinjuries)
-mines_assessments_accidents$total_violations = ifelse(is.na(mines_assessments_accidents$total_violations), 0, mines_assessments_accidents$total_violations)
+mines_violations_accidents$totalinjuries = ifelse(is.na(mines_violations_accidents$totalinjuries), 0, mines_violations_accidents$totalinjuries)
+mines_violations_accidents$total_violations = ifelse(is.na(mines_violations_accidents$total_violations), 0, mines_violations_accidents$total_violations)
 
-mines_assessments_accidents = mines_assessments_accidents[, -grep("row_id", names(mines_assessments_accidents))]
-mines_assessments_accidents$row_id = seq.int(nrow(mines_assessments_accidents))
+mines_violations_accidents = mines_violations_accidents[, -grep("row_id", names(mines_violations_accidents))]
+mines_violations_accidents$row_id = seq.int(nrow(mines_violations_accidents))
 summed_inspcs$row_id = seq.int(nrow(summed_inspcs))
-prediction_data = merge(mines_assessments_accidents, summed_inspcs, by = c("mineid", "quarter"), all = T)
+prediction_data = merge(mines_violations_accidents, summed_inspcs, by = c("mineid", "quarter"), all = T)
 prediction_data[, "merge3"] = ifelse(!is.na(prediction_data$row_id.y) & !is.na(prediction_data$row_id.x), 3, 0)
 prediction_data[, "merge3"] = ifelse(is.na(prediction_data$row_id.x) & !is.na(prediction_data$row_id.y), 2, prediction_data[, "merge3"])
 prediction_data[, "merge3"] = ifelse(is.na(prediction_data$row_id.y) & !is.na(prediction_data$row_id.x), 1, prediction_data[, "merge3"])
@@ -233,7 +233,7 @@ table(prediction_data$merge3)
 
 saveRDS(prediction_data, file = "X:/Projects/Mining/NIOSH/analysis/data/4_collapsed/prediction_data.rds")
 
-rm(multi_qtr_inspcs, merged_violations, mines.accidents.coded, summed_coded_accidents, summed_assessments_cfrkey, summed_inspcs, averaged_assessments_cfrkey)
+rm(multi_qtr_inspcs, merged_violations, mines.accidents.coded, summed_coded_accidents, summed_violations, summed_inspcs, averaged_violations)
 #To provide an intercept for the prediction stage:
 prediction_data$constant = 1
 #WARNING: Fails to converge with these initial values
