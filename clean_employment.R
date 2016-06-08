@@ -2,8 +2,6 @@ library(plyr)
 
 # THIS FILE BRINGS IN AND CLEANS UP EMPLOYMENT/PRODUCTION DATA, TO BE MERGED ONTO FINAL VIOLATIONS/ACCIDENTS/MINES DATASET.
 
-
-
 # DATA FROM UNDERREPORTING - QUARTERLY MINE EMPLOYMENT/PRODUCTION DATA
 under_employment = read.table("X:/Projects/Mining/MSHA_OSHA_Underreporting/analysis/data/0_originals/MSHA/rec_2015_03_03/Operator_Quarterly_Emp_Production/Operator_Quarterly_Emp_Production.txt", fileEncoding="UCS-2LE", header = T, sep = "|")
 names(under_employment)[names(under_employment) == "Production.Year"] = "year"
@@ -77,4 +75,9 @@ contractor_employment_yearly = contractor_employment_yearly[, c(-grep("COAL_META
                                                                 -match("SUBUNIT", names(contractor_employment_yearly)), -match("CONTRACTOR_NAME", names(contractor_employment_yearly)), 
                                                                 -match("SUBUNIT_CD", names(contractor_employment_yearly)))]
 saveRDS(contractor_employment_yearly, file = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_contractor_employment_yearly.rds")
+
+
+
+
+
 
