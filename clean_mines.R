@@ -5,6 +5,9 @@
 library(plyr)
 
 # THIS FILE BRINGS IN AND CLEANS UP EMPLOYMENT/PRODUCTION DATA, TO BE MERGED ONTO FINAL VIOLATIONS/ACCIDENTS/MINES DATASET.
+# IT THEN BRINGS IN THE MINES DATA AND COLLAPSES TO THE MINE-QUARTER LEVEL.S
+
+######################################################################################################
 
 # DATA FROM UNDERREPORTING - QUARTERLY MINE EMPLOYMENT/PRODUCTION DATA
 underreporting_employment = read.table("X:/Projects/Mining/MSHA_OSHA_Underreporting/analysis/data/0_originals/MSHA/rec_2015_03_03/Operator_Quarterly_Emp_Production/Operator_Quarterly_Emp_Production.txt", fileEncoding="UCS-2LE", header = T, sep = "|")
@@ -84,12 +87,7 @@ contractor_yearly_employment = contractor_yearly_employment[, c(-grep("COAL_META
                                                                 -match("SUBUNIT_CD", names(contractor_yearly_employment)))]
 saveRDS(contractor_yearly_employment, file = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_contractor_employment_yearly.rds")
 
-#####
-#quarterly_employment = readRDS("X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_employment.rds")
-#yearly_employment = readRDS("X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_employment_yrly.rds")
-#contractor_quarterly_employment = readRDS("X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_contractor_employment.rds")
-#contractor_yearly_employment = readRDS("X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_contractor_employment_yearly.rds")
-#underreporting_employment = readRDS("X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_underreporting_employment.rds")
+######################################################################################################
 
 #early_mines = read.csv("X:/Projects/Mining/NIOSH/analysis/data/1_converted/MSHA/mines_fromText.csv") #only 25 mines added and all are non-coal
 open_data_mines = read.table("X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA/open_data/Mines.txt", header = T, sep = "|")
@@ -147,6 +145,8 @@ names(open_data_mines)[names(open_data_mines) == "NEAREST_TOWN"] = "nearesttown"
 names(open_data_mines) = tolower(names(open_data_mines))
 open_data_mines$datasource = "mines data"
 
+######################################################################################################
+
 # KEEP ONLY OBSERVATIONS FROM ENVIRONMENT OF INTEREST
 mines_quarters = mines_quarters[!is.na(mines_quarters$coalcormetalmmine),]
 mines_quarters = mines_quarters[mines_quarters$coalcormetalmmine == "C",]
@@ -169,6 +169,8 @@ mines_quarters = mines_quarters[!(mines_quarters$minetype=="Surface"),]
 
 mines_quarters$datasource = ifelse(is.na(mines_quarters$datasource), "emp/prod data", mines_quarters$datasource)
 
+######################################################################################################
+
 # QUARTERLY EMPLOYMENT
 # construct final quarterly employment from three data sources
 mines_quarters$final_employment_qtr = ifelse(mines_quarters$avg_employee_cnt_qtr == mines_quarters$under_avg_employee_cnt_qtr &
@@ -188,12 +190,16 @@ mines_quarters$final_employment_qtr = ifelse(mines_quarters$avg_employee_cnt_yr 
 # only use # of employees from the mines dataset as a last resort - this is actually # employees as of minestatus date (not relevant to quarters)
 mines_quarters$final_employment_qtr = ifelse(is.na(mines_quarters$final_employment_qtr), mines_quarters$numberofemployees, mines_quarters$final_employment_qtr)
 
+######################################################################################################
+
 # QUARTERLY COAL PRODUCTION
 # make sure this var has no missings - missings should be zeros
 mines_quarters$coal_prod_qtr = ifelse(is.na(mines_quarters$coal_prod_qtr), 0, mines_quarters$coal_prod_qtr)
 # get rid of other prod vars - coal_prod_qtr is definitely the most reliable (spot-checked against MSHA mine retrieval system)
 mines_quarters = mines_quarters[, c(-match("coal_prod_yr", names(mines_quarters)), 
                                     -match("under_coal_prod_qtr", names(mines_quarters)))]
+
+######################################################################################################
 
 # QUARTERLY HOURS
 mines_quarters$final_hours_qtr = ifelse(!is.na(mines_quarters$hours_qtr), mines_quarters$hours_qtr, NA)
@@ -220,6 +226,7 @@ mines_quarters$final_employment_qtr = ifelse(is.na(mines_quarters$year) & is.na(
 names(mines_quarters)[names(mines_quarters) == "final_hours_qtr"] = "hours_qtr"
 names(mines_quarters)[names(mines_quarters) == "final_employment_qtr"] = "employment_qtr"
 
+######################################################################################################
 # collapse to mine-quarter level
 temp = mines_quarters[, c(match("mineid", names(mines_quarters)), 
                           match("year", names(mines_quarters)), 
@@ -235,6 +242,7 @@ temp = mines_quarters[, c(match("mineid", names(mines_quarters)),
                           match("idesc", names(mines_quarters)),  
                           match("daysperweek", names(mines_quarters)),  
                           match("productionshiftsperday", names(mines_quarters)))]
+
 mines_quarters = ddply(mines_quarters[, c(match("hours_qtr", names(mines_quarters)), match("employment_qtr", names(mines_quarters)), match("coal_prod_qtr", names(mines_quarters)), 
                                             match("mineid", names(mines_quarters)), match("year", names(mines_quarters)), match("quarter", names(mines_quarters)))], c("mineid", "year", "quarter"), 
                       function(x) colMeans(x[, c(match("hours_qtr", names(x)), match("employment_qtr", names(x)), match("coal_prod_qtr", names(x)))], na.rm = T))
@@ -245,5 +253,4 @@ rm(open_data_mines)
 # save
 saveRDS(mines_quarters, file = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_mines.rds")
 
-# yay # 
-
+######################################################################################################
