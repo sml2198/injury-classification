@@ -1,6 +1,13 @@
-##HEADER##
+##NIOSH STUDY##
+##Professor Alison Morantz##
+##Stanford Law School##
 
 #Coded by Nikhil Saifullah
+
+#Description
+
+#This file cleans the assessments data we downloaded from MSHA's open data portal. The portions commented out are to load and clean data from
+#Carolyn Stasik's (MSHA) data pull from March 3rd, 2015
 
 #early_assessments = read.csv("X:/Projects/Mining/NIOSH/analysis/data/1_converted/MSHA/assessments_fromText.csv")
 open_data_assessments = read.table("X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA/open_data/AssessedViolations.txt", header = T, sep = "|")

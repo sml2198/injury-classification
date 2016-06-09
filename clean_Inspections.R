@@ -1,6 +1,13 @@
-##HEADER##
+##NIOSH STUDY##
+##Professor Alison Morantz##
+##Stanford Law School##
 
 #Coded by Nikhil Saifullah
+
+#Description
+
+#This file cleans the inspections data we downloaded from MSHA's open data portal. The portions commented out are to load and clean data from
+#Carolyn Stasik's (MSHA) data pull from May 20th, 2015
 
 #early_inspecs = read.csv("X:/Projects/Mining/NIOSH/analysis/data/1_converted/MSHA/inspections_fromText.csv")
 open_data_inspecs = read.table("X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA/open_data/Inspections.txt", header = T, sep = "|")
@@ -85,7 +92,7 @@ rm(open_data_inspecs)
 #clean_inspecs = clean_inspecs[, -grep(".y", names(clean_inspecs), fixed = T)]
 #names(clean_inspecs)[grep(".x", names(clean_inspecs), fixed = T)] = common_varstbs
 
-#Now merge in hours. How to use "merge" to update?
+#Now merge in hours.
 clean_inspecs = merge(clean_inspecs, early_inspecs_hours, by = "eventno", all = T)
 rm(early_inspecs_hours)
 clean_inspecs[, "mergehrs"] = ifelse(!is.na(clean_inspecs$mineid.y) & !is.na(clean_inspecs$mineid.x), 3, 0)
