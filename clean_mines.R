@@ -145,29 +145,105 @@ names(open_data_mines)[names(open_data_mines) == "MILES_FROM_OFFICE"] = "milesfr
 names(open_data_mines)[names(open_data_mines) == "DIRECTIONS_TO_MINE"] = "directionstominemodified"
 names(open_data_mines)[names(open_data_mines) == "NEAREST_TOWN"] = "nearesttown"
 names(open_data_mines) = tolower(names(open_data_mines))
+open_data_mines$datasource = "mines data"
 
-open_data_mines = open_data_mines[, c(-grep("company_type", names(open_data_mines)), -grep("nearesttown", names(open_data_mines)), 
-                                      -grep("directionstominemodified", names(open_data_mines)),
-                                      -grep("cong_dist_cd", names(open_data_mines)))]
+# KEEP ONLY OBSERVATIONS FROM ENVIRONMENT OF INTEREST
+mines_quarters = mines_quarters[!is.na(mines_quarters$coalcormetalmmine),]
+mines_quarters = mines_quarters[mines_quarters$coalcormetalmmine == "C",]
+mines_quarters = mines_quarters[mines_quarters$minetype != "Surface",]
 
 # MERGE IN ALL EMPLOYMENT/PRODUCTION/HOURS DATATSETS
+# observations that are missing for coalcormetalmmine need to be dropped anyway
 mines_quarters = merge(quarterly_employment, open_data_mines, by = c("mineid"), all = T)
 mines_quarters = mines_quarters[!is.na(mines_quarters$coalcormetalmmine),]
 
 mines_quarters = merge(mines_quarters, yearly_employment, by = c("mineid", "year"), all = T)
 mines_quarters = mines_quarters[!is.na(mines_quarters$coalcormetalmmine),]
 
-#mines_quarters = merge(mines_quarters, contractor_quarterly_employment, by = c("contractorid", "year", "quarter"), all = T)
-#mines_quarters = merge(mines_quarters, contractor_yearly_employment, by = c("contractorid", "year"), all = T)
-
 mines_quarters = merge(mines_quarters, underreporting_employment, by = c("mineid", "year", "quarter"), all = T)
 mines_quarters = mines_quarters[!is.na(mines_quarters$coalcormetalmmine),]
 
+# make sure we have only kept obsevrations from our environment of interest
 mines_quarters = mines_quarters[mines_quarters$coalcormetalmmine=="C",]
 mines_quarters = mines_quarters[!(mines_quarters$minetype=="Surface"),]
-mines_quarters$final_employment_qtr = 
-mines_quarters$final_employment_qtr[mines_quarters$avg_employee_cnt_qtr == mines_quarters$under_avg_employee_cnt_qtr,] = mines_quarters$avg_employee_cnt_qtr[mines_quarters$avg_employee_cnt_qtr == mines_quarters$under_avg_employee_cnt_qtr,]
 
-#ONLY KEEP 
+mines_quarters$datasource = ifelse(is.na(mines_quarters$datasource), "emp/prod data", mines_quarters$datasource)
 
-saveRDS(open_data_mines, file = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_mines.rds")
+# QUARTERLY EMPLOYMENT
+# construct final quarterly employment from three data sources
+mines_quarters$final_employment_qtr = ifelse(mines_quarters$avg_employee_cnt_qtr == mines_quarters$under_avg_employee_cnt_qtr &
+                                             mines_quarters$avg_employee_cnt_qtr != 0 & 
+                                            !is.na(mines_quarters$under_avg_employee_cnt_qtr) &
+                                            !is.na(mines_quarters$avg_employee_cnt_qtr), mines_quarters$avg_employee_cnt_qt, NA)
+mines_quarters$final_employment_qtr = ifelse(mines_quarters$avg_employee_cnt_qtr != 0 & 
+                                             is.na(mines_quarters$under_avg_employee_cnt_qtr) &
+                                             !is.na(mines_quarters$avg_employee_cnt_qtr), mines_quarters$avg_employee_cnt_qt, mines_quarters$final_employment_qtr)
+mines_quarters$final_employment_qtr = ifelse(mines_quarters$under_avg_employee_cnt_qtr != 0 & 
+                                               !is.na(mines_quarters$under_avg_employee_cnt_qtr) &
+                                               is.na(mines_quarters$avg_employee_cnt_qtr), mines_quarters$under_avg_employee_cnt_qtr, mines_quarters$final_employment_qtr)
+# if no quarterly data is available, use annual average employment
+mines_quarters$final_employment_qtr = ifelse(mines_quarters$avg_employee_cnt_yr != 0 & 
+                                             is.na(mines_quarters$final_employment_qtr) &
+                                             !is.na(mines_quarters$avg_employee_cnt_yr), mines_quarters$avg_employee_cnt_yr, mines_quarters$final_employment_qtr)
+# only use # of employees from the mines dataset as a last resort - this is actually # employees as of minestatus date (not relevant to quarters)
+mines_quarters$final_employment_qtr = ifelse(is.na(mines_quarters$final_employment_qtr), mines_quarters$numberofemployees, mines_quarters$final_employment_qtr)
+
+# QUARTERLY COAL PRODUCTION
+# make sure this var has no missings - missings should be zeros
+mines_quarters$coal_prod_qtr = ifelse(is.na(mines_quarters$coal_prod_qtr), 0, mines_quarters$coal_prod_qtr)
+# get rid of other prod vars - coal_prod_qtr is definitely the most reliable (spot-checked against MSHA mine retrieval system)
+mines_quarters = mines_quarters[, c(-match("coal_prod_yr", names(mines_quarters)), 
+                                    -match("under_coal_prod_qtr", names(mines_quarters)))]
+
+# QUARTERLY HOURS
+mines_quarters$final_hours_qtr = ifelse(!is.na(mines_quarters$hours_qtr), mines_quarters$hours_qtr, NA)
+mines_quarters$final_hours_qtr = ifelse(is.na(mines_quarters$hours_qtr) &
+                                       !is.na(mines_quarters$under_employee_hours_qtr), mines_quarters$under_employee_hours_qtr, mines_quarters$final_hours_qtr)
+mines_quarters$final_hours_qtr = ifelse(is.na(mines_quarters$final_hours_qtr) &
+                                       !is.na(mines_quarters$hours_yr), (mines_quarters$hours_yr/4), mines_quarters$final_hours_qtr)
+
+# drop vars other than "final" count - will just confuse us 
+mines_quarters = mines_quarters[, c(-match("avg_employee_cnt_yr", names(mines_quarters)), 
+                                    -match("avg_employee_cnt_qtr", names(mines_quarters)), 
+                                    -match("numberofemployees", names(mines_quarters)),
+                                    -match("under_avg_employee_cnt_qtr", names(mines_quarters)),
+                                    -match("hours_qtr", names(mines_quarters)),
+                                    -match("under_employee_hours_qtr", names(mines_quarters)),
+                                    -match("hours_yr", names(mines_quarters)))]
+
+# There should be no employment/production/hours data for mine-observations for which we have no year/quarter data. Enforce this.
+mines_quarters$final_hours_qtr = ifelse(is.na(mines_quarters$year) & is.na(mines_quarters$quarter), NA, mines_quarters$final_hours_qtr)
+mines_quarters$coal_prod_qtr = ifelse(is.na(mines_quarters$year) & is.na(mines_quarters$quarter), NA, mines_quarters$coal_prod_qtr)
+mines_quarters$final_employment_qtr = ifelse(is.na(mines_quarters$year) & is.na(mines_quarters$quarter), NA, mines_quarters$final_employment_qtr)
+
+# Rename to get rid of "finals"
+names(mines_quarters)[names(mines_quarters) == "final_hours_qtr"] = "hours_qtr"
+names(mines_quarters)[names(mines_quarters) == "final_employment_qtr"] = "employment_qtr"
+
+# collapse to mine-quarter level
+temp = mines_quarters[, c(match("mineid", names(mines_quarters)), 
+                          match("year", names(mines_quarters)), 
+                          match("quarter", names(mines_quarters)),
+                          match("minetype", names(mines_quarters)),
+                          match("minename", names(mines_quarters)),
+                          match("minestatus", names(mines_quarters)),
+                          match("minestatusdate", names(mines_quarters)),                          
+                          match("operatorid", names(mines_quarters)),
+                          match("operatorname", names(mines_quarters)),         
+                          match("stateabbreviation", names(mines_quarters)),
+                          match("idate", names(mines_quarters)),  
+                          match("idesc", names(mines_quarters)),  
+                          match("daysperweek", names(mines_quarters)),  
+                          match("productionshiftsperday", names(mines_quarters)))]
+mines_quarters = ddply(mines_quarters[, c(match("hours_qtr", names(mines_quarters)), match("employment_qtr", names(mines_quarters)), match("coal_prod_qtr", names(mines_quarters)), 
+                                            match("mineid", names(mines_quarters)), match("year", names(mines_quarters)), match("quarter", names(mines_quarters)))], c("mineid", "year", "quarter"), 
+                      function(x) colMeans(x[, c(match("hours_qtr", names(x)), match("employment_qtr", names(x)), match("coal_prod_qtr", names(x)))], na.rm = T))
+mines_quarters = merge(mines_quarters, temp, by = c("mineid", "year", "quarter"), all = T)
+rm(temp)
+rm(open_data_mines)
+
+# save
+saveRDS(mines_quarters, file = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_mines.rds")
+
+# yay # 
+
