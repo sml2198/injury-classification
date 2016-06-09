@@ -12,6 +12,8 @@
 #early_assessments = read.csv("X:/Projects/Mining/NIOSH/analysis/data/1_converted/MSHA/assessments_fromText.csv")
 open_data_assessments = read.table("X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA/open_data/AssessedViolations.txt", header = T, sep = "|")
 
+######################################################################################################
+
 #early_assessments[, "dup"] = duplicated(early_assessments) #Checks out with total number of duplicates implied by STATA's "duplicates" command
 #table(early_assessments$dup)
 #FALSE    TRUE 
@@ -57,8 +59,17 @@ names(open_data_assessments)[names(open_data_assessments) == "CONTROLLER_SIZE_PO
 names(open_data_assessments) = tolower(names(open_data_assessments))
 open_data_assessments[, "violationno"] = as.character(open_data_assessments[, "violationno"])
 
+open_data_assessments = open_data_assessments[open_data_assessments$coalcormetalm == "C",]
+open_data_assessments = open_data_assessments[!is.na(open_data_assessments$coalcormetalm),]
+
 clean_assessments = open_data_assessments
 rm(open_data_assessments)
+
+
+saveRDS(clean_assessments, file = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_assessments.rds")
+
+######################################################################################################
+
 #early_assessments$src = "early"
 #open_data_assessments$src = "open_data"
 
@@ -81,4 +92,4 @@ rm(open_data_assessments)
 #names(clean_assessments)[grep(".x", names(clean_assessments), fixed = T)] = common_varstbs
 #clean_assessments = clean_assessments[, -grep("merge", names(clean_assessments))]
 
-saveRDS(clean_assessments, file = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_assessments.rds")
+######################################################################################################
