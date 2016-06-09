@@ -167,26 +167,6 @@ summed_inspcs = ddply(merged_violations[, c(match("insp_hours_per_qtr", names(me
 summed_inspcs = merge(summed_inspcs, num_inspecs_per_qtr, by = c("mineid", "quarter"), all = T)
 
 ######################################################################################################################################
-# BRING IN EMPLOYMENT/PRODUCTION DATA
-quarterly_employment = readRDS("X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_employment.rds")
-yearly_employment = readRDS("X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_employment_yrly.rds")
-contractor_quarterly_employment = readRDS("X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_contractor_employment.rds")
-contractor_yearly_employment = readRDS("X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_contractor_employment_yearly.rds")
-underreporting_employment = readRDS("X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_underreporting_employment.rds")
-
-merged_violations[, "numberofemployees"] = ifelse(merged_violations[, "numberofemployees"] == "NA", "", merged_violations[, "numberofemployees"])
-merged_violations$numberofemployees <- as.numeric(as.character(merged_violations$numberofemployees))
-names(merged_violations)[names(merged_violations) == "calendaryear"] = "year"
-
-# MERGE IN ALL EMPLOYMENT/PRODUCTION/HOURS DATATSETS
-merged_violations = merge(merged_violations, quarterly_employment, by = c("mineid", "year", "quarter"), all = T)
-merged_violations = merge(merged_violations, yearly_employment, by = c("mineid", "year"), all = T)
-merged_violations = merge(merged_violations, contractor_quarterly_employment, by = c("mineid", "year", "quarter"), all = T)
-merged_violations = merge(merged_violations, contractor_yearly_employment, by = c("contractorid", "year"), all = T)
-merged_violations = merge(merged_violations, underreporting_employment, by = c("mineid", "year", "quarter"), all = T)
-
-
-######################################################################################################################################
 
 mines.accidents.coded$accidentdate = as.Date(as.character(mines.accidents.coded$accidentdate), "%m/%d/%Y")
 mines.accidents.coded$quarter = as.yearqtr(mines.accidents.coded$accidentdate)
