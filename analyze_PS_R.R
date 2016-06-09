@@ -1,4 +1,13 @@
-#analyze_PS.R by Nikhil Saifullah 4/14/16
+##NIOSH STUDY##
+##Professor Alison Morantz##
+##Stanford Law School##
+
+#Coded by Nikhil Saifullah
+
+#Description
+
+#This file loads the training set sent to us by Miguel Reyes on January 29th, 2016 for use in constructing our Pinning & Striking
+#injury classification algorithm. We also test the accuracy of this algorithm using a 40% hold-out.
 
 #install.packages("dummies")
 install.packages("rpart")

@@ -1,4 +1,20 @@
-##HEADER##
+##NIOSH STUDY##
+##Professor Alison Morantz##
+##Stanford Law School##
+
+#Coded by Nikhil Saifullah
+
+#Description
+
+#Coded by Nikhil Saifullah
+
+#In this file we code all violations as either "relevant" or "maybe relevant" to the cause of
+#pinning and striking (PS) and maintenance and repair (MR) injuries, respectively. Violation
+#codes not flagged as "relevant" or "maybe relevant" can be regarded as irrelevant. These codings
+#came from a meeting between Alison Morantz, Nikhil Saifullah, and Sarah Levine at NIOSH in
+#Pittsburgh in February of 2016.
+
+
 library(stringr)
 
 cfr_key = read.csv("X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA/cfr_key/cfr_key.csv")

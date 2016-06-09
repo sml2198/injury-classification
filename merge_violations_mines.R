@@ -1,4 +1,14 @@
-#HEADER
+##NIOSH STUDY##
+##Professor Alison Morantz##
+##Stanford Law School##
+
+#Coded by Nikhil Saifullah
+
+#Description
+
+#In this file, we merge inspections, assessments, employment and production data to each 
+#violation.
+
 library(stringr)
 
 clean_assessments = readRDS("X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_assessments.rds") #Note: Carolyn data doesn't have eventno!
