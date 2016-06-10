@@ -13,6 +13,8 @@
 #early_viols = read.csv("X:/Projects/Mining/NIOSH/analysis/data/1_converted/MSHA/violations_fromText.csv")
 open_data_viols = read.table("X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA/open_data/Violations.txt", header = T, sep = "|")
 
+######################################################################################################
+
 #Renaming for MSHA Open Data
 names(open_data_viols)[names(open_data_viols) == "VIOLATION_NO"] = "violationno"
 names(open_data_viols)[names(open_data_viols) == "VIOLATION_ID"] = "violationid"
@@ -58,8 +60,18 @@ open_data_viols = open_data_viols[open_data_viols$dup == F,]
 open_data_viols[, "violationno"] = as.character(open_data_viols[, "violationno"])
 open_data_viols[, "eventno"] = as.character(open_data_viols[, "eventno"])
 
+# only keep observations from environment we care about
+open_data_viols = open_data_viols[open_data_viols$minetype != "Surface",]
+open_data_viols = open_data_viols[open_data_viols$coalcormetalm == "C",]
+open_data_viols = open_data_viols[!is.na(open_data_viols$coalcormetalm),]
+
 clean_violations = open_data_viols
 rm(open_data_viols)
+
+saveRDS(clean_violations, file = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_violations.rds")
+
+######################################################################################################
+
 #Keep only observations from Carolyn Stasik's data in years prior to the Open Data's time range
 #early_viols = early_viols[early_viols$calendaryear <= 1999 & early_viols$calendaryear >= 1983,]
 
@@ -83,4 +95,5 @@ rm(open_data_viols)
 #names(clean_violations)[grep(".x", names(clean_violations), fixed = T)] = common_varstbs
 #clean_violations = clean_violations[, -grep("merge", names(clean_violations))]
 
-saveRDS(clean_violations, file = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_violations.rds")
+######################################################################################################
+
