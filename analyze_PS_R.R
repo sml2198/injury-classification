@@ -143,6 +143,9 @@ for (i in indices_with_date) {
   ps_data[,i] = as.Date(ps_data[,i], "%m/%d/%Y")
 }
 
+# Convert accident type codes to numeric values to make this code usable with accidents data
+ps_data$accidenttypecode = as.numeric(ps_data$accidenttypecode)
+
 ##################################################################################################
 # MERGE IN OTHER VARIABLES FROM PROTO-ALGORITHM (LIKE KEYWORD FLAGS) CHANGE TO KEEP ANY OTHER ADDTL VARS
 
@@ -653,6 +656,7 @@ ps_data[, "v_to_p"] = ifelse((grepl("(VEHICLE).{1,20}PINNED/STRUCK.{1,20}(PERSON
 ps_data[, "int_obj_strike"] = ifelse((grepl("( )(block|rock|cho(c)*k|chunk|rail|i-beam)( )", ps_data[, "old_narrative"]) & 
                                          grepl("VEHICLE", ps_data[, "narrative"]) & grepl("PINNED/STRUCK", ps_data[, "narrative"]) &
                                          grepl("(tr(a)*m(m)*[^ ]{0,3}|op(e)*r(a)*t[^ ]{0,3}|back(in|ed).{1,10}VEHICLE|VEHICLE.{1,10}back(in|ed)|r(a|u)n|makin(g)*( )*(a)*( )*tu(r)*n|remote.{1,5}control|driv|pull)", ps_data[, "narrative"]) &
+                                         grepl("(steering |(hand )*knob).{1,20}(PINNED/STRUCK).{1,20}(BODY|PERSON)", ps_data[, "narrative"]) &
                                          (ps_data$accidenttypecode %in% c(8, 5)) & ps_data$falling.accident == 0 & ps_data$operating == 0), 1, 0)
 
 ##################################################################################################
