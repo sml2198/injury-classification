@@ -67,10 +67,20 @@ open_data_assessments$mineid = str_pad(open_data_assessments$mineid, 7, pad = "0
 open_data_assessments$mineid = withr::with_options(c(scipen = 999), str_pad(open_data_assessments$mineid, 7, pad = "0"))
 open_data_assessments$eventno = str_pad(open_data_assessments$eventno, 7, pad = "0")
 open_data_assessments$eventno = withr::with_options(c(scipen = 999), str_pad(open_data_assessments$eventno, 7, pad = "0"))
+open_data_assessments$violationno = str_pad(open_data_assessments$violationno, 7, pad = "0")
+open_data_assessments$violationno = withr::with_options(c(scipen = 999), str_pad(open_data_assessments$violationno, 7, pad = "0"))
 
 # merge on minetypes to drop non-coal and non-underground observations before saving
 open_data_assessments = merge(open_data_assessments, mine_types, by = c("mineid"), all = T)
 open_data_assessments = open_data_assessments[!is.na(open_data_assessments$eventno),]
+
+# only keep observations from environment we care about
+open_data_assessments = open_data_assessments[open_data_assessments$minetype.x != "Surface",]
+open_data_assessments = open_data_assessments[open_data_assessments$minetype.x != "",]
+
+open_data_assessments = open_data_assessments[, c(-match("coalcormetalmmine.x", names(open_data_assessments)), -match("coalcormetalmmine.y", names(open_data_assessments)),
+                                  -grep("minetype.y", names(open_data_assessments)))]
+names(open_data_assessments)[names(open_data_assessments) == "minetype.x"] = "minetype"
 
 clean_assessments = open_data_assessments
 rm(open_data_assessments)
