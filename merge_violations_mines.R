@@ -6,21 +6,20 @@
 
 #Description
 
-#In this file, we merge inspections, assessments, employment and production data to each 
+#In this file, we merge inspections and assessments to each 
 #violation.
 
 library(stringr)
 
 clean_assessments = readRDS("X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_assessments.rds") #Note: Carolyn data doesn't have eventno!
 clean_violations = readRDS("X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_violations.rds")
-clean_mines = readRDS("X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_mines.rds")
-clean_Inspections = readRDS("X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_Inspections.rds")
+clean_inspections = readRDS("X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_inspections.rds")
 
-assessments_violations = merge(clean_assessments, clean_violations, by = "violationno", all = T)
-assessments_violations[, "merge"] = ifelse(!is.na(assessments_violations$mineid.y) & !is.na(assessments_violations$mineid.x), 3, 0)
-assessments_violations[, "merge"] = ifelse(is.na(assessments_violations$mineid.x) & !is.na(assessments_violations$mineid.y), 2, assessments_violations[, "merge"])
-assessments_violations[, "merge"] = ifelse(is.na(assessments_violations$mineid.y) & !is.na(assessments_violations$mineid.x), 1, assessments_violations[, "merge"])
-table(assessments_violations$merge) 
+assessments_violations = merge(clean_assessments, clean_violations, by = c("mineid","violationno"), all = T)
+# EVERYTHING BETWEEN THESE LINES IS RETIRED - WE MUST MERGE BY VIOLNO AND MINEID #####################################
+#assessments_violations[, "merge"] = ifelse(!is.na(assessments_violations$mineid.y) & !is.na(assessments_violations$mineid.x), 3, 0)
+#assessments_violations[, "merge"] = ifelse(is.na(assessments_violations$mineid.x) & !is.na(assessments_violations$mineid.y), 2, assessments_violations[, "merge"])
+#assessments_violations[, "merge"] = ifelse(is.na(assessments_violations$mineid.y) & !is.na(assessments_violations$mineid.x), 1, assessments_violations[, "merge"])
 #table(assessments_violations[assessments_violations$calendaryear >= 2000,]$merge) aligns with the STATA version except for the 43 pre-2000 open data 
 #observations noted at the end of "clean_violations.do"
 #1       2       3 
@@ -28,11 +27,15 @@ table(assessments_violations$merge)
 #Open Data Only:
 #2       3 
 #54144 2107492 
+#common_varstbs = sub(".x", "", names(assessments_violations)[grep(".x", names(assessments_violations), fixed = T)], fixed = T)
+#for (i in 1:length(common_varstbs)) {
+#  assessments_violations[, paste(common_varstbs[i], ".x", sep = "")] = ifelse(assessments_violations[, "merge"] == 2, assessments_violations[, paste(common_varstbs[i], ".y", sep = "")], assessments_violations[, paste(common_varstbs[i], ".x", sep = "")])
+#}
+########################################################################################################################
 
-common_varstbs = sub(".x", "", names(assessments_violations)[grep(".x", names(assessments_violations), fixed = T)], fixed = T)
-for (i in 1:length(common_varstbs)) {
-  assessments_violations[, paste(common_varstbs[i], ".x", sep = "")] = ifelse(assessments_violations[, "merge"] == 2, assessments_violations[, paste(common_varstbs[i], ".y", sep = "")], assessments_violations[, paste(common_varstbs[i], ".x", sep = "")])
-}
+assessments_violations$eventno.x = ifelse((is.na(assessments_violations$eventno.x) & !is.na(assessments_violations$eventno.y)), assessments_violations$eventno.y, assessments_violations$eventno.x)
+assessments_violations$eventno.y = ifelse((is.na(assessments_violations$eventno.y) & !is.na(assessments_violations$eventno.x)), assessments_violations$eventno.x, assessments_violations$eventno.y)
+
 assessments_violations = assessments_violations[, -grep(".y", names(assessments_violations), fixed = T)]
 names(assessments_violations)[grep(".x", names(assessments_violations), fixed = T)] = common_varstbs
 
@@ -78,17 +81,20 @@ names(assessments_violations)[names(assessments_violations) == "good_faith_ind"]
 #                                                   !is.na(assessments_violations$src) & !is.na(assessments_violations$calendaryear)) |
 #                                                  (assessments_violations$src == "open_data") & !is.na(assessments_violations$src) | 
 #                                                  assessments_violations$merge == 1 | assessments_violations$merge == 2,]
-assessments_violations = assessments_violations[, -grep("merge", names(assessments_violations))]
+# assessments_violations = assessments_violations[, -grep("merge", names(assessments_violations))]
 saveRDS(assessments_violations, file = "X:/Projects/Mining/NIOSH/analysis/data/3_merged/assessments_violations.rds") #should we name to align w/ STATA version?
 rm(clean_violations, clean_assessments)
 
 #Now that data will be partially merged on eventno we do some basic cleaning
-clean_Inspections$eventno = ifelse(nchar(clean_Inspections$eventno) < 7, paste("0", clean_Inspections$eventno, sep = ""), clean_Inspections$eventno)
-assessments_violations$eventno = ifelse(nchar(assessments_violations$eventno) < 7, paste("0", assessments_violations$eventno, sep = ""), assessments_violations$eventno)
+#clean_inspections$eventno = ifelse(nchar(clean_inspections$eventno) < 7, paste("0", clean_inspections$eventno, sep = ""), clean_inspections$eventno)
+#assessments_violations$eventno = ifelse(nchar(assessments_violations$eventno) < 7, paste("0", assessments_violations$eventno, sep = ""), assessments_violations$eventno)
+
+assessments_violations2 = assessments_violations
 
 assessments_violations$inspecid = paste("L", assessments_violations$eventno, sep = "")
-clean_Inspections$inspecid = paste("L", clean_Inspections$eventno, sep = "")
-merged_violations = merge(assessments_violations, clean_Inspections, by = c("mineid", "eventno"), all = T)
+clean_inspections$inspecid = paste("L", clean_inspections$eventno, sep = "")
+
+merged_violations = merge(assessments_violations, clean_inspections, by = c("mineid", "eventno"), all = T)
 merged_violations[, "inspecmerge"] = ifelse(!is.na(merged_violations$inspecid.y) & !is.na(merged_violations$inspecid.x), 3, 0)
 merged_violations[, "inspecmerge"] = ifelse(is.na(merged_violations$inspecid.x) & !is.na(merged_violations$inspecid.y), 2, merged_violations[, "inspecmerge"])
 merged_violations[, "inspecmerge"] = ifelse(is.na(merged_violations$inspecid.y) & !is.na(merged_violations$inspecid.x), 1, merged_violations[, "inspecmerge"])
@@ -109,4 +115,4 @@ merged_violations = merged_violations[!is.na(merged_violations$violationno), c(-
                                                                                   -grep("coalcormetalmmine", names(merged_violations)), -grep("coalcormetalm", names(merged_violations)))]
 
 saveRDS(merged_violations, file = "X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_violations.rds")
-rm(assessments_violations, clean_Inspections, common_varstbs, violnames, i)
+rm(assessments_violations, clean_inspections, common_varstbs, violnames, i)
