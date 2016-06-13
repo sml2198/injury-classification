@@ -11,6 +11,7 @@
 
 #early_assessments = read.csv("X:/Projects/Mining/NIOSH/analysis/data/1_converted/MSHA/assessments_fromText.csv")
 open_data_assessments = read.table("X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA/open_data/AssessedViolations.txt", header = T, sep = "|")
+mine_types = readRDS("X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/mine_types.rds")
 
 ######################################################################################################
 
@@ -62,9 +63,17 @@ open_data_assessments[, "violationno"] = as.character(open_data_assessments[, "v
 open_data_assessments = open_data_assessments[open_data_assessments$coalcormetalm == "C",]
 open_data_assessments = open_data_assessments[!is.na(open_data_assessments$coalcormetalm),]
 
+open_data_assessments$mineid = str_pad(open_data_assessments$mineid, 7, pad = "0")
+open_data_assessments$mineid = withr::with_options(c(scipen = 999), str_pad(open_data_assessments$mineid, 7, pad = "0"))
+open_data_assessments$eventno = str_pad(open_data_assessments$eventno, 7, pad = "0")
+open_data_assessments$eventno = withr::with_options(c(scipen = 999), str_pad(open_data_assessments$eventno, 7, pad = "0"))
+
+# merge on minetypes to drop non-coal and non-underground observations before saving
+open_data_assessments = merge(open_data_assessments, mine_types, by = c("mineid"), all = T)
+open_data_assessments = open_data_assessments[!is.na(open_data_assessments$eventno),]
+
 clean_assessments = open_data_assessments
 rm(open_data_assessments)
-
 
 saveRDS(clean_assessments, file = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_assessments.rds")
 
