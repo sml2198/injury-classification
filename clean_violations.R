@@ -62,8 +62,14 @@ open_data_viols[, "eventno"] = as.character(open_data_viols[, "eventno"])
 
 # only keep observations from environment we care about
 open_data_viols = open_data_viols[open_data_viols$minetype != "Surface",]
+open_data_viols = open_data_viols[open_data_viols$minetype != "",]
 open_data_viols = open_data_viols[open_data_viols$coalcormetalm == "C",]
 open_data_viols = open_data_viols[!is.na(open_data_viols$coalcormetalm),]
+
+open_data_viols$mineid = str_pad(open_data_viols$mineid, 7, pad = "0")
+open_data_viols$mineid = withr::with_options(c(scipen = 999), str_pad(open_data_viols$mineid, 7, pad = "0"))
+open_data_viols$eventno = str_pad(open_data_viols$eventno, 7, pad = "0")
+open_data_viols$eventno = withr::with_options(c(scipen = 999), str_pad(open_data_viols$eventno, 7, pad = "0"))
 
 clean_violations = open_data_viols
 rm(open_data_viols)
