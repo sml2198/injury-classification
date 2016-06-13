@@ -143,6 +143,9 @@ for (i in indices_with_date) {
   ps_data[,i] = as.Date(ps_data[,i], "%m/%d/%Y")
 }
 
+# Convert accident type codes to numeric values to make this code usable with accidents data
+ps_data$accidenttypecode = as.numeric(ps_data$accidenttypecode)
+
 ##################################################################################################
 # MERGE IN OTHER VARIABLES FROM PROTO-ALGORITHM (LIKE KEYWORD FLAGS) CHANGE TO KEEP ANY OTHER ADDTL VARS
 
@@ -271,7 +274,7 @@ ps_data[!grepl("scoop(er|ing)", ps_data[,"narrative"]),]$narrative <- gsub("scoo
 ps_data[!grepl("to tram", ps_data[,"narrative"]) & 
           !grepl("tram.{1,5}(lever|sprocket|pedal|chain)", ps_data[,"narrative"]),]$narrative <- gsub("tram( |$|\\.|,)", " VEHICLE44 ", ps_data[!grepl("to tram", ps_data[,"narrative"]) & 
                                                                                                                                       !grepl("tram.{1,5}(lever|sprocket|pedal|chain)", ps_data[,"narrative"]),]$narrative)
-
+ps_data$narrative <- gsub("mucker", "VEHICLE45", ps_data$narrative)
 # DEFINE A FEW NARRATIVES USING THE VEHICLE FLAGS - BEFORE REPLACING BODY PARTS 
 
 ps_data[, "operating"] = ifelse((grepl("( |^|was|while|had)(tr(a)*m(m)*[^ ]{0,3}|op(e)*r(a)*t[^ ]{0,3}|backin.{1,10}VEHICLE|r(a|u)n|makin(g)*( )*(a)*( )*tu(r)*n|remote.{1,5}control|driv)", ps_data$narrative) &
@@ -653,6 +656,7 @@ ps_data[, "v_to_p"] = ifelse((grepl("(VEHICLE).{1,20}PINNED/STRUCK.{1,20}(PERSON
 ps_data[, "int_obj_strike"] = ifelse((grepl("( )(block|rock|cho(c)*k|chunk|rail|i-beam)( )", ps_data[, "old_narrative"]) & 
                                          grepl("VEHICLE", ps_data[, "narrative"]) & grepl("PINNED/STRUCK", ps_data[, "narrative"]) &
                                          grepl("(tr(a)*m(m)*[^ ]{0,3}|op(e)*r(a)*t[^ ]{0,3}|back(in|ed).{1,10}VEHICLE|VEHICLE.{1,10}back(in|ed)|r(a|u)n|makin(g)*( )*(a)*( )*tu(r)*n|remote.{1,5}control|driv|pull)", ps_data[, "narrative"]) &
+                                         grepl("(steering |(hand )*knob).{1,20}(PINNED/STRUCK).{1,20}(BODY|PERSON)", ps_data[, "narrative"]) &
                                          (ps_data$accidenttypecode %in% c(8, 5)) & ps_data$falling.accident == 0 & ps_data$operating == 0), 1, 0)
 
 ##################################################################################################
