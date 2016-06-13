@@ -3,6 +3,7 @@
 # THIS FILE READS IN THE MINES DATA, MERGES IN EMPLOYMENT/PRODUCTION/HOURS DATA, AND COLLAPSES TO THE MINE-QUARTER LEVEL. 
 
 library(plyr)
+library(devtools)
 
 # THIS FILE BRINGS IN AND CLEANS UP EMPLOYMENT/PRODUCTION DATA, TO BE MERGED ONTO FINAL VIOLATIONS/ACCIDENTS/MINES DATASET.
 # IT THEN BRINGS IN THE MINES DATA AND COLLAPSES TO THE MINE-QUARTER LEVEL.S
@@ -17,6 +18,10 @@ names(underreporting_employment)[names(underreporting_employment) == "Mine.Id"] 
 names(underreporting_employment)[names(underreporting_employment) == "Employees"] = "under_avg_employee_cnt_qtr"
 names(underreporting_employment)[names(underreporting_employment) == "Hours.Worked"] = "under_employee_hours_qtr"
 names(underreporting_employment)[names(underreporting_employment) == "Coal.Production"] = "under_coal_prod_qtr"
+
+underreporting_employment$mineid = str_pad(underreporting_employment$mineid, 7, pad = "0")
+underreporting_employment$mineid = withr::with_options(c(scipen = 999), str_pad(underreporting_employment$mineid, 7, pad = "0"))
+
 underreporting_employment = underreporting_employment[underreporting_employment$Subunit=="UNDERGROUND",]
 underreporting_employment = underreporting_employment[, c(-match("Subunit", names(underreporting_employment)), -match("Subunit.Code", names(underreporting_employment)))]
 saveRDS(underreporting_employment, file = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_underreporting_employment.rds")
@@ -29,6 +34,10 @@ names(quarterly_employment)[names(quarterly_employment) == "MINE_ID"] = "mineid"
 names(quarterly_employment)[names(quarterly_employment) == "HOURS_WORKED"] = "hours_qtr"
 names(quarterly_employment)[names(quarterly_employment) == "AVG_EMPLOYEE_CNT"] = "avg_employee_cnt_qtr"
 names(quarterly_employment)[names(quarterly_employment) == "COAL_PRODUCTION"] = "coal_prod_qtr"
+
+quarterly_employment$mineid = str_pad(quarterly_employment$mineid, 7, pad = "0")
+quarterly_employment$mineid = withr::with_options(c(scipen = 999), str_pad(quarterly_employment$mineid, 7, pad = "0"))
+
 quarterly_employment = quarterly_employment[quarterly_employment$SUBUNIT=="UNDERGROUND" & quarterly_employment$COAL_METAL_IND=="C",]
 quarterly_employment = quarterly_employment[, c(-grep("COAL_METAL_IND", names(quarterly_employment)), -match("STATE", names(quarterly_employment)), -match("CURR_MINE_NM", names(quarterly_employment)), 
                             -match("FISCAL_YR", names(quarterly_employment)), -match("FISCAL_QTR", names(quarterly_employment)), 
@@ -45,6 +54,10 @@ names(yearly_employment)[names(yearly_employment) == "AVG_EMPLOYEE_HOURS"] = "em
 names(yearly_employment)[names(yearly_employment) == "ANNUAL_COAL_PRODUCTION"] = "coal_prod_yr"
 names(yearly_employment)[names(yearly_employment) == "AVG_EMPLOYEE_HOURS"] = "employee_hours_yr"
 names(yearly_employment)[names(yearly_employment) == "ANNUAL_HOURS"] = "hours_yr"
+
+yearly_employment$mineid = str_pad(yearly_employment$mineid, 7, pad = "0")
+yearly_employment$mineid = withr::with_options(c(scipen = 999), str_pad(yearly_employment$mineid, 7, pad = "0"))
+
 yearly_employment = yearly_employment[yearly_employment$SUBUNIT=="UNDERGROUND" & yearly_employment$COAL_METAL_IND=="C",]
 yearly_employment = yearly_employment[, c(-grep("COAL_METAL_IND", names(yearly_employment)), -match("STATE", names(yearly_employment)), 
                                           -match("SUBUNIT", names(yearly_employment)), -match("SUBUNIT_CD", names(yearly_employment)))]
@@ -148,9 +161,19 @@ open_data_mines$datasource = "mines data"
 ######################################################################################################
 
 # KEEP ONLY OBSERVATIONS FROM ENVIRONMENT OF INTEREST
-mines_quarters = mines_quarters[!is.na(mines_quarters$coalcormetalmmine),]
-mines_quarters = mines_quarters[mines_quarters$coalcormetalmmine == "C",]
-mines_quarters = mines_quarters[mines_quarters$minetype != "Surface",]
+#mines_quarters = mines_quarters[!is.na(mines_quarters$coalcormetalmmine),]
+#mines_quarters = mines_quarters[mines_quarters$coalcormetalmmine == "C",]
+#mines_quarters = mines_quarters[mines_quarters$minetype != "Surface",]
+
+# format mineid as a 7 digit number 
+open_data_mines$mineid = str_pad(open_data_mines$mineid, 7, pad = "0")
+open_data_mines$mineid = withr::with_options(c(scipen = 999), str_pad(open_data_mines$mineid, 7, pad = "0"))
+
+# save just mine and minetype info
+mine_types = open_data_mines[, c(match("mineid", names(open_data_mines)), 
+                                     match("minetype", names(open_data_mines)),
+                                     match("coalcormetalmmine", names(open_data_mines)))]
+saveRDS(mine_types, file = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/mine_types.rds") 
 
 # MERGE IN ALL EMPLOYMENT/PRODUCTION/HOURS DATATSETS
 # observations that are missing for coalcormetalmmine need to be dropped anyway
@@ -164,8 +187,8 @@ mines_quarters = merge(mines_quarters, underreporting_employment, by = c("mineid
 mines_quarters = mines_quarters[!is.na(mines_quarters$coalcormetalmmine),]
 
 # make sure we have only kept obsevrations from our environment of interest
-mines_quarters = mines_quarters[mines_quarters$coalcormetalmmine=="C",]
-mines_quarters = mines_quarters[!(mines_quarters$minetype=="Surface"),]
+#mines_quarters = mines_quarters[mines_quarters$coalcormetalmmine=="C",]
+#mines_quarters = mines_quarters[!(mines_quarters$minetype=="Surface"),]
 
 mines_quarters$datasource = ifelse(is.na(mines_quarters$datasource), "emp/prod data", mines_quarters$datasource)
 
@@ -236,7 +259,8 @@ temp = mines_quarters[, c(match("mineid", names(mines_quarters)),
                           match("minestatus", names(mines_quarters)),
                           match("minestatusdate", names(mines_quarters)),                          
                           match("operatorid", names(mines_quarters)),
-                          match("operatorname", names(mines_quarters)),         
+                          match("operatorname", names(mines_quarters)),   
+                          match("coalcormetalmmine", names(mines_quarters)),
                           match("stateabbreviation", names(mines_quarters)),
                           match("idate", names(mines_quarters)),  
                           match("idesc", names(mines_quarters)),  
@@ -247,6 +271,12 @@ mines_quarters = ddply(mines_quarters[, c(match("hours_qtr", names(mines_quarter
                                             match("mineid", names(mines_quarters)), match("year", names(mines_quarters)), match("quarter", names(mines_quarters)))], c("mineid", "year", "quarter"), 
                       function(x) colMeans(x[, c(match("hours_qtr", names(x)), match("employment_qtr", names(x)), match("coal_prod_qtr", names(x)))], na.rm = T))
 mines_quarters = merge(mines_quarters, temp, by = c("mineid", "year", "quarter"), all = T)
+
+# format date vars so that "quarter" contains date-formatted year AND quarter info
+mines_quarters$quarter = paste(mines_quarters$year, mines_quarters$quarter, sep= "-")
+mines_quarters$quarter = ifelse(mines_quarters$quarter == "NA-NA", NA, mines_quarters$quarter)
+mines_quarters$quarter = as.yearqtr(mines_quarters$quarter)
+
 rm(temp)
 rm(open_data_mines)
 
