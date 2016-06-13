@@ -6,14 +6,14 @@
 
 #Description
 
-#This file cleans the inspections data we downloaded from MSHA's open data portal. The portions commented out are to load and clean data from
-#Carolyn Stasik's (MSHA) data pull from May 20th, 2015
+# This file cleans the inspections data we downloaded from MSHA's open data portal. The portions commented out are to load and clean data from
+# Carolyn Stasik's (MSHA) data pull from May 20th, 2015. THIS FILE MUST BE RUN AFTER MINES DATA IS CLEANED.
 
-#early_inspecs = read.csv("X:/Projects/Mining/NIOSH/analysis/data/1_converted/MSHA/inspections_fromText.csv")
+######################################################################################################
+
 open_data_inspecs = read.table("X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA/open_data/Inspections.txt", header = T, sep = "|")
 early_inspecs_hours = read.csv("X:/Projects/Mining/NIOSH/analysis/data/1_converted/MSHA/inspection_hours_fromText.csv")
-
-#early_inspecs = early_inspecs[!is.na(early_inspecs$calendaryear) & early_inspecs$calendaryear <= 1999,]
+mine_types.rds = readRDS("X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/mine_types.rds")
 
 names(open_data_inspecs)[names(open_data_inspecs) == "EVENT_NO"] = "eventno"
 names(open_data_inspecs)[names(open_data_inspecs) == "MINE_ID"] = "mineid"
@@ -62,21 +62,33 @@ names(early_inspecs_hours)[names(early_inspecs_hours) == "sumtotalminingareatime
 names(early_inspecs_hours)[names(early_inspecs_hours) == "sumcalctotalinspectionrelatedtim"] = "sumtotal_insp_hours"
 
 open_data_inspecs[, "eventno"] = as.character(open_data_inspecs[, "eventno"])
-#early_inspecs[, "eventno"] = as.character(early_inspecs[, "eventno"])
 early_inspecs_hours[, "eventno"] = as.character(early_inspecs_hours[, "eventno"])
 open_data_inspecs[, "eventno"] = ifelse(nchar(open_data_inspecs[, "eventno"], type = "chars", allowNA = F, keepNA = T) < 7, paste("0", open_data_inspecs[, "eventno"], sep = ""), open_data_inspecs[, "eventno"])
 
 early_inspecs_hours[, "sumtotal_insp_hours"] = as.numeric(gsub(",", "", as.character(early_inspecs_hours$sumtotal_insp_hours), fixed = T))
-
 early_inspecs_hours = aggregate(cbind(sumtotal_on_site_hours, sumtotal_insp_hours) ~ eventno + mineid + coalcormetalmmine, FUN = "sum", data = early_inspecs_hours)
 
-#early_inspecs$beginningdate = as.character(early_inspecs$beginningdate)
 open_data_inspecs$beginningdate = as.character(open_data_inspecs$beginningdate)
-#early_inspecs$endingdate = as.character(early_inspecs$endingdate)
 open_data_inspecs$endingdate = as.character(open_data_inspecs$endingdate)
 
 clean_inspecs = open_data_inspecs
 rm(open_data_inspecs)
+
+######################################################################################################
+
+# format mineid as a 7 digit number 
+clean_inspecs$mineid = str_pad(clean_inspecs$mineid, 7, pad = "0")
+clean_inspecs$mineid = withr::with_options(c(scipen = 999), str_pad(clean_inspecs$mineid, 7, pad = "0"))
+clean_inspecs$eventno = str_pad(clean_inspecs$eventno, 7, pad = "0")
+clean_inspecs$eventno = withr::with_options(c(scipen = 999), str_pad(clean_inspecs$eventno, 7, pad = "0"))
+
+# merge on minetypes to drop non-coal and non-underground observations before saving
+clean_inspecs = clean_inspecs[clean_inspecs$coal_metal_ind != "M",]
+clean_inspecs = merge(clean_inspecs, mine_types, by = c("mineid"), all = T)
+clean_inspecs = clean_inspecs[!is.na(clean_inspecs$eventno),]
+
+######################################################################################################
+
 #clean_inspecs = merge(open_data_inspecs, early_inspecs, by = "eventno", all = T)
 #clean_inspecs[, "merge"] = ifelse(!is.na(clean_inspecs$beginningdate.y) & !is.na(clean_inspecs$beginningdate.x), 3, 0)
 #clean_inspecs[, "merge"] = ifelse(is.na(clean_inspecs$beginningdate.x) & !is.na(clean_inspecs$beginningdate.y), 2, clean_inspecs[, "merge"])
@@ -92,18 +104,30 @@ rm(open_data_inspecs)
 #clean_inspecs = clean_inspecs[, -grep(".y", names(clean_inspecs), fixed = T)]
 #names(clean_inspecs)[grep(".x", names(clean_inspecs), fixed = T)] = common_varstbs
 
-#Now merge in hours.
-clean_inspecs = merge(clean_inspecs, early_inspecs_hours, by = "eventno", all = T)
+#Now clean up hours and merge them in.
+early_inspecs_hours$mineid = str_pad(early_inspecs_hours$mineid, 7, pad = "0")
+early_inspecs_hours$mineid = withr::with_options(c(scipen = 999), str_pad(early_inspecs_hours$mineid, 7, pad = "0"))
+early_inspecs_hours$eventno = str_pad(early_inspecs_hours$eventno, 7, pad = "0")
+early_inspecs_hours$eventno = withr::with_options(c(scipen = 999), str_pad(early_inspecs_hours$eventno, 7, pad = "0"))
+early_inspecs_hours = early_inspecs_hours[early_inspecs_hours$coalcormetalmmine == "C",]
+
+clean_inspecs = merge(clean_inspecs, early_inspecs_hours, by = c("mineid", "eventno"), all = T)
 rm(early_inspecs_hours)
-clean_inspecs[, "mergehrs"] = ifelse(!is.na(clean_inspecs$mineid.y) & !is.na(clean_inspecs$mineid.x), 3, 0)
-clean_inspecs[, "mergehrs"] = ifelse(is.na(clean_inspecs$mineid.x) & !is.na(clean_inspecs$mineid.y), 2, clean_inspecs[, "mergehrs"])
-clean_inspecs[, "mergehrs"] = ifelse(is.na(clean_inspecs$mineid.y) & !is.na(clean_inspecs$mineid.x), 1, clean_inspecs[, "mergehrs"])
-table(clean_inspecs$mergehrs)
+clean_inspecs = clean_inspecs[!is.na(clean_inspecs$calendaryear) & !is.na(clean_inspecs$calendarquarter) & !is.na(clean_inspecs$program_area),]
+clean_inspecs = clean_inspecs[clean_inspecs$minetype != "Surface",]
+clean_inspecs = clean_inspecs[clean_inspecs$minetype != "",]
+
+#clean_inspecs[, "mergehrs"] = ifelse(!is.na(clean_inspecs$mineid.y) & !is.na(clean_inspecs$mineid.x), 3, 0)
+#clean_inspecs[, "mergehrs"] = ifelse(is.na(clean_inspecs$mineid.x) & !is.na(clean_inspecs$mineid.y), 2, clean_inspecs[, "mergehrs"])
+#clean_inspecs[, "mergehrs"] = ifelse(is.na(clean_inspecs$mineid.y) & !is.na(clean_inspecs$mineid.x), 1, clean_inspecs[, "mergehrs"])
+#table(clean_inspecs$mergehrs)
 #1       2       3 
 #198270   71243 1992141
 #Only Open Data:
 #1       2       3 
 #103014 1391153  672231 
+
+######################################################################################################
 
 common_varstbs = sub(".x", "", names(clean_inspecs)[grep(".x", names(clean_inspecs), fixed = T)], fixed = T)
 for (i in 1:length(common_varstbs)) {
@@ -122,3 +146,6 @@ names(clean_inspecs)[grep(".x", names(clean_inspecs), fixed = T)] = common_varst
 clean_inspecs = clean_inspecs[!(((!is.na(clean_inspecs$controllerid) & clean_inspecs$controllerid == "C11088") | is.na(clean_inspecs$controllerid)) & clean_inspecs$eventno == "4165469"),c(-grep("coal_metal_ind", names(clean_inspecs)), -grep("merge", names(clean_inspecs)))]
 
 saveRDS(clean_inspecs, file = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_Inspections.rds")
+
+######################################################################################################
+
