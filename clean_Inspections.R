@@ -13,7 +13,7 @@
 
 open_data_inspecs = read.table("X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA/open_data/Inspections.txt", header = T, sep = "|")
 early_inspecs_hours = read.csv("X:/Projects/Mining/NIOSH/analysis/data/1_converted/MSHA/inspection_hours_fromText.csv")
-mine_types.rds = readRDS("X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/mine_types.rds")
+mine_types = readRDS("X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/mine_types.rds")
 
 names(open_data_inspecs)[names(open_data_inspecs) == "EVENT_NO"] = "eventno"
 names(open_data_inspecs)[names(open_data_inspecs) == "MINE_ID"] = "mineid"
