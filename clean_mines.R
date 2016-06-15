@@ -160,11 +160,6 @@ open_data_mines$datasource = "mines data"
 
 ######################################################################################################
 
-# KEEP ONLY OBSERVATIONS FROM ENVIRONMENT OF INTEREST
-#mines_quarters = mines_quarters[!is.na(mines_quarters$coalcormetalmmine),]
-#mines_quarters = mines_quarters[mines_quarters$coalcormetalmmine == "C",]
-#mines_quarters = mines_quarters[mines_quarters$minetype != "Surface",]
-
 # format mineid as a 7 digit number 
 open_data_mines$mineid = str_pad(open_data_mines$mineid, 7, pad = "0")
 open_data_mines$mineid = withr::with_options(c(scipen = 999), str_pad(open_data_mines$mineid, 7, pad = "0"))
@@ -187,8 +182,8 @@ mines_quarters = merge(mines_quarters, underreporting_employment, by = c("mineid
 mines_quarters = mines_quarters[!is.na(mines_quarters$coalcormetalmmine),]
 
 # make sure we have only kept obsevrations from our environment of interest
-#mines_quarters = mines_quarters[mines_quarters$coalcormetalmmine=="C",]
-#mines_quarters = mines_quarters[!(mines_quarters$minetype=="Surface"),]
+mines_quarters = mines_quarters[mines_quarters$coalcormetalmmine=="C",]
+mines_quarters = mines_quarters[(mines_quarters$minetype=="Underground"),]
 
 mines_quarters$datasource = ifelse(is.na(mines_quarters$datasource), "emp/prod data", mines_quarters$datasource)
 
