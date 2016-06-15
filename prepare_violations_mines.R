@@ -38,7 +38,7 @@ names(merged_violations)[names(merged_violations) == "cfrstandardcode"] = "subse
 merged_violations$subsection_code_marker = paste("S", merged_violations$subsection_code, sep = "")
 merged_cfr_key$subsection_code_marker = paste("S", merged_cfr_key$subsection_code, sep = "")
 
-# in some cases where subsection is missing, part section is not and can be subbed in.
+# in some cases where subsection is missing, part_section is not and can be subbed in.
 merged_violations$part_section2 = merged_violations$part_section
 merged_violations$part_section2 = gsub("\\([a-z]+\\)", "", merged_violations$part_section2)
 merged_violations$part_section2 = gsub("\\([0-9]+\\)", "", merged_violations$part_section2)
@@ -69,14 +69,21 @@ for (i in 1:length(datevars)) {
   merged_violations[, datevars[i]] = as.Date(as.character(merged_violations[, datevars[i]]), "%m/%d/%Y")
 }
 
-#Create variables for mine-quarter level prediction dataset
+# Create variables for mine-quarter level prediction dataset
 merged_violations$quarter = as.yearqtr(merged_violations$dateissued)
 
-#Condition the per-day vars on positive denominator. (There are 256 cases of zero inspection days and positive violation counts). 6/6/16
+# Condition the per-day vars on positive denominator. (There are 256 cases of zero inspection days and positive violation counts). 6/6/16
 merged_violations$contractor_violation_cnt = ifelse(merged_violations$violatortypecode == 1, merged_violations$violator_violation_cnt, NA)
 merged_violations$operator_violation_pInspDay = ifelse(merged_violations$violatortypecode == 2 & merged_violations$violator_inspection_day_cnt > 0, merged_violations$violator_violation_cnt/merged_violations$violator_inspection_day_cnt, NA)
 merged_violations$contractor_repeated_viol_cnt = ifelse(merged_violations$violatortypecode == 1, merged_violations$violator_repeated_viol_cnt, NA)
 merged_violations$operator_repeated_viol_pInspDay = ifelse(merged_violations$violatortypecode == 2 & merged_violations$violator_inspection_day_cnt > 0, merged_violations$violator_repeated_viol_cnt/merged_violations$violator_inspection_day_cnt, NA)
+
+# remove observations from cfr data that didn't merge onto our violations data 
+merged_violations = merged_violations[complete.cases(merged_violations$violationno),]
+# remove violations that we have no dateissued and therefore no quarter data (only 44 observations)
+merged_violations = merged_violations[complete.cases(merged_violations$quarter),]
+# drop observations before our study period (only 27 observations)
+merged_violations = merged_violations[(merged_violations$quarter > "1999 Q4"),]
 
 ######################################################################################################################################
 # CLEAN & COLLAPSE ASSESSMENTS/VIOLATIONS
@@ -85,7 +92,7 @@ merged_violations$operator_repeated_viol_pInspDay = ifelse(merged_violations$vio
 
 MR_relevant_subsectcodes = levels(factor(merged_violations[merged_violations$MR_relevant == 1 | merged_violations$MR_maybe_relevant == 1,]$subsection_code))
 #For preliminary testing only. Comment out when done. 6/3/2016
-MR_relevant_subsectcodes = c("47.41")
+MR_relevant_subsectcodes = c("47.41", "77.404")
 for (i in 1:length(MR_relevant_subsectcodes)) {
   merged_violations[, MR_relevant_subsectcodes[i]] = ifelse(merged_violations$subsection_code == MR_relevant_subsectcodes[i], 1, 0)
   merged_violations[, paste("penaltypoints", MR_relevant_subsectcodes[i], sep = "_")] = apply(cbind(merged_violations[, "penaltypoints"], merged_violations[, MR_relevant_subsectcodes[i]]), 1, prod)
@@ -102,6 +109,46 @@ for (i in 1:length(MR_relevant_subsectcodes)) {
   merged_violations[, paste("operator_repeated_viol_pInspDay", MR_relevant_subsectcodes[i], sep = "_")] = apply(cbind(merged_violations[, "operator_repeated_viol_pInspDay"], merged_violations[, MR_relevant_subsectcodes[i]]), 1, prod)
 }
 
+######################################################################################################################################
+#DUMMY OUT FACTOR VARIABLES
+
+# FIRST - CLEAN UP THE FIELD THAT REPORTS THE TYPE OF INSPECTION
+merged_violations$inspacty = tolower(merged_violations$inspacty)
+merged_violations[, "inspacty"] = ifelse(merged_violations[, "inspacty"] == "mine idle activity", "mine idle", merged_violations[, "inspacty"])
+merged_violations[, "inspacty"] = ifelse(merged_violations[, "inspacty"] == "na", "n", merged_violations[, "inspacty"])
+merged_violations[, "inspacty"] = ifelse(merged_violations[, "inspacty"] == "part 50 audit", "part 50 audits", merged_violations[, "inspacty"])
+merged_violations[, "inspacty"] = ifelse(merged_violations[, "inspacty"] == "non-fatal accident investigation", "nonfatal injury accident inv", merged_violations[, "inspacty"])
+merged_violations[, "inspacty"] = ifelse(merged_violations[, "inspacty"] == "shaft, slope or major construction spot inspection", "shft, slpe, or maj constr spot insp", merged_violations[, "inspacty"])
+merged_violations[, "inspacty"] = ifelse(merged_violations[, "inspacty"] == "103(g)(1) spot umwa inspection", "103(g)(1) spot inspection", merged_violations[, "inspacty"])
+merged_violations[, "inspacty"] = ifelse(merged_violations[, "inspacty"] == "103(i) spot (ign or expl) insp", "103(i) spot inspections", merged_violations[, "inspacty"])
+merged_violations[, "inspacty"] = ifelse(merged_violations[, "inspacty"] == "103(i) spot (hazard) inspection", "103(i) spot inspections", merged_violations[, "inspacty"])
+# can't have any missing values or our dummy method won't work
+merged_violations[, "inspacty"] = ifelse(is.na(merged_violations$inspacty), "unknown", merged_violations[, "inspacty"])
+merged_violations[, "violationtypecode"] = ifelse(is.na(merged_violations$violationtypecode), "unknown", merged_violations[, "violationtypecode"])
+merged_violations[, "assessmenttypecode"] = ifelse(is.na(merged_violations$assessmenttypecode), "unknown", merged_violations[, "assessmenttypecode"])
+
+datdum <- function(x, data, name){
+  data$rv <- rnorm(dim(data)[1],1,1)
+  mm <- data.frame(model.matrix(lm(data$rv~-1+factor(data[,x]))))
+  names(mm) <- paste(name,1:dim(mm)[2],sep=".")
+  data$rv <- NULL
+  data <- cbind(data,mm)
+  return(data)
+}
+
+test.data1 <- datdum(x="inspacty",data=merged_violations,name="inspacty")
+test.data1 <- test.data1 [, c(grep("inspacty", names(test.data1)))]
+test.data2 <- datdum(x="assessmenttypecode",data=merged_violations,name="assessmenttypecode")
+test.data2 <- test.data2 [, c(grep("assessmenttypecode", names(test.data2)))]
+# these make up a grand total of 4 in our observations - not worth making dummies for 4 violation types
+merged_violations = merged_violations[(merged_violations$violationtypecode != "Notice" & merged_violations$violationtypecode != "Safeguard"),]
+test.data3 <- datdum(x="violationtypecode",data=merged_violations,name="violationtypecode")
+test.data3 <- test.data3 [, c(grep("violationtypecode", names(test.data3)))]
+
+merged_violations = cbind(merged_violations, test.data1, test.data2, test.data3)
+rm(test.data1, test.data2, test.data3)
+
+######################################################################################################################################
 #Create CFR-code (only for *relevant) specific for penalty variables:
 #penalty pts, good faith, gravity and its components as well & sig. and sub., negligence, # of repeat violations for operators and ind. contractors,
 ## of overall violations for operators and ind. contractors, create our own previous violations var and compare to the given version for verification,
@@ -125,14 +172,6 @@ rm(violations_to_sum)
 
 ######################################################################################################################################
 # COUNT TOTAL # QUARTERS PER INSPECTION AND TOTAL # INSPECTIONS PER QUARTER 
-
-# CLEAN UP THE FIELD THAT REPORTS THE TYPE OF INSPECTION
-merged_violations$inspacty = tolower(merged_violations$inspacty)
-merged_violations[, "inspacty"] = ifelse(merged_violations[, "inspacty"] == "mine idle activity", "mine idle", merged_violations[, "inspacty"])
-merged_violations[, "inspacty"] = ifelse(merged_violations[, "inspacty"] == "na", "n", merged_violations[, "inspacty"])
-merged_violations[, "inspacty"] = ifelse(merged_violations[, "inspacty"] == "part 50 audit", "part 50 audits", merged_violations[, "inspacty"])
-merged_violations[, "inspacty"] = ifelse(merged_violations[, "inspacty"] == "non-fatal accident investigation", "nonfatal injury accident inv", merged_violations[, "inspacty"])
-merged_violations[, "inspacty"] = ifelse(merged_violations[, "inspacty"] == "shaft, slope or major construction spot inspection", "shft, slpe, or maj constr spot insp", merged_violations[, "inspacty"])
 
 # COLLAPSE TO MINE-QUARTER-EVENT LEVEL TO FLAG EACH INSPECTIONS PER MINE QUARTER WITH A "1"
 num_inspecs_per_qtr = ddply(merged_violations[, c(match("sumtotal_insp_hours", names(merged_violations)), match("sumtotal_on_site_hours", names(merged_violations)),
@@ -188,7 +227,7 @@ summed_inspcs = merge(summed_inspcs, num_inspecs_per_qtr, by = c("mineid", "quar
 mines_accidents_coded$accidentdate = as.Date(as.character(mines_accidents_coded$accidentdate), "%m/%d/%Y")
 mines_accidents_coded$quarter = as.yearqtr(mines_accidents_coded$accidentdate)
 
-#drop observations before our study period
+# drop observations before our study period
 mines_accidents_coded = mines_accidents_coded[(mines_accidents_coded$quarter > "1999 Q4"),]
 
 # merge on minetypes to drop non-coal and non-underground observations before saving
@@ -199,17 +238,20 @@ mines_accidents_coded = mines_accidents_coded[mines_accidents_coded$minetype != 
 mines_accidents_coded = mines_accidents_coded[mines_accidents_coded$minetype != "",]
 mines_accidents_coded = mines_accidents_coded[mines_accidents_coded$coalcormetalmmine.x == "C",]
 
+# format mineid so we can properly merge onto minequarters
 mines_accidents_coded$mineid = str_pad(mines_accidents_coded$mineid, 7, pad = "0")
 mines_accidents_coded$mineid = withr::with_options(c(scipen = 999), str_pad(mines_accidents_coded$mineid, 7, pad = "0"))
 
 # create injury indicator so that we can collapse & sum total injuries per mine quarter
 mines_accidents_coded$totalinjuries = 1
 
-#Collapse mines_accidents data here.
+# collapse mines_accidents data here.
 summed_coded_accidents = ddply(mines_accidents_coded[, c(grep("totalinjuries", names(mines_accidents_coded)), grep("MR", names(mines_accidents_coded)),
                                                                 match("mineid", names(mines_accidents_coded)), match("quarter", names(mines_accidents_coded)))], c("mineid", "quarter"), 
                                   function(x) colSums(x[, c(grep("totalinjuries", names(x)), grep("MR", names(x)))], na.rm = T))
 
+######################################################################################################################################
+# FINISH COLLAPSING AND CLEANING VIOLATIONS
 
 summed_violations$row_id = seq.int(nrow(summed_violations))
 averaged_violations$row_id = seq.int(nrow(averaged_violations))
@@ -226,13 +268,14 @@ collapsed_violations = collapsed_violations[, -grep("row_id", names(collapsed_vi
 collapsed_violations$row_id = seq.int(nrow(collapsed_violations))
 summed_coded_accidents$row_id = seq.int(nrow(summed_coded_accidents))
 
+######################################################################################################################################
 # MERGE VIOLATIONS DATA ONTO MINES
 merged_mines_violations = merge(mines_quarters, collapsed_violations, by = c("mineid", "quarter"), all = T)
 #To save time we save/load all constituent datasets in the prediction data after each of the following merges
 saveRDS(collapsed_violations, file = "X:/Projects/Mining/NIOSH/analysis/data/4_collapsed/collapsed_violations.rds")
 
 ######################################################################################################################################
-# MERGE VIOLATIONS AND ACCIDENTS
+# MERGE ACCIDENTS DATA ONTO VIOLATIONS/PER QUARTER
 
 merged_mines_violations_accidents = merge(merged_mines_violations, summed_coded_accidents, by = c("mineid", "quarter"), all = T)
 
@@ -244,13 +287,16 @@ table(merged_mines_violations_accidents$merge2)
 #0     1     2     3 
 #93790 34824 61858 11715 
 
-
 merged_mines_violations_accidents$totalinjuries = ifelse(is.na(merged_mines_violations_accidents$totalinjuries), 0, merged_mines_violations_accidents$totalinjuries)
 merged_mines_violations_accidents$total_violations = ifelse(is.na(merged_mines_violations_accidents$total_violations), 0, merged_mines_violations_accidents$total_violations)
 
 merged_mines_violations_accidents = merged_mines_violations_accidents[, -grep("row_id", names(merged_mines_violations_accidents))]
 merged_mines_violations_accidents$row_id = seq.int(nrow(merged_mines_violations_accidents))
 summed_inspcs$row_id = seq.int(nrow(summed_inspcs))
+
+######################################################################################################################################
+# MERGE ON FINAL INSPECTION CHARACTERISTICS AND CLEAN UP FINAL PREDICTION DATASET
+
 prediction_data = merge(merged_mines_violations_accidents, summed_inspcs, by = c("mineid", "quarter"), all = T)
 prediction_data[, "merge3"] = ifelse(!is.na(prediction_data$row_id.y) & !is.na(prediction_data$row_id.x), 3, 0)
 prediction_data[, "merge3"] = ifelse(is.na(prediction_data$row_id.x) & !is.na(prediction_data$row_id.y), 2, prediction_data[, "merge3"])
@@ -260,14 +306,17 @@ table(prediction_data$merge3)
 #1      3 
 #190726  69303
 
+#remove observations that are missing key variables or are from the wrong environment
 prediction_data = prediction_data[complete.cases(prediction_data$quarter),]
 prediction_data = prediction_data[complete.cases(prediction_data$minetype),]
 prediction_data = prediction_data[prediction_data$minetype == "Underground",]
 prediction_data = prediction_data[prediction_data$coalcormetalmmine == "C",]
 
+prediction_data = prediction_data[, c(-grep("merge", names(prediction_data)), -grep("row_id", names(prediction_data)))]
+
 saveRDS(prediction_data, file = "X:/Projects/Mining/NIOSH/analysis/data/4_collapsed/prediction_data.rds")
 
-#GOAL HERE IS TO MAKE A LOOP TO FILL IN MISSING VLAUES (OF, SAY, MINE NAME) BY MINE_ID GROUPS
+#GOAL HERE IS TO MAKE A LOOP TO FILL IN MISSING VLAUES (OF, SAY, MINENAME) BY MINE_ID GROUPS
 # CURRENT ISSUE IS A KNOWN BUG WITH DPLYR - https://github.com/hadley/dplyr/issues/859
 #library(dplyr)
 #library(zoo)
