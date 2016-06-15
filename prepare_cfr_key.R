@@ -166,7 +166,7 @@ cfr_key$MR_maybe_relevant = ifelse(cfr_key$cfr_part_code == "75" & (cfr_key$cfr_
 cfr_key$MR_maybe_relevant = ifelse(cfr_key$cfr_part_code == "77" & (cfr_key$cfr_subpart_code %in% c("Subpart L")) &
                                      (cfr_key$subsection_code %in% c("77.1106")), 1, cfr_key$MR_maybe_relevant)
 
-cfr_key = cfr_key[, c(grep("relevant", names(cfr_key)), grep("subsection_code", names(cfr_key)))]
+#cfr_key = cfr_key[, c(grep("relevant", names(cfr_key)), grep("subsection_code", names(cfr_key)))]
 
 saveRDS(cfr_key, file = "X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_cfr_key.rds")
 rm(subsection_code_length, cfr_key)
