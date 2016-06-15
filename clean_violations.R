@@ -70,6 +70,8 @@ open_data_viols$mineid = str_pad(open_data_viols$mineid, 7, pad = "0")
 open_data_viols$mineid = withr::with_options(c(scipen = 999), str_pad(open_data_viols$mineid, 7, pad = "0"))
 open_data_viols$eventno = str_pad(open_data_viols$eventno, 7, pad = "0")
 open_data_viols$eventno = withr::with_options(c(scipen = 999), str_pad(open_data_viols$eventno, 7, pad = "0"))
+open_data_viols$violationno = str_pad(open_data_viols$violationno, 7, pad = "0")
+open_data_viols$violationno = withr::with_options(c(scipen = 999), str_pad(open_data_viols$violationno, 7, pad = "0"))
 
 clean_violations = open_data_viols
 rm(open_data_viols)
