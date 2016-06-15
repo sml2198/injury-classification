@@ -27,19 +27,20 @@ assessments_violations = merge(clean_assessments, clean_violations, by = c("mine
 #Open Data Only:
 #2       3 
 #54144 2107492 
-#common_varstbs = sub(".x", "", names(assessments_violations)[grep(".x", names(assessments_violations), fixed = T)], fixed = T)
 #for (i in 1:length(common_varstbs)) {
 #  assessments_violations[, paste(common_varstbs[i], ".x", sep = "")] = ifelse(assessments_violations[, "merge"] == 2, assessments_violations[, paste(common_varstbs[i], ".y", sep = "")], assessments_violations[, paste(common_varstbs[i], ".x", sep = "")])
 #}
+
 ########################################################################################################################
 
 assessments_violations$eventno.x = ifelse((is.na(assessments_violations$eventno.x) & !is.na(assessments_violations$eventno.y)), assessments_violations$eventno.y, assessments_violations$eventno.x)
 assessments_violations$eventno.y = ifelse((is.na(assessments_violations$eventno.y) & !is.na(assessments_violations$eventno.x)), assessments_violations$eventno.x, assessments_violations$eventno.y)
 
+common_varstbs = sub(".x", "", names(assessments_violations)[grep(".x", names(assessments_violations), fixed = T)], fixed = T)
 assessments_violations = assessments_violations[, -grep(".y", names(assessments_violations), fixed = T)]
 names(assessments_violations)[grep(".x", names(assessments_violations), fixed = T)] = common_varstbs
 
-#Clean up violator name fields
+# Clean up violator name fields
 
 assessments_violations[, "violatorname"] = tolower(str_trim(assessments_violations[, "violatorname"], side = c("both")))
 assessments_violations[, "violator_name"] = tolower(str_trim(assessments_violations[, "violator_name"], side = c("both")))
@@ -89,12 +90,11 @@ rm(clean_violations, clean_assessments)
 #clean_inspections$eventno = ifelse(nchar(clean_inspections$eventno) < 7, paste("0", clean_inspections$eventno, sep = ""), clean_inspections$eventno)
 #assessments_violations$eventno = ifelse(nchar(assessments_violations$eventno) < 7, paste("0", assessments_violations$eventno, sep = ""), assessments_violations$eventno)
 
-assessments_violations2 = assessments_violations
-
 assessments_violations$inspecid = paste("L", assessments_violations$eventno, sep = "")
 clean_inspections$inspecid = paste("L", clean_inspections$eventno, sep = "")
 
 merged_violations = merge(assessments_violations, clean_inspections, by = c("mineid", "eventno"), all = T)
+
 merged_violations[, "inspecmerge"] = ifelse(!is.na(merged_violations$inspecid.y) & !is.na(merged_violations$inspecid.x), 3, 0)
 merged_violations[, "inspecmerge"] = ifelse(is.na(merged_violations$inspecid.x) & !is.na(merged_violations$inspecid.y), 2, merged_violations[, "inspecmerge"])
 merged_violations[, "inspecmerge"] = ifelse(is.na(merged_violations$inspecid.y) & !is.na(merged_violations$inspecid.x), 1, merged_violations[, "inspecmerge"])
