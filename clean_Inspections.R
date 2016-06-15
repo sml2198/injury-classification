@@ -104,6 +104,7 @@ clean_inspecs = clean_inspecs[!is.na(clean_inspecs$eventno),]
 #clean_inspecs = clean_inspecs[, -grep(".y", names(clean_inspecs), fixed = T)]
 #names(clean_inspecs)[grep(".x", names(clean_inspecs), fixed = T)] = common_varstbs
 
+clean_inspecs2 = clean_inspecs
 #Now clean up hours and merge them in.
 early_inspecs_hours$mineid = str_pad(early_inspecs_hours$mineid, 7, pad = "0")
 early_inspecs_hours$mineid = withr::with_options(c(scipen = 999), str_pad(early_inspecs_hours$mineid, 7, pad = "0"))
@@ -111,11 +112,17 @@ early_inspecs_hours$eventno = str_pad(early_inspecs_hours$eventno, 7, pad = "0")
 early_inspecs_hours$eventno = withr::with_options(c(scipen = 999), str_pad(early_inspecs_hours$eventno, 7, pad = "0"))
 early_inspecs_hours = early_inspecs_hours[early_inspecs_hours$coalcormetalmmine == "C",]
 
+clean_inspecs$mergecheck.inspec = 1
+early_inspecs_hours$mergecheck.hrs = 1
 clean_inspecs = merge(clean_inspecs, early_inspecs_hours, by = c("mineid", "eventno"), all = T)
 rm(early_inspecs_hours)
 clean_inspecs = clean_inspecs[!is.na(clean_inspecs$calendaryear) & !is.na(clean_inspecs$calendarquarter) & !is.na(clean_inspecs$program_area),]
-clean_inspecs = clean_inspecs[clean_inspecs$minetype != "Surface",]
-clean_inspecs = clean_inspecs[clean_inspecs$minetype != "",]
+clean_inspecs = clean_inspecs[clean_inspecs$minetype == "Underground",]
+
+clean_inspecs = clean_inspecs[!is.na(clean_inspecs$mergecheck.hrs),]
+
+######################################################################################################
+# code from before we merge on mineid- eventno
 
 #clean_inspecs[, "mergehrs"] = ifelse(!is.na(clean_inspecs$mineid.y) & !is.na(clean_inspecs$mineid.x), 3, 0)
 #clean_inspecs[, "mergehrs"] = ifelse(is.na(clean_inspecs$mineid.x) & !is.na(clean_inspecs$mineid.y), 2, clean_inspecs[, "mergehrs"])
@@ -127,18 +134,24 @@ clean_inspecs = clean_inspecs[clean_inspecs$minetype != "",]
 #1       2       3 
 #103014 1391153  672231 
 
+#common_varstbs = sub(".x", "", names(clean_inspecs)[grep(".x", names(clean_inspecs), fixed = T)], fixed = T)
+#for (i in 1:length(common_varstbs)) {
+#  mstr_copy = paste(common_varstbs[i], ".x", sep = "")
+#  usng_copy = paste(common_varstbs[i], ".y", sep = "")
+#  clean_inspecs[, mstr_copy] = ifelse(clean_inspecs[, "mergehrs"] == 3 & is.na(clean_inspecs[, mstr_copy]), clean_inspecs[, usng_copy], clean_inspecs[, mstr_copy])
+#  clean_inspecs[, mstr_copy] = ifelse(clean_inspecs[, "mergehrs"] == 2, clean_inspecs[, usng_copy], clean_inspecs[, mstr_copy])
+#}
+
+# insp_conflcts = sum(clean_inspecs[, "mergehrs"] == 3 & !is.na(clean_inspecs[, "sumtotal_insp_hours.x"]) & (clean_inspecs[, "sumtotal_insp_hours.x"] != clean_inspecs[, "sumtotal_insp_hours.y"]))
+# on_site_conflcts = sum(clean_inspecs[, "mergehrs"] == 3 & !is.na(clean_inspecs[, "sumtotal_on_site_hours.x"]) & (clean_inspecs[, "sumtotal_on_site_hours.x"] != clean_inspecs[, "sumtotal_on_site_hours.y"]))
+# nonNA_conflicts = max(insp_conflcts, on_site_conflcts)
+# clean_inspecs = clean_inspecs[, -grep(".y", names(clean_inspecs), fixed = T)]
+# names(clean_inspecs)[grep(".x", names(clean_inspecs), fixed = T)] = common_varstbs
+
 ######################################################################################################
 
-common_varstbs = sub(".x", "", names(clean_inspecs)[grep(".x", names(clean_inspecs), fixed = T)], fixed = T)
-for (i in 1:length(common_varstbs)) {
-  mstr_copy = paste(common_varstbs[i], ".x", sep = "")
-  usng_copy = paste(common_varstbs[i], ".y", sep = "")
-  clean_inspecs[, mstr_copy] = ifelse(clean_inspecs[, "mergehrs"] == 3 & is.na(clean_inspecs[, mstr_copy]), clean_inspecs[, usng_copy], clean_inspecs[, mstr_copy])
-  clean_inspecs[, mstr_copy] = ifelse(clean_inspecs[, "mergehrs"] == 2, clean_inspecs[, usng_copy], clean_inspecs[, mstr_copy])
-}
-
-insp_conflcts = sum(clean_inspecs[, "mergehrs"] == 3 & !is.na(clean_inspecs[, "sumtotal_insp_hours.x"]) & (clean_inspecs[, "sumtotal_insp_hours.x"] != clean_inspecs[, "sumtotal_insp_hours.y"]))
-on_site_conflcts = sum(clean_inspecs[, "mergehrs"] == 3 & !is.na(clean_inspecs[, "sumtotal_on_site_hours.x"]) & (clean_inspecs[, "sumtotal_on_site_hours.x"] != clean_inspecs[, "sumtotal_on_site_hours.y"]))
+insp_conflcts = sum(!is.na(clean_inspecs[, "sumtotal_insp_hours.x"]) & (clean_inspecs[, "sumtotal_insp_hours.x"] != clean_inspecs[, "sumtotal_insp_hours.y"]))
+on_site_conflcts = sum(!is.na(clean_inspecs[, "sumtotal_on_site_hours.x"]) & (clean_inspecs[, "sumtotal_on_site_hours.x"] != clean_inspecs[, "sumtotal_on_site_hours.y"]))
 nonNA_conflicts = max(insp_conflcts, on_site_conflcts)
 clean_inspecs = clean_inspecs[, -grep(".y", names(clean_inspecs), fixed = T)]
 names(clean_inspecs)[grep(".x", names(clean_inspecs), fixed = T)] = common_varstbs
