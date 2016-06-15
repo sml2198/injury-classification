@@ -18,7 +18,8 @@ library(stats)
 
 merged_violations = readRDS("X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_violations.rds")
 merged_cfr_key = readRDS("X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_cfr_key.rds")
-mines.accidents.coded = read.csv("X:/Projects/Mining/NIOSH/analysis/data/4_coded/accidents_with_predictions.csv")
+mines_quarters = readRDS("X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_mines.rds")
+mines_accidents_coded = read.csv("X:/Projects/Mining/NIOSH/analysis/data/4_coded/accidents_with_predictions.csv")
 
 merged_violations = merged_violations[, c(-grep("datevacated", names(merged_violations)), -grep("primarymill", names(merged_violations)), -grep("generatedbyassessmt", names(merged_violations)),
                                             -grep("sigandsubindicator", names(merged_violations)), -grep("dup", names(merged_violations)), -grep("source", names(merged_violations)),
@@ -31,7 +32,18 @@ names(merged_violations)[names(merged_violations) == "cfrstandardcode"] = "subse
 
 merged_violations$subsection_code_marker = paste("S", merged_violations$subsection_code, sep = "")
 merged_cfr_key$subsection_code_marker = paste("S", merged_cfr_key$subsection_code, sep = "")
+
+# in some cases where subsection is missing, part section is not and can be subbed in.
+merged_violations$part_section2 = merged_violations$part_section
+merged_violations$part_section2 = gsub("\\([a-z]+\\)", "", merged_violations$part_section2)
+merged_violations$part_section2 = gsub("\\([0-9]+\\)", "", merged_violations$part_section2)
+merged_violations$subsection_code = ifelse((is.na(merged_violations$subsection_code) & !is.na(merged_violations$part_section2)), merged_violations$part_section2, merged_violations$subsection_code)
+
 merged_violations = merge(merged_violations, merged_cfr_key, by = "subsection_code", all = T)
+
+#unmerged_violations = merged_violations[(merged_violations$subsection_code == ""),]
+#write.csv(unmerged_violations, file = "X:/Projects/Mining/NIOSH/analysis/data/3_merged/unmerged_violations.csv", row.names = TRUE)
+
 merged_violations[, "merge"] = ifelse(!is.na(merged_violations$subsection_code_marker.y) & !is.na(merged_violations$subsection_code_marker.x), 3, 0)
 merged_violations[, "merge"] = ifelse(is.na(merged_violations$subsection_code_marker.x) & !is.na(merged_violations$subsection_code_marker.y), 2, merged_violations[, "merge"])
 merged_violations[, "merge"] = ifelse(is.na(merged_violations$subsection_code_marker.y) & !is.na(merged_violations$subsection_code_marker.x), 1, merged_violations[, "merge"])
@@ -62,7 +74,8 @@ merged_violations$operator_violation_pInspDay = ifelse(merged_violations$violato
 merged_violations$contractor_repeated_viol_cnt = ifelse(merged_violations$violatortypecode == 1, merged_violations$violator_repeated_viol_cnt, NA)
 merged_violations$operator_repeated_viol_pInspDay = ifelse(merged_violations$violatortypecode == 2 & merged_violations$violator_inspection_day_cnt > 0, merged_violations$violator_repeated_viol_cnt/merged_violations$violator_inspection_day_cnt, NA)
 
-##VIOLATIONS & ASSESSMENTS##################################################################################################################################
+######################################################################################################################################
+# CLEAN & COLLAPSE ASSESSMENTS/VIOLATIONS
 
 #Dummy out CFR codes (at the subpart and subsection levels) only for *relevant types and mark all non-relevant CFR codes
 
@@ -106,8 +119,8 @@ rm(violations_to_sum)
 #Question: Check if operator variables vary by mine? Are indep. contractors the only operators @ a mine or are they only a part of the operation? A: Inspections generate
 #both contractor and operator violations. 6/6/16
 
-##INSPECTIONS##################################################################################################################################
-#Hours, # of regular inspections, # of special inspections (work out issue of over-counting inspection hours over violations data)
+######################################################################################################################################
+# COUNT TOTAL # QUARTERS PER INSPECTION AND TOTAL # INSPECTIONS PER QUARTER 
 
 # CLEAN UP THE FIELD THAT REPORTS THE TYPE OF INSPECTION
 merged_violations$inspacty = tolower(merged_violations$inspacty)
@@ -116,8 +129,6 @@ merged_violations[, "inspacty"] = ifelse(merged_violations[, "inspacty"] == "na"
 merged_violations[, "inspacty"] = ifelse(merged_violations[, "inspacty"] == "part 50 audit", "part 50 audits", merged_violations[, "inspacty"])
 merged_violations[, "inspacty"] = ifelse(merged_violations[, "inspacty"] == "non-fatal accident investigation", "nonfatal injury accident inv", merged_violations[, "inspacty"])
 merged_violations[, "inspacty"] = ifelse(merged_violations[, "inspacty"] == "shaft, slope or major construction spot inspection", "shft, slpe, or maj constr spot insp", merged_violations[, "inspacty"])
-
-####### COUNT TOTAL # QUARTERS PER INSPECTION AND TOTAL # INSPECTIONS PER QUARTER #######
 
 # COLLAPSE TO MINE-QUARTER-EVENT LEVEL TO FLAG EACH INSPECTIONS PER MINE QUARTER WITH A "1"
 num_inspecs_per_qtr = ddply(merged_violations[, c(match("sumtotal_insp_hours", names(merged_violations)), match("sumtotal_on_site_hours", names(merged_violations)),
@@ -167,14 +178,17 @@ summed_inspcs = ddply(merged_violations[, c(match("insp_hours_per_qtr", names(me
 summed_inspcs = merge(summed_inspcs, num_inspecs_per_qtr, by = c("mineid", "quarter"), all = T)
 
 ######################################################################################################################################
+# COLLAPSE ACCIDENTS DATA
 
-mines.accidents.coded$accidentdate = as.Date(as.character(mines.accidents.coded$accidentdate), "%m/%d/%Y")
-mines.accidents.coded$quarter = as.yearqtr(mines.accidents.coded$accidentdate)
-mines.accidents.coded$totalinjuries = 1
+mines_accidents_coded$accidentdate = as.Date(as.character(mines_accidents_coded$accidentdate), "%m/%d/%Y")
+mines_accidents_coded$quarter = as.yearqtr(mines_accidents_coded$accidentdate)
+#drop observations before our study period
+mines_accidents_coded = mines_accidents_coded[(mines_accidents_coded$quarter > "1999 Q4"),]
+mines_accidents_coded$totalinjuries = 1
 
 #Collapse mines_accidents data here.
-summed_coded_accidents = ddply(mines.accidents.coded[, c(grep("totalinjuries", names(mines.accidents.coded)), grep("MR", names(mines.accidents.coded)),
-                                                                match("mineid", names(mines.accidents.coded)), match("quarter", names(mines.accidents.coded)))], c("mineid", "quarter"), 
+summed_coded_accidents = ddply(mines_accidents_coded[, c(grep("totalinjuries", names(mines_accidents_coded)), grep("MR", names(mines_accidents_coded)),
+                                                                match("mineid", names(mines_accidents_coded)), match("quarter", names(mines_accidents_coded)))], c("mineid", "quarter"), 
                                   function(x) colSums(x[, c(grep("totalinjuries", names(x)), grep("MR", names(x)))], na.rm = T))
 
 
@@ -189,13 +203,23 @@ table(collapsed_violations$merge1)
 #3 
 #69303
 
-#To save time we save/load all constituent datasets in the prediction data after each of the following merges
-saveRDS(collapsed_violations, file = "X:/Projects/Mining/NIOSH/analysis/data/4_collapsed/collapsed_violations.rds")
-
 collapsed_violations = collapsed_violations[, -grep("row_id", names(collapsed_violations))]
 collapsed_violations$row_id = seq.int(nrow(collapsed_violations))
 summed_coded_accidents$row_id = seq.int(nrow(summed_coded_accidents))
-mines_violations_accidents = merge(collapsed_violations, summed_coded_accidents, by = c("mineid", "quarter"), all = T)
+
+# MERGE VIOLATIONS DATA ONTO MINES
+merged_mines_violations = merge(mines_quarters, collapsed_violations, by = c("mineid", "quarter"), all = T)
+
+#To save time we save/load all constituent datasets in the prediction data after each of the following merges
+saveRDS(collapsed_violations, file = "X:/Projects/Mining/NIOSH/analysis/data/4_collapsed/collapsed_violations.rds")
+
+######################################################################################################################################
+# MERGE VIOLATIONS AND ACCIDENTS
+
+#mines_violations_accidents = merge(collapsed_violations, summed_coded_accidents, by = c("mineid", "quarter"), all = T)
+
+merged_mines_violations_accidents = merge(merged_mines_violations, summed_coded_accidents, by = c("mineid", "quarter"), all = T)
+
 mines_violations_accidents[, "merge2"] = ifelse(!is.na(mines_violations_accidents$row_id.y) & !is.na(mines_violations_accidents$row_id.x), 3, 0)
 mines_violations_accidents[, "merge2"] = ifelse(is.na(mines_violations_accidents$row_id.x) & !is.na(mines_violations_accidents$row_id.y), 2, mines_violations_accidents[, "merge2"])
 mines_violations_accidents[, "merge2"] = ifelse(is.na(mines_violations_accidents$row_id.y) & !is.na(mines_violations_accidents$row_id.x), 1, mines_violations_accidents[, "merge2"])
@@ -204,7 +228,7 @@ table(mines_violations_accidents$merge2)
 #1      2      3 
 #52204 190726  17099
 
-saveRDS(mines_violations_accidents, file = "X:/Projects/Mining/NIOSH/analysis/data/4_collapsed/mines_violations_accidents.rds")
+#saveRDS(mines_violations_accidents, file = "X:/Projects/Mining/NIOSH/analysis/data/4_collapsed/mines_violations_accidents.rds")
 
 mines_violations_accidents$totalinjuries = ifelse(is.na(mines_violations_accidents$totalinjuries), 0, mines_violations_accidents$totalinjuries)
 mines_violations_accidents$total_violations = ifelse(is.na(mines_violations_accidents$total_violations), 0, mines_violations_accidents$total_violations)
@@ -223,7 +247,7 @@ table(prediction_data$merge3)
 
 saveRDS(prediction_data, file = "X:/Projects/Mining/NIOSH/analysis/data/4_collapsed/prediction_data.rds")
 
-rm(multi_qtr_inspcs, merged_violations, mines.accidents.coded, summed_coded_accidents, summed_violations, summed_inspcs, averaged_violations)
+rm(multi_qtr_inspcs, merged_violations, mines_accidents_coded, summed_coded_accidents, summed_violations, summed_inspcs, averaged_violations)
 #To provide an intercept for the prediction stage:
 prediction_data$constant = 1
 #WARNING: Fails to converge with these initial values
