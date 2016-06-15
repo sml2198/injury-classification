@@ -15,11 +15,16 @@ library(zoo)
 library(glarma)
 library(pglm)
 library(stats)
+library(stringr)
 
 merged_violations = readRDS("X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_violations.rds")
 merged_cfr_key = readRDS("X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_cfr_key.rds")
 mines_quarters = readRDS("X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_mines.rds")
+mine_types = readRDS("X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/mine_types.rds")
 mines_accidents_coded = read.csv("X:/Projects/Mining/NIOSH/analysis/data/4_coded/accidents_with_predictions.csv")
+
+######################################################################################################################################
+# MERGE CFR CODES ONTO VIOLATIONS AND MAKE VARIABLES FOR COLLAPSING ON
 
 merged_violations = merged_violations[, c(-grep("datevacated", names(merged_violations)), -grep("primarymill", names(merged_violations)), -grep("generatedbyassessmt", names(merged_violations)),
                                             -grep("sigandsubindicator", names(merged_violations)), -grep("dup", names(merged_violations)), -grep("source", names(merged_violations)),
@@ -40,7 +45,6 @@ merged_violations$part_section2 = gsub("\\([0-9]+\\)", "", merged_violations$par
 merged_violations$subsection_code = ifelse((is.na(merged_violations$subsection_code) & !is.na(merged_violations$part_section2)), merged_violations$part_section2, merged_violations$subsection_code)
 
 merged_violations = merge(merged_violations, merged_cfr_key, by = "subsection_code", all = T)
-
 #unmerged_violations = merged_violations[(merged_violations$subsection_code == ""),]
 #write.csv(unmerged_violations, file = "X:/Projects/Mining/NIOSH/analysis/data/3_merged/unmerged_violations.csv", row.names = TRUE)
 
@@ -180,10 +184,25 @@ summed_inspcs = merge(summed_inspcs, num_inspecs_per_qtr, by = c("mineid", "quar
 ######################################################################################################################################
 # COLLAPSE ACCIDENTS DATA
 
+# format date and quarter vars for merges
 mines_accidents_coded$accidentdate = as.Date(as.character(mines_accidents_coded$accidentdate), "%m/%d/%Y")
 mines_accidents_coded$quarter = as.yearqtr(mines_accidents_coded$accidentdate)
+
 #drop observations before our study period
 mines_accidents_coded = mines_accidents_coded[(mines_accidents_coded$quarter > "1999 Q4"),]
+
+# merge on minetypes to drop non-coal and non-underground observations before saving
+mines_accidents_coded = merge(mines_accidents_coded, mine_types, by = c("mineid"), all = T)
+
+# only keep observations from environment we care about
+mines_accidents_coded = mines_accidents_coded[mines_accidents_coded$minetype != "Surface",]
+mines_accidents_coded = mines_accidents_coded[mines_accidents_coded$minetype != "",]
+mines_accidents_coded = mines_accidents_coded[mines_accidents_coded$coalcormetalmmine.x == "C",]
+
+mines_accidents_coded$mineid = str_pad(mines_accidents_coded$mineid, 7, pad = "0")
+mines_accidents_coded$mineid = withr::with_options(c(scipen = 999), str_pad(mines_accidents_coded$mineid, 7, pad = "0"))
+
+# create injury indicator so that we can collapse & sum total injuries per mine quarter
 mines_accidents_coded$totalinjuries = 1
 
 #Collapse mines_accidents data here.
@@ -201,7 +220,7 @@ collapsed_violations[, "merge1"] = ifelse(is.na(collapsed_violations$row_id.y) &
 table(collapsed_violations$merge1)
 #Open Data only:
 #3 
-#69303
+#46539 
 
 collapsed_violations = collapsed_violations[, -grep("row_id", names(collapsed_violations))]
 collapsed_violations$row_id = seq.int(nrow(collapsed_violations))
@@ -209,34 +228,30 @@ summed_coded_accidents$row_id = seq.int(nrow(summed_coded_accidents))
 
 # MERGE VIOLATIONS DATA ONTO MINES
 merged_mines_violations = merge(mines_quarters, collapsed_violations, by = c("mineid", "quarter"), all = T)
-
 #To save time we save/load all constituent datasets in the prediction data after each of the following merges
 saveRDS(collapsed_violations, file = "X:/Projects/Mining/NIOSH/analysis/data/4_collapsed/collapsed_violations.rds")
 
 ######################################################################################################################################
 # MERGE VIOLATIONS AND ACCIDENTS
 
-#mines_violations_accidents = merge(collapsed_violations, summed_coded_accidents, by = c("mineid", "quarter"), all = T)
-
 merged_mines_violations_accidents = merge(merged_mines_violations, summed_coded_accidents, by = c("mineid", "quarter"), all = T)
 
-mines_violations_accidents[, "merge2"] = ifelse(!is.na(mines_violations_accidents$row_id.y) & !is.na(mines_violations_accidents$row_id.x), 3, 0)
-mines_violations_accidents[, "merge2"] = ifelse(is.na(mines_violations_accidents$row_id.x) & !is.na(mines_violations_accidents$row_id.y), 2, mines_violations_accidents[, "merge2"])
-mines_violations_accidents[, "merge2"] = ifelse(is.na(mines_violations_accidents$row_id.y) & !is.na(mines_violations_accidents$row_id.x), 1, mines_violations_accidents[, "merge2"])
-table(mines_violations_accidents$merge2) 
+merged_mines_violations_accidents[, "merge2"] = ifelse(!is.na(merged_mines_violations_accidents$row_id.y) & !is.na(merged_mines_violations_accidents$row_id.x), 3, 0)
+merged_mines_violations_accidents[, "merge2"] = ifelse(is.na(merged_mines_violations_accidents$row_id.x) & !is.na(merged_mines_violations_accidents$row_id.y), 2, merged_mines_violations_accidents[, "merge2"])
+merged_mines_violations_accidents[, "merge2"] = ifelse(is.na(merged_mines_violations_accidents$row_id.y) & !is.na(merged_mines_violations_accidents$row_id.x), 1, merged_mines_violations_accidents[, "merge2"])
+table(merged_mines_violations_accidents$merge2) 
 #Open Data Only:
-#1      2      3 
-#52204 190726  17099
+#0     1     2     3 
+#93790 34824 61858 11715 
 
-#saveRDS(mines_violations_accidents, file = "X:/Projects/Mining/NIOSH/analysis/data/4_collapsed/mines_violations_accidents.rds")
 
-mines_violations_accidents$totalinjuries = ifelse(is.na(mines_violations_accidents$totalinjuries), 0, mines_violations_accidents$totalinjuries)
-mines_violations_accidents$total_violations = ifelse(is.na(mines_violations_accidents$total_violations), 0, mines_violations_accidents$total_violations)
+merged_mines_violations_accidents$totalinjuries = ifelse(is.na(merged_mines_violations_accidents$totalinjuries), 0, merged_mines_violations_accidents$totalinjuries)
+merged_mines_violations_accidents$total_violations = ifelse(is.na(merged_mines_violations_accidents$total_violations), 0, merged_mines_violations_accidents$total_violations)
 
-mines_violations_accidents = mines_violations_accidents[, -grep("row_id", names(mines_violations_accidents))]
-mines_violations_accidents$row_id = seq.int(nrow(mines_violations_accidents))
+merged_mines_violations_accidents = merged_mines_violations_accidents[, -grep("row_id", names(merged_mines_violations_accidents))]
+merged_mines_violations_accidents$row_id = seq.int(nrow(merged_mines_violations_accidents))
 summed_inspcs$row_id = seq.int(nrow(summed_inspcs))
-prediction_data = merge(mines_violations_accidents, summed_inspcs, by = c("mineid", "quarter"), all = T)
+prediction_data = merge(merged_mines_violations_accidents, summed_inspcs, by = c("mineid", "quarter"), all = T)
 prediction_data[, "merge3"] = ifelse(!is.na(prediction_data$row_id.y) & !is.na(prediction_data$row_id.x), 3, 0)
 prediction_data[, "merge3"] = ifelse(is.na(prediction_data$row_id.x) & !is.na(prediction_data$row_id.y), 2, prediction_data[, "merge3"])
 prediction_data[, "merge3"] = ifelse(is.na(prediction_data$row_id.y) & !is.na(prediction_data$row_id.x), 1, prediction_data[, "merge3"])
@@ -245,7 +260,22 @@ table(prediction_data$merge3)
 #1      3 
 #190726  69303
 
+prediction_data = prediction_data[complete.cases(prediction_data$quarter),]
+prediction_data = prediction_data[complete.cases(prediction_data$minetype),]
+prediction_data = prediction_data[prediction_data$minetype == "Underground",]
+prediction_data = prediction_data[prediction_data$coalcormetalmmine == "C",]
+
 saveRDS(prediction_data, file = "X:/Projects/Mining/NIOSH/analysis/data/4_collapsed/prediction_data.rds")
+
+#GOAL HERE IS TO MAKE A LOOP TO FILL IN MISSING VLAUES (OF, SAY, MINE NAME) BY MINE_ID GROUPS
+# CURRENT ISSUE IS A KNOWN BUG WITH DPLYR - https://github.com/hadley/dplyr/issues/859
+#library(dplyr)
+#library(zoo)
+#prediction_data$mineid = as.character(prediction_data$mineid)
+#prediction_data %>% group_by(prediction_data$mineid) %>% do(na.locf(prediction_data$minename))
+
+######################################################################################################################################
+# EVERYTHING BELOW THIS LINE IS FOR THE ALGORITHM
 
 rm(multi_qtr_inspcs, merged_violations, mines_accidents_coded, summed_coded_accidents, summed_violations, summed_inspcs, averaged_violations)
 #To provide an intercept for the prediction stage:
