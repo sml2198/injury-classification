@@ -75,12 +75,9 @@ open_data_assessments = merge(open_data_assessments, mine_types, by = c("mineid"
 open_data_assessments = open_data_assessments[!is.na(open_data_assessments$eventno),]
 
 # only keep observations from environment we care about
-open_data_assessments = open_data_assessments[open_data_assessments$minetype.x != "Surface",]
-open_data_assessments = open_data_assessments[open_data_assessments$minetype.x != "",]
+open_data_assessments = open_data_assessments[open_data_assessments$minetype == "Underground",]
 
-open_data_assessments = open_data_assessments[, c(-match("coalcormetalmmine.x", names(open_data_assessments)), -match("coalcormetalmmine.y", names(open_data_assessments)),
-                                  -grep("minetype.y", names(open_data_assessments)))]
-names(open_data_assessments)[names(open_data_assessments) == "minetype.x"] = "minetype"
+open_data_assessments = open_data_assessments[, c(-match("coalcormetalmmine", names(open_data_assessments)))]
 
 clean_assessments = open_data_assessments
 rm(open_data_assessments)
