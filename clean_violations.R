@@ -61,8 +61,7 @@ open_data_viols[, "violationno"] = as.character(open_data_viols[, "violationno"]
 open_data_viols[, "eventno"] = as.character(open_data_viols[, "eventno"])
 
 # only keep observations from environment we care about
-open_data_viols = open_data_viols[open_data_viols$minetype != "Surface",]
-open_data_viols = open_data_viols[open_data_viols$minetype != "",]
+open_data_viols = open_data_viols[open_data_viols$minetype == "Underground",]
 open_data_viols = open_data_viols[open_data_viols$coalcormetalm == "C",]
 open_data_viols = open_data_viols[!is.na(open_data_viols$coalcormetalm),]
 
