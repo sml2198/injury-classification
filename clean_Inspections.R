@@ -119,7 +119,7 @@ rm(early_inspecs_hours)
 clean_inspecs = clean_inspecs[!is.na(clean_inspecs$calendaryear) & !is.na(clean_inspecs$calendarquarter) & !is.na(clean_inspecs$program_area),]
 clean_inspecs = clean_inspecs[clean_inspecs$minetype == "Underground",]
 
-clean_inspecs = clean_inspecs[!is.na(clean_inspecs$mergecheck.hrs),]
+clean_inspecs = clean_inspecs[!is.na(clean_inspecs$mergecheck.hrs) & !is.na(clean_inspecs$mergecheck.inspec),]
 
 ######################################################################################################
 # code from before we merge on mineid- eventno
@@ -150,8 +150,8 @@ clean_inspecs = clean_inspecs[!is.na(clean_inspecs$mergecheck.hrs),]
 
 ######################################################################################################
 
-insp_conflcts = sum(!is.na(clean_inspecs[, "sumtotal_insp_hours.x"]) & (clean_inspecs[, "sumtotal_insp_hours.x"] != clean_inspecs[, "sumtotal_insp_hours.y"]))
-on_site_conflcts = sum(!is.na(clean_inspecs[, "sumtotal_on_site_hours.x"]) & (clean_inspecs[, "sumtotal_on_site_hours.x"] != clean_inspecs[, "sumtotal_on_site_hours.y"]))
+insp_conflcts = sum(!is.na(clean_inspecs[, "sumtotal_insp_hours.x"]) & (clean_inspecs[, "sumtotal_insp_hours.x"] != clean_inspecs[, "sumtotal_insp_hours.y"])) #There are 6 of these
+on_site_conflcts = sum(!is.na(clean_inspecs[, "sumtotal_on_site_hours.x"]) & (clean_inspecs[, "sumtotal_on_site_hours.x"] != clean_inspecs[, "sumtotal_on_site_hours.y"])) #There are 2 of these
 nonNA_conflicts = max(insp_conflcts, on_site_conflcts)
 clean_inspecs = clean_inspecs[, -grep(".y", names(clean_inspecs), fixed = T)]
 names(clean_inspecs)[grep(".x", names(clean_inspecs), fixed = T)] = common_varstbs
