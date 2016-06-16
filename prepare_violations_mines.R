@@ -136,9 +136,6 @@ violationtypecodes = c("1", "2", "3", "4", "5")
 assessmenttypecodes = c("1", "2", "3", "4", "5")
 inspactycodes = seq(1, 56)
 
-merged_violations2= merged_violations
-merged_violations = merged_violations2
-
 #Change call "sep"'s to dots
 for (i in 1:length(MR_relevant_subsectcodes)) {
   merged_violations[, MR_relevant_subsectcodes[i]] = ifelse(merged_violations$subsection_code == MR_relevant_subsectcodes[i], 1, 0)
