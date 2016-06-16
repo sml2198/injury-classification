@@ -182,7 +182,6 @@ violations_to_sum = merged_violations[, c(grep("[0-9][0-9]\\.[a-z]+", names(merg
 
 # these were grabbed by the regular expression above, but we want to average (not sum) these, so we remove them  
 violations_to_sum = violations_to_sum[, c(-grep("operator_repeated_viol_pInspDay", names(violations_to_sum)), -grep("contractor_repeated_viol_cnt", names(violations_to_sum)))]
-
 summed_violations = ddply(violations_to_sum, c("mineid", "quarter"), function(x) colSums(x[, c(grep("[0-9][0-9]\\.[a-z]+", names(x)), 
                                                                                                match("total_violations", names(x)),
                                                                                                match("terminated", names(x)))], na.rm = T))
