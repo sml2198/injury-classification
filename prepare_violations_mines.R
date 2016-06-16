@@ -354,7 +354,8 @@ for (i in 1:length(cfr_codes)) {
                          prediction_data[, c(-grep("^[0-9][0-9]", names(prediction_data)), -grep("mineid", names(prediction_data)),
                                              -match("quarter", names(prediction_data)))])
   #run model selection algorithm using model_sel_data and store output in whichever way is necessary. e.g., PCA
-  #pca_loadings[i] = however you obtain the matrix of loading factors for each PC
+  #model_sel_data must be completely numeric and have no missing values before the next step is executed. Neither is currently true.
+  #pca_loadings[i] = princomp(model_sel_data)$loadings
 }
 
 
