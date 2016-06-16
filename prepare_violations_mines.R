@@ -172,16 +172,23 @@ for (i in 1:length(MR_relevant_subsectcodes)) {
 ## of overall violations for operators and ind. contractors, create our own previous violations var and compare to the given version for verification,
 #(NOT by *relevant CFR-code) appropriateness: size of mine in tonnage, size of controlling entity in tonnage, size of indep. contractor in annual hrs. worked
 
-#Aggregation to mine-quarter level
+#Aggregation to mine-quarter level - create variable to sum for violation #, and for if terminated
 merged_violations$total_violations = 1
-violations_to_sum = merged_violations[, c(grep("_*[0-9][0-9]\\..+", names(merged_violations)), match("total_violations", names(merged_violations)),
-                                                   match("mineid", names(merged_violations)), match("quarter", names(merged_violations)))]
+merged_violations$terminated = ifelse(merged_violations$typeoftermination == "Terminated", 1, 0)
+
+# select all variables to sum when we collapse to the mine-quarter lever (the first regex will grab all vars created above)
+# add indicator for if a mine q was terminated because of a violation (sum this for now - maybe we'll just make it an indicator later)
+violations_to_sum = merged_violations[, c(grep("[0-9][0-9]\\.[a-z]+", names(merged_violations)), 
+                                          match("total_violations", names(merged_violations)), 
+                                          match("terminated", names(merged_violations)),
+                                          match("mineid", names(merged_violations)), match("quarter", names(merged_violations)))]
+
+# these were grabbed by the regular expression above, but we want to average (not sum) these, so we remove them  
 violations_to_sum = violations_to_sum[, c(-grep("operator_repeated_viol_pInspDay", names(violations_to_sum)), -grep("contractor_repeated_viol_cnt", names(violations_to_sum)))]
-summed_violations = ddply(violations_to_sum, c("mineid", "quarter"), function(x) colSums(x[, c(grep("_*[0-9][0-9]\\..+", names(x)), match("total_violations", names(x)),
-                                                                                               grep("violationtypecode.", names(x)), match("assessmenttypecode.", names(x))
-                                                                                               
-                                                                                               
-                                                                                               )], na.rm = T))
+
+summed_violations = ddply(violations_to_sum, c("mineid", "quarter"), function(x) colSums(x[, c(grep("[0-9][0-9]\\.[a-z]+", names(x)), 
+                                                                                               match("total_violations", names(x)),
+                                                                                               match("terminated", names(x)))], na.rm = T))
 
 averaged_violations = ddply(merged_violations[, c(grep("operator_repeated_viol_pInspDay", names(merged_violations)), grep("minesizepoints", names(merged_violations)), grep("controllersizepoints", names(merged_violations)),
                                                                   grep("contractorsizepoints", names(merged_violations)), grep("contractor_repeated_viol_cnt", names(merged_violations)),
