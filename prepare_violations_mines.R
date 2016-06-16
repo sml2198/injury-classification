@@ -179,14 +179,14 @@ merged_violations$terminated = ifelse(merged_violations$typeoftermination == "Te
 
 # select all variables to sum when we collapse to the mine-quarter lever (the first regex will grab all vars created above)
 # add indicator for if a mine q was terminated because of a violation (sum this for now - maybe we'll just make it an indicator later)
-violations_to_sum = merged_violations[, c(grep("[0-9][0-9]\\.[a-z]+", names(merged_violations)), 
+violations_to_sum = merged_violations[, c(grep("^[0-9][0-9]", names(merged_violations)), 
                                           match("total_violations", names(merged_violations)), 
                                           match("terminated", names(merged_violations)),
                                           match("mineid", names(merged_violations)), match("quarter", names(merged_violations)))]
 
 # these were grabbed by the regular expression above, but we want to average (not sum) these, so we remove them  
 violations_to_sum = violations_to_sum[, c(-grep("operator_repeated_viol_pInspDay", names(violations_to_sum)), -grep("contractor_repeated_viol_cnt", names(violations_to_sum)))]
-summed_violations = ddply(violations_to_sum, c("mineid", "quarter"), function(x) colSums(x[, c(grep("[0-9][0-9]\\.[a-z]+", names(x)), 
+summed_violations = ddply(violations_to_sum, c("mineid", "quarter"), function(x) colSums(x[, c(grep("^[0-9][0-9]", names(x)), 
                                                                                                match("total_violations", names(x)),
                                                                                                match("terminated", names(x)))], na.rm = T))
 
