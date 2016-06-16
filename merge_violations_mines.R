@@ -34,7 +34,6 @@ assessments_violations = merge(clean_assessments, clean_violations, by = c("mine
 ########################################################################################################################
 
 assessments_violations$eventno.x = ifelse((is.na(assessments_violations$eventno.x) & !is.na(assessments_violations$eventno.y)), assessments_violations$eventno.y, assessments_violations$eventno.x)
-assessments_violations$eventno.y = ifelse((is.na(assessments_violations$eventno.y) & !is.na(assessments_violations$eventno.x)), assessments_violations$eventno.x, assessments_violations$eventno.y)
 
 common_varstbs = sub(".x", "", names(assessments_violations)[grep(".x", names(assessments_violations), fixed = T)], fixed = T)
 assessments_violations = assessments_violations[, -grep(".y", names(assessments_violations), fixed = T)]
