@@ -134,6 +134,7 @@ MR_relevant_subsectcodes = levels(factor(merged_violations[merged_violations$MR_
 MR_relevant_subsectcodes = c("47.41", "77.404")
 violationtypecodes = c("1", "2", "3", "4", "4")
 
+#Change call "sep"'s to dots
 for (i in 1:length(MR_relevant_subsectcodes)) {
   merged_violations[, MR_relevant_subsectcodes[i]] = ifelse(merged_violations$subsection_code == MR_relevant_subsectcodes[i], 1, 0)
   merged_violations[, paste("penaltypoints", MR_relevant_subsectcodes[i], sep = "_")] = apply(cbind(merged_violations[, "penaltypoints"], merged_violations[, MR_relevant_subsectcodes[i]]), 1, prod)
