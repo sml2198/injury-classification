@@ -252,7 +252,9 @@ summed_inspcs = merge(summed_inspcs, num_inspecs_per_qtr, by = c("mineid", "quar
 ######################################################################################################################################
 # COLLAPSE ACCIDENTS DATA
 
-# format date and quarter vars for merges
+# format mineid (for merges), date and quarter vars for merges
+mines_accidents_coded$mineid = str_pad(mines_accidents_coded$mineid, 7, pad = "0")
+mines_accidents_coded$mineid = withr::with_options(c(scipen = 999), str_pad(mines_accidents_coded$mineid, 7, pad = "0"))
 mines_accidents_coded$accidentdate = as.Date(as.character(mines_accidents_coded$accidentdate), "%m/%d/%Y")
 mines_accidents_coded$quarter = as.yearqtr(mines_accidents_coded$accidentdate)
 
@@ -261,15 +263,13 @@ mines_accidents_coded = mines_accidents_coded[(mines_accidents_coded$quarter > "
 
 # merge on minetypes to drop non-coal and non-underground observations before saving
 mines_accidents_coded = merge(mines_accidents_coded, mine_types, by = c("mineid"), all = T)
+# drop non-merging observations
+mines_accidents_coded = mines_accidents_coded[!is.na(mines_accidents_coded$MR),]
 
 # only keep observations from environment we care about
-mines_accidents_coded = mines_accidents_coded[mines_accidents_coded$minetype != "Surface",]
-mines_accidents_coded = mines_accidents_coded[mines_accidents_coded$minetype != "",]
+mines_accidents_coded = mines_accidents_coded[mines_accidents_coded$minetype == "Underground",]
+mines_accidents_coded = mines_accidents_coded[mines_accidents_coded$subunit == "UNDERGROUND",]
 mines_accidents_coded = mines_accidents_coded[mines_accidents_coded$coalcormetalmmine.x == "C",]
-
-# format mineid so we can properly merge onto minequarters
-mines_accidents_coded$mineid = str_pad(mines_accidents_coded$mineid, 7, pad = "0")
-mines_accidents_coded$mineid = withr::with_options(c(scipen = 999), str_pad(mines_accidents_coded$mineid, 7, pad = "0"))
 
 # create injury indicator so that we can collapse & sum total injuries per mine quarter
 mines_accidents_coded$totalinjuries = 1
