@@ -178,10 +178,7 @@ violations_to_sum = merged_violations[, c(grep("_*[0-9][0-9]\\..+", names(merged
                                                    match("mineid", names(merged_violations)), match("quarter", names(merged_violations)))]
 violations_to_sum = violations_to_sum[, c(-grep("operator_repeated_viol_pInspDay", names(violations_to_sum)), -grep("contractor_repeated_viol_cnt", names(violations_to_sum)))]
 summed_violations = ddply(violations_to_sum, c("mineid", "quarter"), function(x) colSums(x[, c(grep("_*[0-9][0-9]\\..+", names(x)), match("total_violations", names(x)),
-                                                                                               grep("violationtypecode.", names(x)), match("assessmenttypecode.", names(x))
-                                                                                               
-                                                                                               
-                                                                                               )], na.rm = T))
+                                                                                               grep("violationtypecode.", names(x)), grep("assessmenttypecode.", names(x)))], na.rm = T))
 
 averaged_violations = ddply(merged_violations[, c(grep("operator_repeated_viol_pInspDay", names(merged_violations)), grep("minesizepoints", names(merged_violations)), grep("controllersizepoints", names(merged_violations)),
                                                                   grep("contractorsizepoints", names(merged_violations)), grep("contractor_repeated_viol_cnt", names(merged_violations)),
