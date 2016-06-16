@@ -347,6 +347,16 @@ prediction_data = prediction_data[, c(-grep("merge", names(prediction_data)), -g
 
 saveRDS(prediction_data, file = "X:/Projects/Mining/NIOSH/analysis/data/4_collapsed/prediction_data.rds")
 
+#Run variable selection by CFR part code
+pca_loadings = list()
+for (i in 1:length(cfr_codes)) {
+  model_sel_data = cbind(prediction_data[, grep(paste("^", cfr_codes[i], sep = ""), names(prediction_data))], 
+                         prediction_data[, -grep("^[0-9][0-9]", names(prediction_data))])
+  #run model selection algorithm using model_sel_data and store output in whichever way is necessary. e.g., PCA
+  #pca_loadings[i] = however you obtain the matrix of loading factors for each PC
+}
+
+
 #GOAL HERE IS TO MAKE A LOOP TO FILL IN MISSING VLAUES (OF, SAY, MINENAME) BY MINE_ID GROUPS
 # CURRENT ISSUE IS A KNOWN BUG WITH DPLYR - https://github.com/hadley/dplyr/issues/859
 #library(dplyr)
