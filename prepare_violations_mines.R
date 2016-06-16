@@ -290,6 +290,8 @@ summed_coded_accidents$row_id = seq.int(nrow(summed_coded_accidents))
 # MERGE VIOLATIONS DATA ONTO MINES
 merged_mines_violations = merge(mines_quarters, collapsed_violations, by = c("mineid", "quarter"), all = T)
 #To save time we save/load all constituent datasets in the prediction data after each of the following merges
+merged_mines_violations = merged_mines_violations[, -grep("row_id", names(merged_mines_violations))]
+merged_mines_violations$row_id = seq.int(nrow(merged_mines_violations))
 saveRDS(collapsed_violations, file = "X:/Projects/Mining/NIOSH/analysis/data/4_collapsed/collapsed_violations.rds")
 
 ######################################################################################################################################
