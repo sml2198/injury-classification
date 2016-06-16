@@ -86,30 +86,6 @@ merged_violations = merged_violations[complete.cases(merged_violations$quarter),
 merged_violations = merged_violations[(merged_violations$quarter > "1999 Q4"),]
 
 ######################################################################################################################################
-# CLEAN & COLLAPSE ASSESSMENTS/VIOLATIONS
-
-#Dummy out CFR codes (at the subpart and subsection levels) only for *relevant types and mark all non-relevant CFR codes
-
-MR_relevant_subsectcodes = levels(factor(merged_violations[merged_violations$MR_relevant == 1 | merged_violations$MR_maybe_relevant == 1,]$subsection_code))
-#For preliminary testing only. Comment out when done. 6/3/2016
-MR_relevant_subsectcodes = c("47.41", "77.404")
-for (i in 1:length(MR_relevant_subsectcodes)) {
-  merged_violations[, MR_relevant_subsectcodes[i]] = ifelse(merged_violations$subsection_code == MR_relevant_subsectcodes[i], 1, 0)
-  merged_violations[, paste("penaltypoints", MR_relevant_subsectcodes[i], sep = "_")] = apply(cbind(merged_violations[, "penaltypoints"], merged_violations[, MR_relevant_subsectcodes[i]]), 1, prod)
-  #There is also a factor var likelihood which marks the severity of negligence e.g., reasonably, unlikely, ...
-  merged_violations[, paste("gravitylikelihoodpoints", MR_relevant_subsectcodes[i], sep = "_")] = apply(cbind(merged_violations[, "gravitylikelihoodpoints"], merged_violations[, MR_relevant_subsectcodes[i]]), 1, prod)
-  merged_violations[, paste("gravityinjurypoints", MR_relevant_subsectcodes[i], sep = "_")] = apply(cbind(merged_violations[, "gravityinjurypoints"], merged_violations[, MR_relevant_subsectcodes[i]]), 1, prod)
-  merged_violations[, paste("gravitypersonspoints", MR_relevant_subsectcodes[i], sep = "_")] = apply(cbind(merged_violations[, "gravitypersonspoints"], merged_violations[, MR_relevant_subsectcodes[i]]), 1, prod)
-  #There is also a factor var negligence which marks the severity of negligence e.g., low, high, ...
-  merged_violations[, paste("negligencepoints", MR_relevant_subsectcodes[i], sep = "_")] = apply(cbind(merged_violations[, "negligencepoints"], merged_violations[, MR_relevant_subsectcodes[i]]), 1, prod)
-  merged_violations[, paste("sigandsubdesignation", MR_relevant_subsectcodes[i], sep = "_")] = ifelse(merged_violations[, MR_relevant_subsectcodes[i]] == 1, merged_violations[, "sigandsubdesignation"], 0)
-  merged_violations[, paste("contractor_violation_cnt", MR_relevant_subsectcodes[i], sep = "_")] = apply(cbind(merged_violations[, "contractor_violation_cnt"], merged_violations[, MR_relevant_subsectcodes[i]]), 1, prod)
-  merged_violations[, paste("operator_violation_pInspDay", MR_relevant_subsectcodes[i], sep = "_")] = apply(cbind(merged_violations[, "operator_violation_pInspDay"], merged_violations[, MR_relevant_subsectcodes[i]]), 1, prod)
-  merged_violations[, paste("contractor_repeated_viol_cnt", MR_relevant_subsectcodes[i], sep = "_")] = apply(cbind(merged_violations[, "contractor_repeated_viol_cnt"], merged_violations[, MR_relevant_subsectcodes[i]]), 1, prod)
-  merged_violations[, paste("operator_repeated_viol_pInspDay", MR_relevant_subsectcodes[i], sep = "_")] = apply(cbind(merged_violations[, "operator_repeated_viol_pInspDay"], merged_violations[, MR_relevant_subsectcodes[i]]), 1, prod)
-}
-
-######################################################################################################################################
 #DUMMY OUT FACTOR VARIABLES
 
 # FIRST - CLEAN UP THE FIELD THAT REPORTS THE TYPE OF INSPECTION
@@ -149,6 +125,43 @@ merged_violations = cbind(merged_violations, test.data1, test.data2, test.data3)
 rm(test.data1, test.data2, test.data3)
 
 ######################################################################################################################################
+# CLEAN & COLLAPSE ASSESSMENTS/VIOLATIONS
+
+#Dummy out CFR codes (at the subpart and subsection levels) only for *relevant types and mark all non-relevant CFR codes
+
+MR_relevant_subsectcodes = levels(factor(merged_violations[merged_violations$MR_relevant == 1 | merged_violations$MR_maybe_relevant == 1,]$subsection_code))
+#For preliminary testing only. Comment out when done. 6/3/2016
+MR_relevant_subsectcodes = c("47.41", "77.404")
+violationtypecodes = c("1", "2", "3", "4", "4")
+
+for (i in 1:length(MR_relevant_subsectcodes)) {
+  merged_violations[, MR_relevant_subsectcodes[i]] = ifelse(merged_violations$subsection_code == MR_relevant_subsectcodes[i], 1, 0)
+  merged_violations[, paste("penaltypoints", MR_relevant_subsectcodes[i], sep = "_")] = apply(cbind(merged_violations[, "penaltypoints"], merged_violations[, MR_relevant_subsectcodes[i]]), 1, prod)
+  #There is also a factor var likelihood which marks the severity of negligence e.g., reasonably, unlikely, ...
+  merged_violations[, paste("gravitylikelihoodpoints", MR_relevant_subsectcodes[i], sep = "_")] = apply(cbind(merged_violations[, "gravitylikelihoodpoints"], merged_violations[, MR_relevant_subsectcodes[i]]), 1, prod)
+  merged_violations[, paste("gravityinjurypoints", MR_relevant_subsectcodes[i], sep = "_")] = apply(cbind(merged_violations[, "gravityinjurypoints"], merged_violations[, MR_relevant_subsectcodes[i]]), 1, prod)
+  merged_violations[, paste("gravitypersonspoints", MR_relevant_subsectcodes[i], sep = "_")] = apply(cbind(merged_violations[, "gravitypersonspoints"], merged_violations[, MR_relevant_subsectcodes[i]]), 1, prod)
+  #There is also a factor var negligence which marks the severity of negligence e.g., low, high, ...
+  merged_violations[, paste("negligencepoints", MR_relevant_subsectcodes[i], sep = "_")] = apply(cbind(merged_violations[, "negligencepoints"], merged_violations[, MR_relevant_subsectcodes[i]]), 1, prod)
+  merged_violations[, paste("sigandsubdesignation", MR_relevant_subsectcodes[i], sep = "_")] = ifelse(merged_violations[, MR_relevant_subsectcodes[i]] == 1, merged_violations[, "sigandsubdesignation"], 0)
+  merged_violations[, paste("contractor_violation_cnt", MR_relevant_subsectcodes[i], sep = "_")] = apply(cbind(merged_violations[, "contractor_violation_cnt"], merged_violations[, MR_relevant_subsectcodes[i]]), 1, prod)
+  merged_violations[, paste("operator_violation_pInspDay", MR_relevant_subsectcodes[i], sep = "_")] = apply(cbind(merged_violations[, "operator_violation_pInspDay"], merged_violations[, MR_relevant_subsectcodes[i]]), 1, prod)
+  merged_violations[, paste("contractor_repeated_viol_cnt", MR_relevant_subsectcodes[i], sep = "_")] = apply(cbind(merged_violations[, "contractor_repeated_viol_cnt"], merged_violations[, MR_relevant_subsectcodes[i]]), 1, prod)
+  merged_violations[, paste("operator_repeated_viol_pInspDay", MR_relevant_subsectcodes[i], sep = "_")] = apply(cbind(merged_violations[, "operator_repeated_viol_pInspDay"], merged_violations[, MR_relevant_subsectcodes[i]]), 1, prod)
+  # dummied out categorical vars
+  merged_violations[, paste("violationtypecode.1", MR_relevant_subsectcodes[i], sep = "_")] = apply(cbind(merged_violations[, "violationtypecode.1"], merged_violations[, MR_relevant_subsectcodes[i]]), 1, prod)
+  merged_violations[, paste("violationtypecode.2", MR_relevant_subsectcodes[i], sep = "_")] = apply(cbind(merged_violations[, "violationtypecode.2"], merged_violations[, MR_relevant_subsectcodes[i]]), 1, prod)
+  merged_violations[, paste("violationtypecode.3", MR_relevant_subsectcodes[i], sep = "_")] = apply(cbind(merged_violations[, "violationtypecode.3"], merged_violations[, MR_relevant_subsectcodes[i]]), 1, prod)
+  merged_violations[, paste("violationtypecode.4", MR_relevant_subsectcodes[i], sep = "_")] = apply(cbind(merged_violations[, "violationtypecode.4"], merged_violations[, MR_relevant_subsectcodes[i]]), 1, prod)
+  merged_violations[, paste("violationtypecode.5", MR_relevant_subsectcodes[i], sep = "_")] = apply(cbind(merged_violations[, "violationtypecode.5"], merged_violations[, MR_relevant_subsectcodes[i]]), 1, prod)
+  merged_violations[, paste("assessmenttypecode.1", MR_relevant_subsectcodes[i], sep = "_")] = apply(cbind(merged_violations[, "assessmenttypecode.1"], merged_violations[, MR_relevant_subsectcodes[i]]), 1, prod)
+  merged_violations[, paste("assessmenttypecode.2", MR_relevant_subsectcodes[i], sep = "_")] = apply(cbind(merged_violations[, "assessmenttypecode.2"], merged_violations[, MR_relevant_subsectcodes[i]]), 1, prod)
+  merged_violations[, paste("assessmenttypecode.3", MR_relevant_subsectcodes[i], sep = "_")] = apply(cbind(merged_violations[, "assessmenttypecode.3"], merged_violations[, MR_relevant_subsectcodes[i]]), 1, prod)
+  merged_violations[, paste("assessmenttypecode.4", MR_relevant_subsectcodes[i], sep = "_")] = apply(cbind(merged_violations[, "assessmenttypecode.4"], merged_violations[, MR_relevant_subsectcodes[i]]), 1, prod)
+  merged_violations[, paste("assessmenttypecode.5", MR_relevant_subsectcodes[i], sep = "_")] = apply(cbind(merged_violations[, "assessmenttypecode.5"], merged_violations[, MR_relevant_subsectcodes[i]]), 1, prod)
+}
+
+######################################################################################################################################
 #Create CFR-code (only for *relevant) specific for penalty variables:
 #penalty pts, good faith, gravity and its components as well & sig. and sub., negligence, # of repeat violations for operators and ind. contractors,
 ## of overall violations for operators and ind. contractors, create our own previous violations var and compare to the given version for verification,
@@ -159,7 +172,11 @@ merged_violations$total_violations = 1
 violations_to_sum = merged_violations[, c(grep("_*[0-9][0-9]\\..+", names(merged_violations)), match("total_violations", names(merged_violations)),
                                                    match("mineid", names(merged_violations)), match("quarter", names(merged_violations)))]
 violations_to_sum = violations_to_sum[, c(-grep("operator_repeated_viol_pInspDay", names(violations_to_sum)), -grep("contractor_repeated_viol_cnt", names(violations_to_sum)))]
-summed_violations = ddply(violations_to_sum, c("mineid", "quarter"), function(x) colSums(x[, c(grep("_*[0-9][0-9]\\..+", names(x)), match("total_violations", names(x)))], na.rm = T))
+summed_violations = ddply(violations_to_sum, c("mineid", "quarter"), function(x) colSums(x[, c(grep("_*[0-9][0-9]\\..+", names(x)), match("total_violations", names(x)),
+                                                                                               grep("violationtypecode.", names(x)), match("assessmenttypecode.", names(x))
+                                                                                               
+                                                                                               
+                                                                                               )], na.rm = T))
 
 averaged_violations = ddply(merged_violations[, c(grep("operator_repeated_viol_pInspDay", names(merged_violations)), grep("minesizepoints", names(merged_violations)), grep("controllersizepoints", names(merged_violations)),
                                                                   grep("contractorsizepoints", names(merged_violations)), grep("contractor_repeated_viol_cnt", names(merged_violations)),
