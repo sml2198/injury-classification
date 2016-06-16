@@ -74,10 +74,10 @@ for (i in 1:length(datevars)) {
 merged_violations$quarter = as.yearqtr(merged_violations$dateissued)
 
 # Condition the per-day vars on positive denominator. (There are 256 cases of zero inspection days and positive violation counts). 6/6/16
-merged_violations$contractor_violation_cnt = ifelse(merged_violations$violatortypecode == 1, merged_violations$violator_violation_cnt, NA)
-merged_violations$operator_violation_pInspDay = ifelse(merged_violations$violatortypecode == 2 & merged_violations$violator_inspection_day_cnt > 0, merged_violations$violator_violation_cnt/merged_violations$violator_inspection_day_cnt, NA)
-merged_violations$contractor_repeated_viol_cnt = ifelse(merged_violations$violatortypecode == 1, merged_violations$violator_repeated_viol_cnt, NA)
-merged_violations$operator_repeated_viol_pInspDay = ifelse(merged_violations$violatortypecode == 2 & merged_violations$violator_inspection_day_cnt > 0, merged_violations$violator_repeated_viol_cnt/merged_violations$violator_inspection_day_cnt, NA)
+merged_violations$contractor_violation_cnt = ifelse(merged_violations$violatortypecode == "Contractor", merged_violations$violator_violation_cnt, NA)
+merged_violations$operator_violation_pInspDay = ifelse(merged_violations$violatortypecode == "Operator" & merged_violations$violator_inspection_day_cnt > 0, merged_violations$violator_violation_cnt/merged_violations$violator_inspection_day_cnt, NA)
+merged_violations$contractor_repeated_viol_cnt = ifelse(merged_violations$violatortypecode == "Contractor", merged_violations$violator_repeated_viol_cnt, NA)
+merged_violations$operator_repeated_viol_pInspDay = ifelse(merged_violations$violatortypecode == "Operator" & merged_violations$violator_inspection_day_cnt > 0, merged_violations$violator_repeated_viol_cnt/merged_violations$violator_inspection_day_cnt, NA)
 
 # remove observations from cfr data that didn't merge onto our violations data 
 merged_violations = merged_violations[complete.cases(merged_violations$violationno),]
