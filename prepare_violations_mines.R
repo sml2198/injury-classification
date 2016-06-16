@@ -16,6 +16,7 @@ library(glarma)
 library(pglm)
 library(stats)
 library(stringr)
+library(withr)
 
 merged_violations = readRDS("X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_violations.rds")
 merged_cfr_key = readRDS("X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_cfr_key.rds")
@@ -314,8 +315,8 @@ merged_mines_violations_accidents[, "merge2"] = ifelse(is.na(merged_mines_violat
 merged_mines_violations_accidents[, "merge2"] = ifelse(is.na(merged_mines_violations_accidents$row_id.y) & !is.na(merged_mines_violations_accidents$row_id.x), 1, merged_mines_violations_accidents[, "merge2"])
 table(merged_mines_violations_accidents$merge2) 
 #Open Data Only:
-#0     1     2     3 
-#93790 34824 61858 11715 
+#1     2     3 
+#43353  3568  9274
 
 merged_mines_violations_accidents$totalinjuries = ifelse(is.na(merged_mines_violations_accidents$totalinjuries), 0, merged_mines_violations_accidents$totalinjuries)
 merged_mines_violations_accidents$total_violations = ifelse(is.na(merged_mines_violations_accidents$total_violations), 0, merged_mines_violations_accidents$total_violations)
@@ -333,8 +334,8 @@ prediction_data[, "merge3"] = ifelse(is.na(prediction_data$row_id.x) & !is.na(pr
 prediction_data[, "merge3"] = ifelse(is.na(prediction_data$row_id.y) & !is.na(prediction_data$row_id.x), 1, prediction_data[, "merge3"])
 table(prediction_data$merge3)
 #Open Data Only:
-#1      3 
-#190726  69303
+#1     3 
+#24634 31561
 
 #remove observations that are missing key variables or are from the wrong environment
 prediction_data = prediction_data[complete.cases(prediction_data$quarter),]
