@@ -351,7 +351,8 @@ saveRDS(prediction_data, file = "X:/Projects/Mining/NIOSH/analysis/data/4_collap
 pca_loadings = list()
 for (i in 1:length(cfr_codes)) {
   model_sel_data = cbind(prediction_data[, grep(paste("^", cfr_codes[i], sep = ""), names(prediction_data))], 
-                         prediction_data[, -grep("^[0-9][0-9]", names(prediction_data))])
+                         prediction_data[, c(-grep("^[0-9][0-9]", names(prediction_data)), -grep("mineid", names(prediction_data)),
+                                             -match("quarter", names(prediction_data)))])
   #run model selection algorithm using model_sel_data and store output in whichever way is necessary. e.g., PCA
   #pca_loadings[i] = however you obtain the matrix of loading factors for each PC
 }
