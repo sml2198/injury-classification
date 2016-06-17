@@ -129,18 +129,61 @@ rm(test.data1, test.data2, test.data3)
 # CLEAN & COLLAPSE ASSESSMENTS/VIOLATIONS
 
 #Dummy out CFR codes (at the subpart and subsection levels) only for *relevant types and mark all non-relevant CFR codes
-
 MR_relevant_subsectcodes = levels(factor(merged_violations[merged_violations$MR_relevant == 1 | merged_violations$MR_maybe_relevant == 1,]$subsection_code))
 #For preliminary testing only. Comment out when done. 6/3/2016
-MR_relevant_subsectcodes = c("47.41", "77.404")
+
+#  eventually we can create loop to go through each part (of cfr codes) and create lists of relevent/maybe relevant subsections within that part (instead of this) 
+MR_relevant_subsectcodes_47 = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 | 
+            merged_violations$MR_maybe_relevant == 1) & (grepl("47\\.", merged_violations[,"subsection_code"])),]$subsection_code))
+MR_relevant_subsectcodes_48 = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 | 
+            merged_violations$MR_maybe_relevant == 1) & (grepl("48\\.", merged_violations[,"subsection_code"])),]$subsection_code))
+MR_relevant_subsectcodes_71 = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 | 
+            merged_violations$MR_maybe_relevant == 1) & (grepl("71\\.", merged_violations[,"subsection_code"])),]$subsection_code))
+MR_relevant_subsectcodes_72 = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 | 
+            merged_violations$MR_maybe_relevant == 1) & (grepl("72\\.", merged_violations[,"subsection_code"])),]$subsection_code))
+MR_relevant_subsectcodes_75 = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 | 
+            merged_violations$MR_maybe_relevant == 1) & (grepl("75\\.", merged_violations[,"subsection_code"])),]$subsection_code))
+MR_relevant_subsectcodes_77 = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 | 
+            merged_violations$MR_maybe_relevant == 1) & (grepl("77\\.", merged_violations[,"subsection_code"])),]$subsection_code))
+
+# create lists of number of dummies for violation, assessment, and inspection types 
 violationtypecodes = c("1", "2", "3", "4", "5")
 assessmenttypecodes = c("1", "2", "3", "4", "5")
 inspactycodes = seq(1, 56)
+
 #For CFR part-specific variable creation
 MR_relevant_partcodes = levels(factor(merged_violations[merged_violations$MR_relevant == 1 | merged_violations$MR_maybe_relevant == 1,]$cfr_part_code))
-
 #Sets the level of CFR code for which to create code-specific variables
 cfr_codes = MR_relevant_partcodes
+
+for (i in 1:length(cfr_codes)) {
+  merged_violations[, cfr_codes[i]] = ifelse(merged_violations$subsection_code == cfr_codes[i], 1, 0)
+  merged_violations[, paste(cfr_codes[i], "penaltypoints", sep = ".")] = apply(cbind(merged_violations[, "penaltypoints"], merged_violations[, cfr_codes[i]]), 1, prod)
+  #There is also a factor var likelihood which marks the severity of negligence e.g., reasonably, unlikely, ...
+  merged_violations[, paste(cfr_codes[i], "gravitylikelihoodpoints", sep = ".")] = apply(cbind(merged_violations[, "gravitylikelihoodpoints"], merged_violations[, cfr_codes[i]]), 1, prod)
+  merged_violations[, paste(cfr_codes[i], "gravityinjurypoints", sep = ".")] = apply(cbind(merged_violations[, "gravityinjurypoints"], merged_violations[, cfr_codes[i]]), 1, prod)
+  merged_violations[, paste(cfr_codes[i], "gravitypersonspoints", sep = ".")] = apply(cbind(merged_violations[, "gravitypersonspoints"], merged_violations[, cfr_codes[i]]), 1, prod)
+  #There is also a factor var negligence which marks the severity of negligence e.g., low, high, ...
+  merged_violations[, paste(cfr_codes[i], "negligencepoints", sep = ".")] = apply(cbind(merged_violations[, "negligencepoints"], merged_violations[, cfr_codes[i]]), 1, prod)
+  merged_violations[, paste(cfr_codes[i], "sigandsubdesignation", sep = ".")] = ifelse(merged_violations[, cfr_codes[i]] == 1, merged_violations[, "sigandsubdesignation"], 0)
+  merged_violations[, paste(cfr_codes[i], "contractor_violation_cnt", sep = ".")] = apply(cbind(merged_violations[, "contractor_violation_cnt"], merged_violations[, cfr_codes[i]]), 1, prod)
+  merged_violations[, paste(cfr_codes[i], "operator_violation_pInspDay", sep = ".")] = apply(cbind(merged_violations[, "operator_violation_pInspDay"], merged_violations[, cfr_codes[i]]), 1, prod)
+  merged_violations[, paste(cfr_codes[i], "contractor_repeated_viol_cnt", sep = ".")] = apply(cbind(merged_violations[, "contractor_repeated_viol_cnt"], merged_violations[, cfr_codes[i]]), 1, prod)
+  merged_violations[, paste(cfr_codes[i], "operator_repeated_viol_pInspDay", sep = ".")] = apply(cbind(merged_violations[, "operator_repeated_viol_pInspDay"], merged_violations[, cfr_codes[i]]), 1, prod)
+  # dummied out categorical vars
+  for (j in 1:length(violationtypecodes)) {
+    merged_violations[, paste(cfr_codes[i], "violationtypecode", violationtypecodes[j], sep = ".")] = ifelse(merged_violations[, cfr_codes[i]] == 1 & merged_violations[, paste("violationtypecode", violationtypecodes[j], sep = ".")] == 1, 1, 0)
+  }
+  for (j in 1:length(assessmenttypecodes)) {
+    merged_violations[, paste(cfr_codes[i], "assessmenttypecode", assessmenttypecodes[j], sep = ".")] = ifelse(merged_violations[, cfr_codes[i]] == 1 & merged_violations[, paste("assessmenttypecode", assessmenttypecodes[j], sep = ".")] == 1, 1, 0)
+  }
+  for (j in 1:length(inspactycodes)) {
+    merged_violations[, paste(cfr_codes[i], "inspacty", inspactycodes[j], sep = ".")] = ifelse(merged_violations[, cfr_codes[i]] == 1 & merged_violations[, paste("inspacty", inspactycodes[j], sep = ".")] == 1, 1, 0)
+  }
+}
+
+# THIS LOOP BELOW WILL PERFORM THE SAME PROCESS AS ABOVE, BUT FOR ALLL SUBSECTIONS OF THE SPECIFIED PART. 
+cfr_codes = MR_relevant_subsectcodes_47
 for (i in 1:length(cfr_codes)) {
   merged_violations[, cfr_codes[i]] = ifelse(merged_violations$subsection_code == cfr_codes[i], 1, 0)
   merged_violations[, paste(cfr_codes[i], "penaltypoints", sep = ".")] = apply(cbind(merged_violations[, "penaltypoints"], merged_violations[, cfr_codes[i]]), 1, prod)
@@ -345,7 +388,8 @@ prediction_data = prediction_data[prediction_data$coalcormetalmmine == "C",]
 
 prediction_data = prediction_data[, c(-grep("merge", names(prediction_data)), -grep("row_id", names(prediction_data)))]
 
-saveRDS(prediction_data, file = "X:/Projects/Mining/NIOSH/analysis/data/4_collapsed/prediction_data.rds")
+#saveRDS(prediction_data, file = "X:/Projects/Mining/NIOSH/analysis/data/4_collapsed/prediction_data.rds")
+saveRDS(prediction_data, file = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_47.rds")
 
 #Run variable selection by CFR part code
 pca_loadings = list()
