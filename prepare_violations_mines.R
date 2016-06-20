@@ -428,6 +428,10 @@ for (i in 1:length(cfr_codes)) {
 #library(zoo)
 #prediction_data$mineid = as.character(prediction_data$mineid)
 #prediction_data %>% group_by(prediction_data$mineid) %>% do(na.locf(prediction_data$minename))
+#THIS MIGHT BE THE WAY TO DO THE ABOVE
+#prediction_data = group_by(prediction_data, mineid, quarter)
+#prediction_data = prediction_data[order(prediction_data$mineid, prediction_data$quarter, na.last = T),]
+#prediction_data$minename = na.locf(prediction_data$minename)
 
 ######################################################################################################################################
 # EVERYTHING BELOW THIS LINE IS FOR THE ALGORITHM
