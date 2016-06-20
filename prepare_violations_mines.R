@@ -426,17 +426,36 @@ prediction_data = prediction_data[complete.cases(prediction_data$minetype),]
 prediction_data = prediction_data[prediction_data$minetype == "Underground",]
 prediction_data = prediction_data[prediction_data$coalcormetalmmine == "C",]
 
-prediction_data = prediction_data[, c(-grep("merge", names(prediction_data)), -grep("row_id", names(prediction_data)))]
+prediction_data = prediction_data[, c(-grep("merge", names(prediction_data)), -grep("row_id", names(prediction_data)), 
+                                      -grep("coalcormetalmmine", names(prediction_data)), -grep("minetype", names(prediction_data)))]
 
 #saveRDS(prediction_data, file = "X:/Projects/Mining/NIOSH/analysis/data/4_collapsed/prediction_data.rds")
 saveRDS(prediction_data, file = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75b.rds")
 
+prediction_data$minestatus = ifelse(prediction_data$minestatus == "Abandoned", 1, ifelse(prediction_data$minestatus == "Abandoned and Sealed", 2, 
+                                                                                         ifelse(prediction_data$minestatus == "Active", 3, 
+                                                                                                ifelse(prediction_data$minestatus == "Intermittent", 4,
+                                                                                                       ifelse(prediction_data$minestatus == "New Mine", 5,
+                                                                                                              ifelse(prediction_data$minestatus == "NonProducing", 6, 
+                                                                                                                     ifelse(prediction_data$minestatus == "Temporarily Idled", 7, NA)))))))
+
+prediction_data$idesc = ifelse(prediction_data$idesc == "Hazard", 1, ifelse(prediction_data$idesc == "Ignition or Explosion", 2, 
+                                                                                         ifelse(prediction_data$idesc == "Inspect Once Every 10-days", 3, 
+                                                                                                ifelse(prediction_data$idesc == "Inspect Once Every 15-days", 4,
+                                                                                                       ifelse(prediction_data$idesc == "Inspect Once Every 5-days", 5,
+                                                                                                              ifelse(prediction_data$idesc == "Never Had 103I Status", 6, 
+                                                                                                                     ifelse(prediction_data$idesc == "Removed From 103I Status", 7, NA)))))))
+
 #Run variable selection by CFR part code
 pca_loadings = list()
 for (i in 1:length(cfr_codes)) {
+#Until we determine a satisfactory way to handle qualitative variables with many bins we will omit them as they are not essential to prediction yet  
   model_sel_data = cbind(prediction_data[, grep(paste("^", cfr_codes[i], sep = ""), names(prediction_data))], 
                          prediction_data[, c(-grep("^[0-9][0-9]", names(prediction_data)), -grep("mineid", names(prediction_data)),
-                                             -match("quarter", names(prediction_data)))])
+                                             -match("quarter", names(prediction_data)), -match("minename", names(prediction_data)),
+                                             -match("minestatusdate", names(prediction_data)), -match("operatorid", names(prediction_data)),
+                                             -match("operatorname", names(prediction_data)), -match("stateabbreviation", names(prediction_data)),
+                                             -match("idate", names(prediction_data)))])
   #run model selection algorithm using model_sel_data and store output in whichever way is necessary. e.g., PCA
   #model_sel_data must be completely numeric and have no missing values before the next step is executed. Neither is currently true.
   #pca_loadings[i] = princomp(model_sel_data)$loadings
@@ -449,6 +468,10 @@ for (i in 1:length(cfr_codes)) {
 #library(zoo)
 #prediction_data$mineid = as.character(prediction_data$mineid)
 #prediction_data %>% group_by(prediction_data$mineid) %>% do(na.locf(prediction_data$minename))
+#THIS MIGHT BE THE WAY TO DO THE ABOVE
+prediction_data = group_by(prediction_data, mineid, quarter)
+prediction_data = prediction_data[order(prediction_data$mineid, prediction_data$quarter, na.last = T),]
+prediction_data$minename = na.locf(prediction_data$minename)
 
 ######################################################################################################################################
 # EVERYTHING BELOW THIS LINE IS FOR THE ALGORITHM
