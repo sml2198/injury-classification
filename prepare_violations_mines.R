@@ -17,6 +17,7 @@ library(pglm)
 library(stats)
 library(stringr)
 library(withr)
+library(psych)
 
 merged_violations = readRDS("X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_violations.rds")
 merged_cfr_key = readRDS("X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_cfr_key.rds")
@@ -157,7 +158,7 @@ MR_relevant_partcodes = levels(factor(merged_violations[merged_violations$MR_rel
 cfr_codes = MR_relevant_partcodes
 
 for (i in 1:length(cfr_codes)) {
-  merged_violations[, cfr_codes[i]] = ifelse(merged_violations$subsection_code == cfr_codes[i], 1, 0)
+  merged_violations[, cfr_codes[i]] = ifelse(merged_violations$cfr_part_code == cfr_codes[i], 1, 0)
   merged_violations[, paste(cfr_codes[i], "penaltypoints", sep = ".")] = apply(cbind(merged_violations[, "penaltypoints"], merged_violations[, cfr_codes[i]]), 1, prod)
   #There is also a factor var likelihood which marks the severity of negligence e.g., reasonably, unlikely, ...
   merged_violations[, paste(cfr_codes[i], "gravitylikelihoodpoints", sep = ".")] = apply(cbind(merged_violations[, "gravitylikelihoodpoints"], merged_violations[, cfr_codes[i]]), 1, prod)
@@ -389,8 +390,8 @@ prediction_data = prediction_data[prediction_data$coalcormetalmmine == "C",]
 prediction_data = prediction_data[, c(-grep("merge", names(prediction_data)), -grep("row_id", names(prediction_data)), 
                                       -grep("coalcormetalmmine", names(prediction_data)), -grep("minetype", names(prediction_data)))]
 
-#saveRDS(prediction_data, file = "X:/Projects/Mining/NIOSH/analysis/data/4_collapsed/prediction_data.rds")
-saveRDS(prediction_data, file = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_47.rds")
+saveRDS(prediction_data, file = "X:/Projects/Mining/NIOSH/analysis/data/4_collapsed/prediction_data_partOnly.rds")
+#saveRDS(prediction_data, file = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_47.rds")
 
 prediction_data$minestatus = ifelse(prediction_data$minestatus == "Abandoned", 1, ifelse(prediction_data$minestatus == "Abandoned and Sealed", 2, 
                                                                                          ifelse(prediction_data$minestatus == "Active", 3, 
@@ -418,7 +419,7 @@ for (i in 1:length(cfr_codes)) {
                                              -match("idate", names(prediction_data)))])
   #run model selection algorithm using model_sel_data and store output in whichever way is necessary. e.g., PCA
   #model_sel_data must be completely numeric and have no missing values before the next step is executed. Neither is currently true.
-  #pca_loadings[i] = princomp(model_sel_data)$loadings
+  #pca_loadings[i] = princomp(model_sel_data[complete.cases(model_sel_data),])$loadings
 }
 
 
