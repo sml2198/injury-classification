@@ -433,6 +433,9 @@ prediction_data = prediction_data[, c(-grep("merge", names(prediction_data)), -g
 #saveRDS(prediction_data, file = "X:/Projects/Mining/NIOSH/analysis/data/4_collapsed/prediction_data.rds")
 saveRDS(prediction_data, file = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75b.rds")
 
+#LOAD CFR PART-SPECIFIC DATAFRAME
+#prediction_data = dataframe of choice
+
 prediction_data$minestatus = ifelse(prediction_data$minestatus == "Abandoned", 1, ifelse(prediction_data$minestatus == "Abandoned and Sealed", 2, 
                                                                                          ifelse(prediction_data$minestatus == "Active", 3, 
                                                                                                 ifelse(prediction_data$minestatus == "Intermittent", 4,
@@ -447,7 +450,11 @@ prediction_data$idesc = ifelse(prediction_data$idesc == "Hazard", 1, ifelse(pred
                                                                                                               ifelse(prediction_data$idesc == "Never Had 103I Status", 6, 
                                                                                                                      ifelse(prediction_data$idesc == "Removed From 103I Status", 7, NA)))))))
 
-#Run variable selection by CFR part code
+#Run variable selection by CFR part/subsection code
+
+#Run this line only if analyzing by CFR subsection code
+cfr_codes = names(prediction_data)[grep("^[0-9][0-9]\\.[0-9]+$", names(prediction_data))]
+
 pca_loadings = list()
 for (i in 1:length(cfr_codes)) {
 #Until we determine a satisfactory way to handle qualitative variables with many bins we will omit them as they are not essential to prediction yet  
