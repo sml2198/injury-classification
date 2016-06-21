@@ -12,8 +12,6 @@
 
 library(plyr)
 library(zoo)
-library(glarma)
-library(pglm)
 library(stats)
 library(stringr)
 library(withr)
@@ -444,6 +442,7 @@ prediction_data = prediction_data[, c(-grep("merge", names(prediction_data)), -g
                                       -grep("coalcormetalmmine", names(prediction_data)), -grep("minetype", names(prediction_data)))]
 
 #saveRDS(prediction_data, file = "X:/Projects/Mining/NIOSH/analysis/data/4_collapsed/prediction_data.rds")
+<<<<<<< HEAD
 saveRDS(prediction_data, file = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_77.rds")
 
 ######################################################################################################################################
@@ -511,3 +510,6 @@ test_pred = glarma(Y, X, type = "NegBin", phiLags = c(1, 2), thetaLags = c(1, 2)
 names(prediction_data)[match("47.41", names(prediction_data))] = "subsection_47.41"
 test_pred_2 = pglm(MR ~  subsection_47.41 + penaltypoints_47.41 + totalinjuries ,
                    prediction_data, na.action = na.omit, family = "negbin", effect = "time", model = "within")
+=======
+saveRDS(prediction_data, file = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75b.rds")
+>>>>>>> f3ec486e25cf07dbcd7a998c27256718d914dbf2
