@@ -100,7 +100,7 @@ merged_violations = merged_violations[, c( -match("outbyareas", names(merged_vio
                        , -match("beginningdate", names(merged_violations)), -match("billprintdate", names(merged_violations))
                        , -match("billprintfiscalyr", names(merged_violations)), -match("delinquent_dt", names(merged_violations))
                        , -match("contestedindicator", names(merged_violations)), -match("companyrecords", names(merged_violations))
-                       , -match("buildingconstinspected", names(merged_violations))
+                       , -match("buildingconstinspected", names(merged_violations)), -match("writtennotice", names(merged_violations))
                        , -match("draglineconstinspected", names(merged_violations)), -match("miscellaneous", names(merged_violations)))]
 
 ######################################################################################################################################
@@ -118,6 +118,16 @@ merged_violations[, "inspacty"] = ifelse(merged_violations[, "inspacty"] == "103
 merged_violations[, "inspacty"] = ifelse(merged_violations[, "inspacty"] == "103(i) spot (hazard) inspection", "103(i) spot inspections", merged_violations[, "inspacty"])
 # can't have any missing values or our dummy method won't work
 merged_violations[, "inspacty"] = ifelse(is.na(merged_violations$inspacty), "unknown", merged_violations[, "inspacty"])
+
+# deal with too many categories
+merged_violations[, "inspacty"] = ifelse((merged_violations[, "inspacty"] == "regular inspection" |
+                                            merged_violations[, "inspacty"] == "regular safety and health inspection"), "regular inspection", merged_violations[, "inspacty"])
+merged_violations[, "inspacty"] = ifelse(grepl("complaint", merged_violations[,"inspacty"]), "complaint inspection", merged_violations[, "inspacty"])
+merged_violations[, "inspacty"] = ifelse(merged_violations[, "inspacty"] == "fatal accident investigation", "fatality inspection", merged_violations[, "inspacty"])
+merged_violations[, "inspacty"] = ifelse(grepl("103", merged_violations[,"inspacty"]), "103", merged_violations[, "inspacty"])
+merged_violations[, "inspacty"] = ifelse(grepl("(103|fatality|unknown|regular|complaint)", merged_violations[,"inspacty"]), merged_violations[, "inspacty"], "other")
+
+# can't have any missing values or our dummy method won't work
 merged_violations[, "violationtypecode"] = ifelse(is.na(merged_violations$violationtypecode), "unknown", merged_violations[, "violationtypecode"])
 # these make up a grand total of 4 in our observations - not worth making dummies for 4 violation types
 merged_violations = merged_violations[(merged_violations$violationtypecode != "Notice" & merged_violations$violationtypecode != "Safeguard"),]
@@ -161,7 +171,7 @@ MR_relevant_subsectcodes_72 = levels(factor(merged_violations[(merged_violations
 MR_relevant_subsectcodes_75a = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 | 
             merged_violations$MR_maybe_relevant == 1) & (grepl("75\\.1[0-3]", merged_violations[,"subsection_code"])),]$subsection_code))
 MR_relevant_subsectcodes_75b = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 | 
-           merged_violations$MR_maybe_relevant == 1) & (grepl("75\\.1[4]", merged_violations[,"subsection_code"])),]$subsection_code))
+            merged_violations$MR_maybe_relevant == 1) & (grepl("75\\.14", merged_violations[,"subsection_code"])),]$subsection_code))
 MR_relevant_subsectcodes_75c = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 | 
            merged_violations$MR_maybe_relevant == 1) & (grepl("75\\.1[5-7]", merged_violations[,"subsection_code"])),]$subsection_code))
 MR_relevant_subsectcodes_77 = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 | 
@@ -170,7 +180,7 @@ MR_relevant_subsectcodes_77 = levels(factor(merged_violations[(merged_violations
 # create lists of number of dummies for violation, assessment, and inspection types 
 violationtypecodes = c("1", "2", "3", "4", "5")
 assessmenttypecodes = c("1", "2", "3", "4", "5")
-inspactycodes = seq(1, 56)
+inspactycodes = seq(1, 6)
 
 #For CFR part-specific variable creation
 MR_relevant_partcodes = levels(factor(merged_violations[merged_violations$MR_relevant == 1 | merged_violations$MR_maybe_relevant == 1,]$cfr_part_code))
@@ -204,7 +214,7 @@ for (i in 1:length(cfr_codes)) {
 }
 
 # THIS LOOP BELOW WILL PERFORM THE SAME PROCESS AS ABOVE, BUT FOR ALLL SUBSECTIONS OF THE SPECIFIED PART. 
-cfr_codes = MR_relevant_subsectcodes_75b
+cfr_codes = MR_relevant_subsectcodes_77
 for (i in 1:length(cfr_codes)) {
   merged_violations[, cfr_codes[i]] = ifelse(merged_violations$subsection_code == cfr_codes[i], 1, 0)
   merged_violations[, paste(cfr_codes[i], "penaltypoints", sep = ".")] = apply(cbind(merged_violations[, "penaltypoints"], merged_violations[, cfr_codes[i]]), 1, prod)
@@ -252,6 +262,8 @@ rm(MR_relevant_subsectcodes, MR_relevant_subsectcodes_47, MR_relevant_subsectcod
 merged_violations$total_violations = 1
 merged_violations$terminated = ifelse(merged_violations$typeoftermination == "Terminated", 1, 0)
 
+#saveRDS(merged_violations, "X:/Projects/Mining/NIOSH/analysis/data/4_collapsed/merged_violations.rds")
+
 # select all variables to sum when we collapse to the mine-quarter lever (the first regex will grab all vars created above)
 # add indicator for if a mine q was terminated because of a violation (sum this for now - maybe we'll just make it an indicator later)
 violations_to_sum = merged_violations[, c(grep("^[0-9][0-9]", names(merged_violations)), 
@@ -270,6 +282,7 @@ averaged_violations = ddply(merged_violations[, c(grep("operator_repeated_viol_p
                                                                   match("mineid", names(merged_violations)), match("quarter", names(merged_violations)))], c("mineid", "quarter"), 
                                     function(x) colMeans(x[, c(grep("operator_repeated_viol_pInspDay", names(x)), grep("minesizepoints", names(x)), grep("controllersizepoints", names(x)),
                                                                grep("contractorsizepoints", names(x)), grep("contractor_repeated_viol_cnt", names(x)))], na.rm = T))
+
 rm(violations_to_sum)
 #Question: Check if operator variables vary by mine? Are indep. contractors the only operators @ a mine or are they only a part of the operation? A: Inspections generate
 #both contractor and operator violations. 6/6/16
@@ -387,7 +400,7 @@ merged_mines_violations = merge(mines_quarters, collapsed_violations, by = c("mi
 #To save time we save/load all constituent datasets in the prediction data after each of the following merges
 merged_mines_violations = merged_mines_violations[, -grep("row_id", names(merged_mines_violations))]
 merged_mines_violations$row_id = seq.int(nrow(merged_mines_violations))
-saveRDS(collapsed_violations, file = "X:/Projects/Mining/NIOSH/analysis/data/4_collapsed/collapsed_violations.rds")
+#saveRDS(collapsed_violations, file = "X:/Projects/Mining/NIOSH/analysis/data/4_collapsed/collapsed_violations.rds")
 
 ######################################################################################################################################
 # MERGE ACCIDENTS DATA ONTO VIOLATIONS/PER QUARTER
@@ -431,7 +444,9 @@ prediction_data = prediction_data[, c(-grep("merge", names(prediction_data)), -g
                                       -grep("coalcormetalmmine", names(prediction_data)), -grep("minetype", names(prediction_data)))]
 
 #saveRDS(prediction_data, file = "X:/Projects/Mining/NIOSH/analysis/data/4_collapsed/prediction_data.rds")
-saveRDS(prediction_data, file = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75b.rds")
+saveRDS(prediction_data, file = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_77.rds")
+
+######################################################################################################################################
 
 prediction_data$minestatus = ifelse(prediction_data$minestatus == "Abandoned", 1, ifelse(prediction_data$minestatus == "Abandoned and Sealed", 2, 
                                                                                          ifelse(prediction_data$minestatus == "Active", 3, 
