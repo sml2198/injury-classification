@@ -459,9 +459,11 @@ for (i in 1:length(cfr_codes)) {
                                              -match("idate", names(prediction_data)))])
   #run model selection algorithm using model_sel_data and store output in whichever way is necessary. e.g., PCA
   #model_sel_data must be completely numeric and have no missing values before the next step is executed. Neither is currently true.
-  #pca_loadings[i] = princomp(model_sel_data[complete.cases(model_sel_data),])$loadings
+  pca_loadings[[i]] = princomp(model_sel_data[complete.cases(model_sel_data),])$loadings
 }
 
+#ANALYZE PCA RESULTS
+#Now use pca_loadings[[i]][,j] j = 1, 2, ..., K to access the jth principal component for the ith CFR part code. Take absolute values before analyzing.
 
 #GOAL HERE IS TO MAKE A LOOP TO FILL IN MISSING VLAUES (OF, SAY, MINENAME) BY MINE_ID GROUPS
 # CURRENT ISSUE IS A KNOWN BUG WITH DPLYR - https://github.com/hadley/dplyr/issues/859
