@@ -13,7 +13,10 @@ library(stats)
 library(glarma)
 library(pglm)
 library(psych)
+library(dplyr)
+library(zoo)
 
+#prediction_data = readRDS("X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_47.rds")
 prediction_data = readRDS("X:/Projects/Mining/NIOSH/analysis/data/4_collapsed/prediction_data.rds")
 
 prediction_data$minestatus = ifelse(prediction_data$minestatus == "Abandoned", 1, ifelse(prediction_data$minestatus == "Abandoned and Sealed", 2, 
@@ -35,6 +38,38 @@ prediction_data$idesc = ifelse(prediction_data$idesc == "Hazard", 1, ifelse(pred
 #Run this line only if analyzing by CFR subsection code
 cfr_codes = names(prediction_data)[grep("^[0-9][0-9]\\.[0-9]+$", names(prediction_data))]
 
+#FILL IN MISSING VALUES OF MINE CHARACTERISTICS BY MINE_ID/QUARTER GROUPS
+prediction_data = group_by(prediction_data, mineid, quarter)
+prediction_data = prediction_data[order(prediction_data$mineid, prediction_data$quarter, na.last = T),]
+prediction_data$minename = na.locf(prediction_data$minename)
+prediction_data$minename = na.locf(prediction_data$minesizepoints)
+prediction_data$minename = na.locf(prediction_data$controllersizepoints)
+prediction_data$minename = na.locf(prediction_data$contractorsizepoints)
+prediction_data$minename = na.locf(prediction_data$hours_qtr)
+prediction_data$minename = na.locf(prediction_data$employment_qtr)
+prediction_data$minename = na.locf(prediction_data$coal_prod_qtr)
+
+# FIRST PIPE IN ZEROES TO THE MISSING PART-SPECIFIC VARIABLES (IF NOTHING MERGED ON A MINE QUARTER THAN IT SHOULD BE A ZERO)
+MR_relevant_partcodes = names(prediction_data)[grep("^[0-9][0-9]\\.", names(prediction_data))]
+partcodes_data = prediction_data[, c(grep("^[0-9][0-9]", names(prediction_data)), match("mineid", names(prediction_data)),
+                               match("quarter", names(prediction_data)))]
+prediction_data = prediction_data[, c(-grep("^[0-9][0-9]", names(prediction_data)))]
+partcodes_data[is.na(partcodes_data)] = 0
+prediction_data = merge(prediction_data, partcodes_data, by = c("mineid", "quarter"), all = T)
+rm(partcodes_data)
+
+#NOW REPLACE ANY MISSINGS IN OTHER NUMERIC VARS BY RANDOMLY SAMPLING FROM THE DISTRIBUTION
+var_classes = sapply(prediction_data[,names(prediction_data)], class)
+num_vars = names(var_classes[c(grep("numeric", var_classes), grep("integer", var_classes))])
+for (i in 1:length(num_vars)) {
+  i_rowsmissing = row.names(prediction_data)[is.na(prediction_data[, num_vars[i]])]
+  while (sum(!complete.cases(prediction_data[, num_vars[i]])) > 0) {
+    replace_rows = sample(setdiff(row.names(prediction_data), i_rowsmissing), length(i_rowsmissing), replace = T)
+    prediction_data[i_rowsmissing, num_vars[i]] = prediction_data[replace_rows, num_vars[i]]
+  }
+}
+
+# BEGIN MODEL SELECTION ALGORITHMS
 pca_loadings = list()
 for (i in 1:length(cfr_codes)) {
   #Until we determine a satisfactory way to handle qualitative variables with many bins we will omit them as they are not essential to prediction yet  
@@ -60,17 +95,6 @@ mca_results = MCA(as.data.frame(sapply(model_sel_data[, c(grep("minestatus", nam
 summary.MCA(mca_results)
 
 #INSERT MFA CODE HERE
-
-#GOAL HERE IS TO MAKE A LOOP TO FILL IN MISSING VLAUES (OF, SAY, MINENAME) BY MINE_ID GROUPS
-# CURRENT ISSUE IS A KNOWN BUG WITH DPLYR - https://github.com/hadley/dplyr/issues/859
-#library(dplyr)
-#library(zoo)
-#prediction_data$mineid = as.character(prediction_data$mineid)
-#prediction_data %>% group_by(prediction_data$mineid) %>% do(na.locf(prediction_data$minename))
-#THIS MIGHT BE THE WAY TO DO THE ABOVE
-prediction_data = group_by(prediction_data, mineid, quarter)
-prediction_data = prediction_data[order(prediction_data$mineid, prediction_data$quarter, na.last = T),]
-prediction_data$minename = na.locf(prediction_data$minename)
 
 ######################################################################################################################################
 # EVERYTHING BELOW THIS LINE IS FOR THE ALGORITHM
