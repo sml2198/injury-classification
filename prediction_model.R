@@ -46,13 +46,14 @@ prediction_data = prediction_data[, c(-grep("statusquarter", names(prediction_da
 prediction_data = group_by(prediction_data, mineid, quarter)
 prediction_data = prediction_data[order(prediction_data$mineid, prediction_data$quarter, na.last = T),]
 prediction_data$minename = na.locf(prediction_data$minename)
-prediction_data$minename = na.locf(prediction_data$minesizepoints)
-prediction_data$minename = na.locf(prediction_data$controllersizepoints)
-prediction_data$minename = na.locf(prediction_data$contractorsizepoints)
-prediction_data$minename = na.locf(prediction_data$hours_qtr)
-prediction_data$minename = na.locf(prediction_data$employment_qtr)
-prediction_data$minename = na.locf(prediction_data$coal_prod_qtr)
-prediction_data$minename = na.locf(prediction_data$productionshiftsperday)
+prediction_data$minesizepoints = na.locf(prediction_data$minesizepoints)
+prediction_data$controllersizepoints = na.locf(prediction_data$controllersizepoints)
+prediction_data$contractorsizepoints = na.locf(prediction_data$contractorsizepoints)
+prediction_data$hours_qtr = na.locf(prediction_data$hours_qtr)
+prediction_data$employment_qtr = na.locf(prediction_data$employment_qtr)
+prediction_data$coal_prod_qtr = na.locf(prediction_data$coal_prod_qtr)
+prediction_data$productionshiftsperday = na.locf(prediction_data$productionshiftsperday)
+prediction_data$idesc = na.locf(prediction_data$idesc)
 
 # FIRST PIPE IN ZEROES TO THE MISSING PART-SPECIFIC VARIABLES (IF NOTHING MERGED ON A MINE QUARTER THAN IT SHOULD BE A ZERO)
 number_to_zero = prediction_data[, c(grep("^[0-9][0-9]", names(prediction_data)), match("mineid", names(prediction_data)),
@@ -70,16 +71,16 @@ number_to_zero[is.na(number_to_zero)] = 0
 prediction_data = merge(prediction_data, number_to_zero, by = c("mineid", "quarter"), all = T)
 rm(number_to_zero)
 
-#NOW REPLACE ANY MISSINGS IN OTHER NUMERIC VARS BY RANDOMLY SAMPLING FROM THE DISTRIBUTION - JK THERE'S NO NEED FOR THIS
-# var_classes = sapply(prediction_data[,names(prediction_data)], class)
-# num_vars = names(var_classes[c(grep("numeric", var_classes), grep("integer", var_classes))])
-# for (i in 1:length(num_vars)) {
-#   i_rowsmissing = row.names(prediction_data)[is.na(prediction_data[, num_vars[i]])]
-#   while (sum(!complete.cases(prediction_data[, num_vars[i]])) > 0) {
-#     replace_rows = sample(setdiff(row.names(prediction_data), i_rowsmissing), length(i_rowsmissing), replace = T)
-#     prediction_data[i_rowsmissing, num_vars[i]] = prediction_data[replace_rows, num_vars[i]]
-#   }
-# }
+#NOW REPLACE ANY MISSINGS IN OTHER NUMERIC VARS BY RANDOMLY SAMPLING FROM THE DISTRIBUTION
+var_classes = sapply(prediction_data[,names(prediction_data)], class)
+num_vars = names(var_classes[c(grep("numeric", var_classes), grep("integer", var_classes))])
+for (i in 1:length(num_vars)) {
+   i_rowsmissing = row.names(prediction_data)[is.na(prediction_data[, num_vars[i]])]
+   while (sum(!complete.cases(prediction_data[, num_vars[i]])) > 0) {
+     replace_rows = sample(setdiff(row.names(prediction_data), i_rowsmissing), length(i_rowsmissing), replace = T)
+     prediction_data[i_rowsmissing, num_vars[i]] = prediction_data[replace_rows, num_vars[i]]
+   }
+}
 
 #Run variable selection over CFR subsection codes
 
@@ -90,10 +91,10 @@ model_sel_quant = cbind(prediction_data[, grep("^[0-9][0-9]\\.[0-9]+", names(pre
                                              -match("operatorname", names(prediction_data)), -match("stateabbreviation", names(prediction_data)),
                                              -match("idate", names(prediction_data)), -match("MR", names(prediction_data)),
                                              -match("idesc", names(prediction_data)), -match("minestatus", names(prediction_data)))])
-pca_results = PCA(model_sel_quant, graph = F)$var$contrib
+pca_results = PCA(model_sel_quant, graph = F)
 
 #ANALYZE PCA RESULTS
-#Now use pca_results[,j] j = 1, 2, ..., K to access the jth principal component for the ith CFR part code. Take absolute values before analyzing.
+#Now use pca_results$var$contrib[,j] j = 1, 2, ..., K to access the jth principal component for the ith CFR part code. Take absolute values before analyzing.
 
 #Exploring MCA
 
