@@ -14,7 +14,8 @@ library(glarma)
 library(pglm)
 library(psych)
 
-prediction_data = readRDS("X:/Projects/Mining/NIOSH/analysis/data/4_collapsed/prediction_data.rds")
+prediction_data = readRDS("X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_47.rds")
+prediction_data = prediction_data[, c(-grep("minetype", names(prediction_data)), -grep("coalcormetalmmine", names(prediction_data)))]
 
 prediction_data$minestatus = ifelse(prediction_data$minestatus == "Abandoned", 1, ifelse(prediction_data$minestatus == "Abandoned and Sealed", 2, 
                                                                                          ifelse(prediction_data$minestatus == "Active", 3, 
@@ -30,36 +31,28 @@ prediction_data$idesc = ifelse(prediction_data$idesc == "Hazard", 1, ifelse(pred
                                                                                                  ifelse(prediction_data$idesc == "Never Had 103I Status", 6, 
                                                                                                         ifelse(prediction_data$idesc == "Removed From 103I Status", 7, NA)))))))
 
-#Run variable selection by CFR part/subsection code
+#Run variable selection over CFR subsection codes
 
-#Run this line only if analyzing by CFR subsection code
-cfr_codes = names(prediction_data)[grep("^[0-9][0-9]\\.[0-9]+$", names(prediction_data))]
-
-pca_loadings = list()
-for (i in 1:length(cfr_codes)) {
-  #Until we determine a satisfactory way to handle qualitative variables with many bins we will omit them as they are not essential to prediction yet  
-  model_sel_data = cbind(prediction_data[, grep(paste("^", cfr_codes[i], sep = ""), names(prediction_data))], 
-                         prediction_data[, c(-grep("^[0-9][0-9]", names(prediction_data)), -grep("mineid", names(prediction_data)),
+model_sel_quant = cbind(prediction_data[, grep("^[0-9][0-9]\\.[0-9]+", names(prediction_data))], 
+                        prediction_data[, c(-grep("^[0-9][0-9]", names(prediction_data)), -grep("mineid", names(prediction_data)),
                                              -match("quarter", names(prediction_data)), -match("minename", names(prediction_data)),
                                              -match("minestatusdate", names(prediction_data)), -match("operatorid", names(prediction_data)),
                                              -match("operatorname", names(prediction_data)), -match("stateabbreviation", names(prediction_data)),
                                              -match("idate", names(prediction_data)), -match("MR", names(prediction_data)),
                                              -match("idesc", names(prediction_data)), -match("minestatus", names(prediction_data)))])
-  #run model selection algorithm using model_sel_data and store output in whichever way is necessary. e.g., PCA
-  #model_sel_data must be completely numeric and have no missing values before the next step is executed. Neither is currently true.
-  pca_loadings[[i]] = princomp(model_sel_data[complete.cases(model_sel_data),])$loadings
-}
+pca_results = PCA(model_sel_quant, graph = F)$var$contrib
 
 #ANALYZE PCA RESULTS
-#Now use pca_loadings[[i]][,j] j = 1, 2, ..., K to access the jth principal component for the ith CFR part code. Take absolute values before analyzing.
+#Now use pca_results[,j] j = 1, 2, ..., K to access the jth principal component for the ith CFR part code. Take absolute values before analyzing.
 
 #Exploring MCA
 
-mca_results = MCA(as.data.frame(sapply(model_sel_data[, c(grep("minestatus", names(model_sel_data)), grep("idesc", names(model_sel_data)),
-                                                          grep("stateabbreviation", names(model_sel_data)))], FUN = factor)))
+mca_results = MCA(as.data.frame(sapply(prediction_data[, c(grep("minestatus", names(prediction_data)), grep("idesc", names(prediction_data)),
+                                                          grep("stateabbreviation", names(prediction_data)))], FUN = factor)))
 summary.MCA(mca_results)
 
-#INSERT MFA CODE HERE
+#INSERT MFA CODE HERE (TESTING); There is an obscure error thrown with this code
+#mfa_results = MFA(data, group = c(81, 2, 13), type = c("c", "n", "c"), name.group = c("quant1", "quali1", "quant2"))
 
 #GOAL HERE IS TO MAKE A LOOP TO FILL IN MISSING VLAUES (OF, SAY, MINENAME) BY MINE_ID GROUPS
 # CURRENT ISSUE IS A KNOWN BUG WITH DPLYR - https://github.com/hadley/dplyr/issues/859
@@ -71,7 +64,6 @@ summary.MCA(mca_results)
 prediction_data = group_by(prediction_data, mineid, quarter)
 prediction_data = prediction_data[order(prediction_data$mineid, prediction_data$quarter, na.last = T),]
 prediction_data$minename = na.locf(prediction_data$minename)
-
 ######################################################################################################################################
 # EVERYTHING BELOW THIS LINE IS FOR THE ALGORITHM
 
