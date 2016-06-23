@@ -117,11 +117,6 @@ K = ncol(prediction_data) - 3
 X = as.matrix(prediction_data[, c(-grep("MR", names(prediction_data)), -grep("mineid", names(prediction_data)), -grep("quarter", names(prediction_data)))])
 Y = as.vector(prediction_data$MR)
 
-#Model Selection
-#PCA
-pca_output = prcomp(na.omit(X))
-pca_results = pca_output$rotation
-
 test_pred = glarma(Y, X, type = "NegBin", phiLags = c(1, 2), thetaLags = c(1, 2), phiInit = c(0.5, 0.5), thetaInit = c(0.25, 0.25), beta = rep(1, K), alphaInit = 1)
 #For some reason, unable to use usual formula abbreviations in this command
 names(prediction_data)[match("47.41", names(prediction_data))] = "subsection_47.41"
