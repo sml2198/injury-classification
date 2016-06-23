@@ -33,14 +33,6 @@ prediction_data$idesc = ifelse(prediction_data$idesc == "Hazard", 1, ifelse(pred
                                                                                                  ifelse(prediction_data$idesc == "Never Had 103I Status", 6, 
                                                                                                         ifelse(prediction_data$idesc == "Removed From 103I Status", 7, NA)))))))
 
-# DEAL WITH MINE STATUS DATE
-# if for a given minequarter the minestatus date is LESS than the quarter, then the observation should take on that minestatus.
-# if for a given minequarter the minestatus date is GREATER than that quarter, and the minestatus is abandoned, then the observation should take on some other minestatus (probably active?).
-prediction_data$minestatusdate <- as.Date(prediction_data$minestatusdate, "%m/%d/%Y")
-prediction_data$statusquarter = as.yearqtr(prediction_data$minestatusdate)
-prediction_data$minestatus = ifelse((prediction_data$statusquarter >= prediction_data$quarter) 
-                                    & (prediction_data$minestatus == 1 | prediction_data$minestatus == 2), 8, prediction_data$minestatus)
-prediction_data = prediction_data[, c(-grep("statusquarter", names(prediction_data)))]
 
 #FILL IN MISSING VALUES OF MINE CHARACTERISTICS BY MINE_ID/QUARTER GROUPS
 prediction_data = group_by(prediction_data, mineid, quarter)
