@@ -39,7 +39,7 @@ prediction_data$idesc = ifelse(prediction_data$idesc == "Hazard", 1, ifelse(pred
 prediction_data$minestatusdate <- as.Date(prediction_data$minestatusdate, "%m/%d/%Y")
 prediction_data$statusquarter = as.yearqtr(prediction_data$minestatusdate)
 prediction_data$minestatus = ifelse((prediction_data$statusquarter >= prediction_data$quarter) 
-                                    & (prediction_data$minestatus == 1 | prediction_data$minestatus == 2), 3, prediction_data$minestatus)
+                                    & (prediction_data$minestatus == 1 | prediction_data$minestatus == 2), 8, prediction_data$minestatus)
 prediction_data = prediction_data[, c(-grep("statusquarter", names(prediction_data)))]
 
 #FILL IN MISSING VALUES OF MINE CHARACTERISTICS BY MINE_ID/QUARTER GROUPS
