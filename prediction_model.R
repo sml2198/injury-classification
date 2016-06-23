@@ -17,7 +17,11 @@ library(dplyr)
 library(zoo)
 
 prediction_data = readRDS("X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_47.rds")
-prediction_data = prediction_data[, c(-grep("minetype", names(prediction_data)), -grep("coalcormetalmmine", names(prediction_data)))]
+prediction_data = prediction_data[, c(-grep("minetype", names(prediction_data)), -grep("coalcormetalmmine", names(prediction_data)), -match("daysperweek", names(prediction_data)))]
+
+#Make categorical variables with numeric levels
+
+prediction_data$year = factor(prediction_data$year)
 
 prediction_data$minestatus = ifelse(prediction_data$minestatus == "Abandoned", 1, ifelse(prediction_data$minestatus == "Abandoned and Sealed", 2, 
                                                                                          ifelse(prediction_data$minestatus == "Active", 3, 
@@ -75,26 +79,36 @@ for (i in 1:length(num_vars)) {
 }
 
 #Run variable selection over CFR subsection codes
+#"terminated" is a count of all citations that have been terminated by MSHA for a mine. This reflects a mine's past citations but also its ability to
+#improve its safety conditions. We may form terminated/total_violations by mine-qtr in the future but will remain agnostic as of now.
+mine_faults = c("total_violations", "contractor_repeated_viol_cnt", "totalinjuries", "operator_repeated_viol_pInspDay", "terminated")
+inspec_exp = c("insp_hours_per_qtr", "onsite_insp_hours_per_qtr", "num_insp")
+inj_exp = c("productionshiftsperday", "coal_prod_qtr", "employment_qtr", "hours_qtr")
+mine_penpoints = c("contractorsizepoints", "controllersizepoints", "minesizepoints")
 
 model_sel_quant = cbind(prediction_data[, grep("^[0-9][0-9]\\.[0-9]+", names(prediction_data))], 
                         prediction_data[, c(-grep("^[0-9][0-9]", names(prediction_data)), -grep("mineid", names(prediction_data)),
                                              -match("quarter", names(prediction_data)), -match("minename", names(prediction_data)),
                                              -match("minestatusdate", names(prediction_data)), -match("operatorid", names(prediction_data)),
                                              -match("operatorname", names(prediction_data)), -match("stateabbreviation", names(prediction_data)),
-                                             -match("idate", names(prediction_data)), -match("MR", names(prediction_data)),
+                                             -match("idate", names(prediction_data)), -match("MR", names(prediction_data)), -match("year", names(prediction_data)),
                                              -match("idesc", names(prediction_data)), -match("minestatus", names(prediction_data)))])
-pca_results = PCA(model_sel_quant, graph = F)
+pca_results = PCA(prediction_data[, grep("^[0-9][0-9]\\.[0-9]+", names(prediction_data))], graph = F)
+pca_inj_exp = PCA(prediction_data[,unlist(lapply(inj_exp, FUN = function(x) grep(x, names(prediction_data))))], graph = F)
+pca_inspec_exp = PCA(prediction_data[,unlist(lapply(inspec_exp, FUN = function(x) grep(x, names(prediction_data))))], graph = F)
+pca_mine_faults = PCA(prediction_data[,unlist(lapply(mine_faults, FUN = function(x) grep(x, names(prediction_data))))], graph = F)
+pca_mine_penpoints = PCA(prediction_data[,unlist(lapply(mine_penpoints, FUN = function(x) grep(x, names(prediction_data))))], graph = F)
 
 #ANALYZE PCA RESULTS
 #Now use pca_results$var$contrib[,j] j = 1, 2, ..., K to access the jth principal component for the ith CFR part code. Take absolute values before analyzing.
+#Use plot.PCA(pca_results, choix = "var"/"ind") to view correlation circle plot/individual factor map
 
-#Exploring MCA
+#Exploring MCA - NOT USED
 
-mca_results = MCA(as.data.frame(sapply(prediction_data[, c(grep("minestatus", names(prediction_data)), grep("idesc", names(prediction_data)),
-                                                          grep("stateabbreviation", names(prediction_data)))], FUN = factor)))
-summary.MCA(mca_results)
+#mca_results = MCA(as.data.frame(sapply(prediction_data[, c(match("minestatus", names(prediction_data)), grep("idesc", names(prediction_data)))], FUN = factor)))
+#summary.MCA(mca_results)
 
-#INSERT MFA CODE HERE (TESTING); There is an obscure error thrown with this code
+#INSERT MFA CODE HERE (TESTING); There is an obscure error thrown with this code. NOT USED
 #mfa_results = MFA(data, group = c(81, 2, 13), type = c("c", "n", "c"), name.group = c("quant1", "quali1", "quant2"))
 
 ######################################################################################################################################
