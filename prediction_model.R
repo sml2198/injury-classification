@@ -102,14 +102,27 @@ model_sel_quant = cbind(prediction_data[, grep("^[0-9][0-9]\\.[0-9]+", names(pre
                                              -match("idate", names(prediction_data)), -match("MR", names(prediction_data)), -match("year", names(prediction_data)),
                                              -match("idesc", names(prediction_data)), -match("minestatus", names(prediction_data)))])
 pca_results = PCA(prediction_data[, grep("^[0-9][0-9]\\.[0-9]+", names(prediction_data))], graph = F)
-pca_inj_exp = PCA(prediction_data[,unlist(lapply(inj_exp, FUN = function(x) grep(x, names(prediction_data))))], graph = F)
-pca_inspec_exp = PCA(prediction_data[,unlist(lapply(inspec_exp, FUN = function(x) grep(x, names(prediction_data))))], graph = F)
-pca_mine_faults = PCA(prediction_data[,unlist(lapply(mine_faults, FUN = function(x) grep(x, names(prediction_data))))], graph = F)
-pca_mine_penpoints = PCA(prediction_data[,unlist(lapply(mine_penpoints, FUN = function(x) grep(x, names(prediction_data))))], graph = F)
+pca_inj_exp = PCA(prediction_data[,unlist(lapply(inj_exp, FUN = function(x) match(x, names(prediction_data))))], graph = F)
+pca_inspec_exp = PCA(prediction_data[,unlist(lapply(inspec_exp, FUN = function(x) match(x, names(prediction_data))))], graph = F)
+pca_mine_faults = PCA(prediction_data[,unlist(lapply(mine_faults, FUN = function(x) match(x, names(prediction_data))))], graph = F)
+pca_mine_penpoints = PCA(prediction_data[,unlist(lapply(mine_penpoints, FUN = function(x) match(x, names(prediction_data))))], graph = F)
+
+#UNDER CONSTRUCTION - Tool for extracting significant variables from PCA analysis
+imp_vars = list()
+a = list()
+for (i in 1:2) {
+  imp_vars[[i]] = test$var$contrib[test$var$contrib[,i] >= sqrt(1/308),i]
+  if (i > 1) {
+    a = intersect(a, names(unlist(imp_vars[i])))
+  } else {
+    a = intersect(names(unlist(imp_vars[i])), names(unlist(imp_vars[i+1])))
+  }
+  print(a)
+}
 
 #ANALYZE PCA RESULTS
 #Now use pca_results$var$contrib[,j] j = 1, 2, ..., K to access the jth principal component for the ith CFR part code. Take absolute values before analyzing.
-#Use plot.PCA(pca_results, choix = "var"/"ind") to view correlation circle plot/individual factor map
+#Use plot.PCA(pca_results, choix = "var"/"ind") to view correlation circle plot/individual factor map and summary.PCA(pca_results) for Kaiser-Guttman test.
 
 #Exploring MCA - NOT USED
 
