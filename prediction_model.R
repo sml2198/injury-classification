@@ -16,7 +16,7 @@ library(psych)
 library(dplyr)
 library(zoo)
 
-prediction_data = readRDS("X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_47.rds")
+prediction_data = readRDS("X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75a.rds")
 prediction_data = prediction_data[, c(-grep("minetype", names(prediction_data)), -grep("coalcormetalmmine", names(prediction_data)), -match("daysperweek", names(prediction_data)))]
 
 #Make categorical variables with numeric levels
@@ -102,14 +102,15 @@ pca_mine_penpoints = PCA(prediction_data[,unlist(lapply(mine_penpoints, FUN = fu
 #UNDER CONSTRUCTION - Tool for extracting significant variables from PCA analysis
 imp_vars = list()
 a = list()
+k = length(grep("^[0-9][0-9]\\.[0-9]+\\.penaltypoints", names(prediction_data)))
+test = PCA(prediction_data[, grep("^[0-9][0-9]\\.[0-9]+\\.penaltypoints", names(prediction_data))], graph = F)
 for (i in 1:2) {
-  imp_vars[[i]] = test$var$contrib[test$var$contrib[,i] >= sqrt(1/308),i]
+  imp_vars[[i]] = test$var$contrib[test$var$contrib[,i] >= sqrt(1/k),i]
   if (i > 1) {
-    a = intersect(a, names(unlist(imp_vars[i])))
+    a = intersect(a, names(unlist(imp_vars[[i]])))
   } else {
-    a = intersect(names(unlist(imp_vars[i])), names(unlist(imp_vars[i+1])))
+    a = intersect(names(unlist(imp_vars[[i]])), names(unlist(test$var$contrib[test$var$contrib[,i+1] >= sqrt(1/k),i+1])))
   }
-  print(a)
 }
 
 #ANALYZE PCA RESULTS
