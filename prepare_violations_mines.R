@@ -23,11 +23,6 @@ merged_cfr_key = readRDS("X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged
 ######################################################################################################################################
 # MERGE CFR CODES ONTO VIOLATIONS AND MAKE VARIABLES FOR COLLAPSING ON
 
-merged_violations = merged_violations[, c(-grep("datevacated", names(merged_violations)), -grep("primarymill", names(merged_violations)), -grep("generatedbyassessmt", names(merged_violations)),
-                                            -grep("sigandsubindicator", names(merged_violations)), -grep("dup", names(merged_violations)), -grep("source", names(merged_violations)),
-                                            -grep("merge", names(merged_violations)), -grep("samples", names(merged_violations)), -grep("sic", names(merged_violations)), 
-                                            -grep("(latitude|longitude|idate|idesc)", names(merged_violations)))]
-
 merged_violations$cfrstandardcode = gsub("(\\(([0-9]|[a-z]|-|[A-Z])+\\))+", "", merged_violations$cfrstandardcode)
 merged_violations$cfrstandardcode = gsub("(-([a-z]+)\\))+(\\([0-9])*", "", merged_violations$cfrstandardcode)
 names(merged_violations)[names(merged_violations) == "cfrstandardcode"] = "subsection_code"
@@ -42,8 +37,6 @@ merged_violations$part_section2 = gsub("\\([0-9]+\\)", "", merged_violations$par
 merged_violations$subsection_code = ifelse((is.na(merged_violations$subsection_code) & !is.na(merged_violations$part_section2)), merged_violations$part_section2, merged_violations$subsection_code)
 
 merged_violations = merge(merged_violations, merged_cfr_key, by = "subsection_code", all = T)
-#unmerged_violations = merged_violations[(merged_violations$subsection_code == ""),]
-#write.csv(unmerged_violations, file = "X:/Projects/Mining/NIOSH/analysis/data/3_merged/unmerged_violations.csv", row.names = TRUE)
 
 merged_violations[, "merge"] = ifelse(!is.na(merged_violations$subsection_code_marker.y) & !is.na(merged_violations$subsection_code_marker.x), 3, 0)
 merged_violations[, "merge"] = ifelse(is.na(merged_violations$subsection_code_marker.x) & !is.na(merged_violations$subsection_code_marker.y), 2, merged_violations[, "merge"])
@@ -66,8 +59,8 @@ for (i in 1:length(datevars)) {
   merged_violations[, datevars[i]] = as.Date(as.character(merged_violations[, datevars[i]]), "%m/%d/%Y")
 }
 
-# Create variables for mine-quarter level prediction dataset
-merged_violations$quarter = as.yearqtr(merged_violations$dateissued)
+# remove observations from cfr data that didn't merge onto our violations data 
+merged_violations = merged_violations[complete.cases(merged_violations$violationno),]
 
 # Condition the per-day vars on positive denominator. (There are 256 cases of zero inspection days and positive violation counts). 6/6/16
 merged_violations$contractor_violation_cnt = ifelse(merged_violations$violatortypecode == "Contractor", merged_violations$violator_violation_cnt, NA)
@@ -75,31 +68,7 @@ merged_violations$operator_violation_pInspDay = ifelse(merged_violations$violato
 merged_violations$contractor_repeated_viol_cnt = ifelse(merged_violations$violatortypecode == "Contractor", merged_violations$violator_repeated_viol_cnt, NA)
 merged_violations$operator_repeated_viol_pInspDay = ifelse(merged_violations$violatortypecode == "Operator" & merged_violations$violator_inspection_day_cnt > 0, merged_violations$violator_repeated_viol_cnt/merged_violations$violator_inspection_day_cnt, NA)
 
-# remove observations from cfr data that didn't merge onto our violations data 
-merged_violations = merged_violations[complete.cases(merged_violations$violationno),]
-# remove violations that we have no dateissued and therefore no quarter data (only 44 observations)
-merged_violations = merged_violations[complete.cases(merged_violations$quarter),]
-# drop observations before our study period (only 27 observations)
-merged_violations = merged_violations[(merged_violations$quarter > "1999 Q4"),]
-
-# remove unnecessary variables
-merged_violations = merged_violations[, c( -match("outbyareas", names(merged_violations)), -match("shafts", names(merged_violations))
-                       , -match("refusepiles", names(merged_violations)), -match("shaftslopesinkingconstinspected", names(merged_violations)) 
-                       , -match("surfaceareasugmines", names(merged_violations)), -match("surfaceworkings", names(merged_violations))
-                       , -match("majorconstruction", names(merged_violations)), -match("merge", names(merged_violations))
-                       , -match("nbr_inspector", names(merged_violations)), -match("inspection_begin_dt", names(merged_violations))
-                       , -match("inspection_end_dt", names(merged_violations)), -match("last_action_cd", names(merged_violations))
-                       , -match("latest_term_due_time", names(merged_violations)), -match("latesttermduedate", names(merged_violations))
-                       , -match("explosivestorage", names(merged_violations)), -match("history_end_dt", names(merged_violations))
-                       , -match("history_start_dt", names(merged_violations)), -match("docket_no", names(merged_violations))
-                       , -match("docket_status_cd", names(merged_violations)), -match("orig_term_due_dt", names(merged_violations))
-                       , -match("orig_term_due_time", names(merged_violations)), -match("enforcement_area", names(merged_violations))
-                       , -match("fiscalquarter", names(merged_violations)), -match("fiscalyear", names(merged_violations))
-                       , -match("beginningdate", names(merged_violations)), -match("billprintdate", names(merged_violations))
-                       , -match("billprintfiscalyr", names(merged_violations)), -match("delinquent_dt", names(merged_violations))
-                       , -match("contestedindicator", names(merged_violations)), -match("companyrecords", names(merged_violations))
-                       , -match("buildingconstinspected", names(merged_violations)), -match("writtennotice", names(merged_violations))
-                       , -match("draglineconstinspected", names(merged_violations)), -match("miscellaneous", names(merged_violations)))]
+merged_violations = merged_violations[, c(-grep("merge", names(merged_violations)))]
 
 ######################################################################################################################################
 #DUMMY OUT FACTOR VARIABLES
