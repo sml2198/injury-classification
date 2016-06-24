@@ -16,6 +16,7 @@ library(psych)
 library(dplyr)
 library(zoo)
 library(glmnet)
+library(randomForest)
 
 prediction_data = readRDS("X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75a.rds")
 prediction_data = prediction_data[, c(-grep("minetype", names(prediction_data)), -grep("coalcormetalmmine", names(prediction_data)), -match("daysperweek", names(prediction_data)))]
@@ -123,12 +124,17 @@ for (i in 1:3) {
 
 #LASSO
 
-lasso_results = glmnet(as.matrix(), as.vector(), family = "gaussian")
+lasso_results = glmnet(as.matrix(prediction_data[, grep("^[0-9][0-9]\\.[0-9]+\\.penaltypoints", names(prediction_data))]), 
+                       as.vector(prediction_data$MR), family = "gaussian")
 print(lasso_results)
 #plot(lasso_results)
 lasso_coefs = coef(lasso_results, s = 1.149e-02)[,1]
 survng_vars = names(lasso_coefs)[lasso_coefs > 0]
 survng_vars[2:length(survng_vars)]
+
+#RANDOM FOREST
+rf_results = randomForest(prediction_data[, grep("^[0-9][0-9]\\.[0-9]+\\.penaltypoints", names(prediction_data))], prediction_data$MR)
+sort(rf_results$importance[,1], decreasing = T)
 
 #Exploring MCA - NOT USED
 #mca_results = MCA(as.data.frame(sapply(prediction_data[, c(match("minestatus", names(prediction_data)), grep("idesc", names(prediction_data)))], FUN = factor)))
