@@ -270,6 +270,26 @@ rm(violations_to_sum)
 #both contractor and operator violations. 6/6/16
 
 ######################################################################################################################################
+# GRAB CONTRACTOR VARS
+contractor_vars = merged_violations[, c(match("mineid", names(merged_violations)),
+                                        match("quarter", names(merged_violations)),
+                                        match("contractorid", names(merged_violations)),
+                                        match("con_avg_employee_cnt_qtr", names(merged_violations)),
+                                        match("con_employee_hours_qtr", names(merged_violations)),
+                                        match("con_coal_prod_qtr", names(merged_violations)))]
+#remove obs without contractor ID
+contractor_vars = contractor_vars[!is.na(contractor_vars$contractorid),]
+#remove obs that never merged with production/employment info
+contractor_vars = contractor_vars[!is.na(contractor_vars$con_avg_employee_cnt_qtr),]
+
+#collapse to mine quarter level 
+contractor_vars = ddply(contractor_vars[, c(grep("mineid", names(contractor_vars)), grep("quarter", names(contractor_vars)), grep("contractorid", names(contractor_vars)),
+                                                  grep("con_avg_employee_cnt_qtr", names(contractor_vars)), grep("con_employee_hours_qtr", names(contractor_vars)),
+                                                  match("con_coal_prod_qtr", names(contractor_vars)))], c("mineid", "quarter"),
+                            function(x) colMeans(x[, c(grep("con_avg_employee_cnt_qtr", names(x)), grep("con_employee_hours_qtr", names(x)),
+                                                       grep("con_coal_prod_qtr", names(x)))], na.rm = T))
+
+######################################################################################################################################
 # COUNT TOTAL # QUARTERS PER INSPECTION AND TOTAL # INSPECTIONS PER QUARTER 
 
 # COLLAPSE TO MINE-QUARTER-EVENT LEVEL TO FLAG EACH INSPECTIONS PER MINE QUARTER WITH A "1"
@@ -377,6 +397,9 @@ summed_coded_accidents$row_id = seq.int(nrow(summed_coded_accidents))
 # MERGE VIOLATIONS DATA ONTO MINES
 
 mines_quarters = readRDS("X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_mines.rds")
+
+#merge mine-specific contractor info onto mine quarters
+merged_mines_violations = merge(mines_quarters, contractor_vars, by = c("mineid", "quarter"), all = T)
 
 merged_mines_violations = merge(mines_quarters, collapsed_violations, by = c("mineid", "quarter"), all = T)
 #To save time we save/load all constituent datasets in the prediction data after each of the following merges
