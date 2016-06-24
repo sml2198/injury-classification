@@ -81,10 +81,10 @@ for (i in 1:length(num_vars)) {
 #Run variable selection over CFR subsection codes
 #"terminated" is a count of all citations that have been terminated by MSHA for a mine. This reflects a mine's past citations but also its ability to
 #improve its safety conditions. We may form terminated/total_violations by mine-qtr in the future but will remain agnostic as of now.
-mine_faults = c("total_violations", "contractor_repeated_viol_cnt", "totalinjuries", "operator_repeated_viol_pInspDay", "terminated")
+mine_faults = c("total_violations", "contractor_repeated_viol_cnt", "operator_repeated_viol_pInspDay", "terminated")
 inspec_exp = c("insp_hours_per_qtr", "onsite_insp_hours_per_qtr", "num_insp")
-inj_exp = c("productionshiftsperday", "coal_prod_qtr", "employment_qtr", "hours_qtr")
-mine_penpoints = c("contractorsizepoints", "controllersizepoints", "minesizepoints")
+inj_exp = c("productionshiftsperday", "coal_prod_qtr", "employment_qtr", "hours_qtr", "minesizepoints")
+mine_penpoints = c("contractorsizepoints", "controllersizepoints")
 
 model_sel_quant = cbind(prediction_data[, grep("^[0-9][0-9]\\.[0-9]+", names(prediction_data))], 
                         prediction_data[, c(-grep("^[0-9][0-9]", names(prediction_data)), -grep("mineid", names(prediction_data)),
