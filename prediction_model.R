@@ -15,6 +15,8 @@ library(pglm)
 library(psych)
 library(dplyr)
 library(zoo)
+library(glmnet)
+library(randomForest)
 
 prediction_data = readRDS("X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75a.rds")
 prediction_data = prediction_data[, c(-grep("minetype", names(prediction_data)), -grep("coalcormetalmmine", names(prediction_data)), -match("daysperweek", names(prediction_data)))]
@@ -78,6 +80,14 @@ for (i in 1:length(num_vars)) {
    }
 }
 
+#Pare away variables with zero variation before model selection and prediction stages
+var_stats = describe(prediction_data[, c(-match("mineid", names(prediction_data)), -match("quarter", names(prediction_data)), -match("year", names(prediction_data)),
+                                         -match("minename", names(prediction_data)), -match("minestatusdate", names(prediction_data)), -match("operatorid", names(prediction_data)),
+                                         -match("operatorname", names(prediction_data)), -match("stateabbreviation", names(prediction_data)), -match("idate", names(prediction_data)))])
+nontriv_vars = rownames(var_stats[var_stats$sd > 0,])
+triv_vars = setdiff(names(prediction_data), nontriv_vars)
+prediction_data = prediction_data[, nontriv_vars]
+
 #Run variable selection over CFR subsection codes
 #"terminated" is a count of all citations that have been terminated by MSHA for a mine. This reflects a mine's past citations but also its ability to
 #improve its safety conditions. We may form terminated/total_violations by mine-qtr in the future but will remain agnostic as of now.
@@ -86,43 +96,51 @@ inspec_exp = c("insp_hours_per_qtr", "onsite_insp_hours_per_qtr", "num_insp")
 inj_exp = c("productionshiftsperday", "coal_prod_qtr", "employment_qtr", "hours_qtr", "minesizepoints")
 mine_penpoints = c("contractorsizepoints", "controllersizepoints")
 
-model_sel_quant = cbind(prediction_data[, grep("^[0-9][0-9]\\.[0-9]+", names(prediction_data))], 
-                        prediction_data[, c(-grep("^[0-9][0-9]", names(prediction_data)), -grep("mineid", names(prediction_data)),
-                                             -match("quarter", names(prediction_data)), -match("minename", names(prediction_data)),
-                                             -match("minestatusdate", names(prediction_data)), -match("operatorid", names(prediction_data)),
-                                             -match("operatorname", names(prediction_data)), -match("stateabbreviation", names(prediction_data)),
-                                             -match("idate", names(prediction_data)), -match("MR", names(prediction_data)), -match("year", names(prediction_data)),
-                                             -match("idesc", names(prediction_data)), -match("minestatus", names(prediction_data)))])
+#PCA
+
 pca_results = PCA(prediction_data[, grep("^[0-9][0-9]\\.[0-9]+", names(prediction_data))], graph = F)
 pca_inj_exp = PCA(prediction_data[,unlist(lapply(inj_exp, FUN = function(x) match(x, names(prediction_data))))], graph = F)
 pca_inspec_exp = PCA(prediction_data[,unlist(lapply(inspec_exp, FUN = function(x) match(x, names(prediction_data))))], graph = F)
 pca_mine_faults = PCA(prediction_data[,unlist(lapply(mine_faults, FUN = function(x) match(x, names(prediction_data))))], graph = F)
 pca_mine_penpoints = PCA(prediction_data[,unlist(lapply(mine_penpoints, FUN = function(x) match(x, names(prediction_data))))], graph = F)
 
+#ANALYZE PCA RESULTS
+#Now use pca_results$var$contrib[,j] j = 1, 2, ..., K to access the jth principal component for the ith CFR part code. Take absolute values before analyzing.
+#Use plot.PCA(pca_results, choix = "var"/"ind") to view correlation circle plot/individual factor map and summary.PCA(pca_results) for Kaiser-Guttman test.
 #UNDER CONSTRUCTION - Tool for extracting significant variables from PCA analysis
 imp_vars = list()
 a = list()
-k = length(grep("^[0-9][0-9]\\.[0-9]+\\.penaltypoints", names(prediction_data)))
-test = PCA(prediction_data[, grep("^[0-9][0-9]\\.[0-9]+\\.penaltypoints", names(prediction_data))], graph = F)
-for (i in 1:2) {
+k = length(grep("^[0-9][0-9]\\.[0-9]+\\.inspacty", names(prediction_data)))
+test = PCA(prediction_data[, grep("^[0-9][0-9]\\.[0-9]+\\.inspacty", names(prediction_data))], graph = F)
+for (i in 1:3) {
   imp_vars[[i]] = test$var$contrib[test$var$contrib[,i] >= sqrt(1/k),i]
   if (i > 1) {
     a = intersect(a, names(unlist(imp_vars[[i]])))
   } else {
     a = intersect(names(unlist(imp_vars[[i]])), names(unlist(test$var$contrib[test$var$contrib[,i+1] >= sqrt(1/k),i+1])))
   }
+  print(a)
 }
 
-#ANALYZE PCA RESULTS
-#Now use pca_results$var$contrib[,j] j = 1, 2, ..., K to access the jth principal component for the ith CFR part code. Take absolute values before analyzing.
-#Use plot.PCA(pca_results, choix = "var"/"ind") to view correlation circle plot/individual factor map and summary.PCA(pca_results) for Kaiser-Guttman test.
+#LASSO
+
+lasso_results = glmnet(as.matrix(prediction_data[, grep("^[0-9][0-9]\\.[0-9]+\\.inspacty", names(prediction_data))]), 
+                       as.vector(prediction_data$MR), family = "gaussian")
+print(lasso_results)
+#plot(lasso_results)
+lasso_coefs = coef(lasso_results, s = 1.260e-02)[,1]
+survng_vars = names(lasso_coefs)[lasso_coefs > 0]
+survng_vars[2:length(survng_vars)]
+
+#RANDOM FOREST
+rf_results = randomForest(prediction_data[, grep("^[0-9][0-9]\\.[0-9]+\\.inspacty", names(prediction_data))], prediction_data$MR)
+sort(rf_results$importance[,1], decreasing = T)
 
 #Exploring MCA - NOT USED
-
 #mca_results = MCA(as.data.frame(sapply(prediction_data[, c(match("minestatus", names(prediction_data)), grep("idesc", names(prediction_data)))], FUN = factor)))
 #summary.MCA(mca_results)
 
-#INSERT MFA CODE HERE (TESTING); There is an obscure error thrown with this code. NOT USED
+#EXPLORING MFA - There is an obscure error thrown with this code. NOT USED
 #mfa_results = MFA(data, group = c(81, 2, 13), type = c("c", "n", "c"), name.group = c("quant1", "quali1", "quant2"))
 
 ######################################################################################################################################
