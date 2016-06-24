@@ -105,6 +105,16 @@ table(merged_violations$inspacty)
 #103           complaint inspection  fatality inspection        other         regular inspection         unknown 
 #35583                 4519                  732                69825               657741                97816
 
+table(merged_violations$violationtypecode)
+#violationtypecode.n variables are numbered from left to right over these values
+#Citation   Notice Order Safeguard unknown 
+#830340       3   11155       1   24717
+
+table(merged_violations$assessmenttypecode)
+#assessmenttypecode.n variables are numbered from left to right over these values
+#Regular  Single Special unknown 
+#640739  187678   13082   24717
+
 datdum <- function(x, data, name){
   data$rv <- rnorm(dim(data)[1],1,1)
   mm <- data.frame(model.matrix(lm(data$rv~-1+factor(data[,x]))))
