@@ -15,6 +15,7 @@ library(pglm)
 library(psych)
 library(dplyr)
 library(zoo)
+library(glmnet)
 
 prediction_data = readRDS("X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75a.rds")
 prediction_data = prediction_data[, c(-grep("minetype", names(prediction_data)), -grep("coalcormetalmmine", names(prediction_data)), -match("daysperweek", names(prediction_data)))]
