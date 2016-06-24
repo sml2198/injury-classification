@@ -110,8 +110,8 @@ pca_mine_penpoints = PCA(prediction_data[,unlist(lapply(mine_penpoints, FUN = fu
 #UNDER CONSTRUCTION - Tool for extracting significant variables from PCA analysis
 imp_vars = list()
 a = list()
-k = length(grep("^[0-9][0-9]\\.[0-9]+\\.penaltypoints", names(prediction_data)))
-test = PCA(prediction_data[, grep("^[0-9][0-9]\\.[0-9]+\\.penaltypoints", names(prediction_data))], graph = F)
+k = length(grep("^[0-9][0-9]\\.[0-9]+\\.inspacty", names(prediction_data)))
+test = PCA(prediction_data[, grep("^[0-9][0-9]\\.[0-9]+\\.inspacty", names(prediction_data))], graph = F)
 for (i in 1:3) {
   imp_vars[[i]] = test$var$contrib[test$var$contrib[,i] >= sqrt(1/k),i]
   if (i > 1) {
@@ -124,16 +124,16 @@ for (i in 1:3) {
 
 #LASSO
 
-lasso_results = glmnet(as.matrix(prediction_data[, grep("^[0-9][0-9]\\.[0-9]+\\.penaltypoints", names(prediction_data))]), 
+lasso_results = glmnet(as.matrix(prediction_data[, grep("^[0-9][0-9]\\.[0-9]+\\.inspacty", names(prediction_data))]), 
                        as.vector(prediction_data$MR), family = "gaussian")
 print(lasso_results)
 #plot(lasso_results)
-lasso_coefs = coef(lasso_results, s = 1.149e-02)[,1]
+lasso_coefs = coef(lasso_results, s = 1.260e-02)[,1]
 survng_vars = names(lasso_coefs)[lasso_coefs > 0]
 survng_vars[2:length(survng_vars)]
 
 #RANDOM FOREST
-rf_results = randomForest(prediction_data[, grep("^[0-9][0-9]\\.[0-9]+\\.penaltypoints", names(prediction_data))], prediction_data$MR)
+rf_results = randomForest(prediction_data[, grep("^[0-9][0-9]\\.[0-9]+\\.inspacty", names(prediction_data))], prediction_data$MR)
 sort(rf_results$importance[,1], decreasing = T)
 
 #Exploring MCA - NOT USED

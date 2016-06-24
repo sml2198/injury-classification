@@ -100,6 +100,11 @@ merged_violations[, "violationtypecode"] = ifelse(is.na(merged_violations$violat
 merged_violations = merged_violations[(merged_violations$violationtypecode != "Notice" & merged_violations$violationtypecode != "Safeguard"),]
 merged_violations[, "assessmenttypecode"] = ifelse(is.na(merged_violations$assessmenttypecode), "unknown", merged_violations[, "assessmenttypecode"])
 
+table(merged_violations$inspacty)
+#inspacty.n variables are numbered from left to right over these values
+#103           complaint inspection  fatality inspection        other         regular inspection         unknown 
+#35583                 4519                  732                69825               657741                97816
+
 datdum <- function(x, data, name){
   data$rv <- rnorm(dim(data)[1],1,1)
   mm <- data.frame(model.matrix(lm(data$rv~-1+factor(data[,x]))))
@@ -185,7 +190,7 @@ cfr_codes = MR_relevant_subsectcodes_75a
 for (i in 1:length(cfr_codes)) {
   merged_violations[, cfr_codes[i]] = ifelse(merged_violations$subsection_code == cfr_codes[i], 1, 0)
   merged_violations[, paste(cfr_codes[i], "penaltypoints", sep = ".")] = apply(cbind(merged_violations[, "penaltypoints"], merged_violations[, cfr_codes[i]]), 1, prod)
-  #There is also a factor var likelihood which marks the severity of negligence e.g., reasonably, unlikely, ...
+  #There is also a factor var likelihood which marks the severity of likelihood e.g., reasonably, unlikely, ...
   merged_violations[, paste(cfr_codes[i], "gravitylikelihoodpoints", sep = ".")] = apply(cbind(merged_violations[, "gravitylikelihoodpoints"], merged_violations[, cfr_codes[i]]), 1, prod)
   merged_violations[, paste(cfr_codes[i], "gravityinjurypoints", sep = ".")] = apply(cbind(merged_violations[, "gravityinjurypoints"], merged_violations[, cfr_codes[i]]), 1, prod)
   merged_violations[, paste(cfr_codes[i], "gravitypersonspoints", sep = ".")] = apply(cbind(merged_violations[, "gravitypersonspoints"], merged_violations[, cfr_codes[i]]), 1, prod)
