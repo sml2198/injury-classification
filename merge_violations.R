@@ -15,23 +15,9 @@ clean_assessments = readRDS("X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/cl
 clean_violations = readRDS("X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_violations.rds")
 clean_inspections = readRDS("X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_inspections.rds")
 
+######################################################################################################
+# MERGE VIOLATIONS AND ASSESSMENTS
 assessments_violations = merge(clean_assessments, clean_violations, by = c("mineid","violationno"), all = T)
-# EVERYTHING BETWEEN THESE LINES IS RETIRED - WE MUST MERGE BY VIOLNO AND MINEID #####################################
-#assessments_violations[, "merge"] = ifelse(!is.na(assessments_violations$mineid.y) & !is.na(assessments_violations$mineid.x), 3, 0)
-#assessments_violations[, "merge"] = ifelse(is.na(assessments_violations$mineid.x) & !is.na(assessments_violations$mineid.y), 2, assessments_violations[, "merge"])
-#assessments_violations[, "merge"] = ifelse(is.na(assessments_violations$mineid.y) & !is.na(assessments_violations$mineid.x), 1, assessments_violations[, "merge"])
-#table(assessments_violations[assessments_violations$calendaryear >= 2000,]$merge) aligns with the STATA version except for the 43 pre-2000 open data 
-#observations noted at the end of "clean_violations.do"
-#1       2       3 
-#55668 1616855 2821359
-#Open Data Only:
-#2       3 
-#54144 2107492 
-#for (i in 1:length(common_varstbs)) {
-#  assessments_violations[, paste(common_varstbs[i], ".x", sep = "")] = ifelse(assessments_violations[, "merge"] == 2, assessments_violations[, paste(common_varstbs[i], ".y", sep = "")], assessments_violations[, paste(common_varstbs[i], ".x", sep = "")])
-#}
-
-########################################################################################################################
 
 assessments_violations$eventno.x = ifelse((is.na(assessments_violations$eventno.x) & !is.na(assessments_violations$eventno.y)), assessments_violations$eventno.y, assessments_violations$eventno.x)
 
@@ -82,6 +68,7 @@ names(assessments_violations)[names(assessments_violations) == "good_faith_ind"]
 #                                                  (assessments_violations$src == "open_data") & !is.na(assessments_violations$src) | 
 #                                                  assessments_violations$merge == 1 | assessments_violations$merge == 2,]
 # assessments_violations = assessments_violations[, -grep("merge", names(assessments_violations))]
+
 saveRDS(assessments_violations, file = "X:/Projects/Mining/NIOSH/analysis/data/3_merged/assessments_violations.rds") #should we name to align w/ STATA version?
 rm(clean_violations, clean_assessments)
 
@@ -92,6 +79,8 @@ rm(clean_violations, clean_assessments)
 assessments_violations$inspecid = paste("L", assessments_violations$eventno, sep = "")
 clean_inspections$inspecid = paste("L", clean_inspections$eventno, sep = "")
 
+######################################################################################################
+# MERGE VIOLATIONS AND INSPECTIONS
 merged_violations = merge(assessments_violations, clean_inspections, by = c("mineid", "eventno"), all = T)
 
 merged_violations[, "inspecmerge"] = ifelse(!is.na(merged_violations$inspecid.y) & !is.na(merged_violations$inspecid.x), 3, 0)
@@ -113,5 +102,49 @@ merged_violations = merged_violations[!is.na(merged_violations$violationno), c(-
                                                                                   -grep("minegascategorycode", names(merged_violations)), -grep("merge", names(merged_violations)), 
                                                                                   -grep("coalcormetalmmine", names(merged_violations)), -grep("coalcormetalm", names(merged_violations)))]
 
+######################################################################################################
+# BRING IN CONTRACTOR DATA - WILL BE MERGED ON CONTRACTOR ID 
+
+# OPEN DATA - QUARTERLY CONTRACTOR EMPLOYMENT/PRODUCTION
+# THIS FILE DOES NOT CONTAIN MINEID'S - ONLY CONTRACTORID'S. CAN BE MERGED INTO VIOLATIONS DATA BY CONTRACTORID IF AND ONLY IF THE CONTRACTOR WAS CITED AT A MINE.
+contractor_quarterly_employment = read.table("X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA/open_data/ContractorProdQuarterly.txt", header = T, sep = "|")
+names(contractor_quarterly_employment)[names(contractor_quarterly_employment) == "CAL_YR"] = "year"
+names(contractor_quarterly_employment)[names(contractor_quarterly_employment) == "CAL_QTR"] = "quarter"
+names(contractor_quarterly_employment)[names(contractor_quarterly_employment) == "CONTRACTOR_ID"] = "contractorid"
+names(contractor_quarterly_employment)[names(contractor_quarterly_employment) == "AVG_EMPLOYEE_CNT"] = "con_avg_employee_cnt_qtr"
+names(contractor_quarterly_employment)[names(contractor_quarterly_employment) == "COAL_PRODUCTION"] = "con_coal_prod_qtr"
+names(contractor_quarterly_employment)[names(contractor_quarterly_employment) == "HOURS_WORKED"] = "con_employee_hours_qtr"
+contractor_quarterly_employment = contractor_quarterly_employment[contractor_quarterly_employment$SUBUNIT=="UNDERGROUND" & contractor_quarterly_employment$COAL_METAL_IND=="C",]
+contractor_quarterly_employment = contractor_quarterly_employment[, c(-grep("COAL_METAL_IND", names(contractor_quarterly_employment)), -match("SUBUNIT", names(contractor_quarterly_employment)), 
+                                                                      -grep("FISCAL_YR", names(contractor_quarterly_employment)), -match("FISCAL_QTR", names(contractor_quarterly_employment)), 
+                                                                      -match("SUBUNIT_CD", names(contractor_quarterly_employment)), -match("CONTRACTOR_NAME", names(contractor_quarterly_employment)))]
+
+contractor_quarterly_employment = ddply(contractor_quarterly_employment[, c(match("con_avg_employee_cnt_qtr", names(contractor_quarterly_employment)), 
+                                                                            match("con_coal_prod_qtr", names(contractor_quarterly_employment)), 
+                                                                            match("con_employee_hours_qtr", names(contractor_quarterly_employment)),
+                                                                            match("contractorid", names(contractor_quarterly_employment)), 
+                                                                            match("year", names(contractor_quarterly_employment)), 
+                                                                            match("quarter", names(contractor_quarterly_employment)))], c("contractorid", "year", "quarter"), 
+                                        function(x) colMeans(x[, c(match("con_avg_employee_cnt_qtr", names(x)), match("con_employee_hours_qtr", names(x)), 
+                                                                   match("con_coal_prod_qtr", names(x)))], na.rm = T))
+saveRDS(contractor_quarterly_employment, file = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_contractor_employment.rds")
+
+# OPEN DATA - ANNUAL CONTRACTOR EMPLOYMENT/PRODUCTION
+contractor_yearly_employment = read.table("X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA/open_data/ContractorProdYearly.txt", header = T, sep = "|")
+names(contractor_yearly_employment)[names(contractor_yearly_employment) == "CAL_YR"] = "year"
+names(contractor_yearly_employment)[names(contractor_yearly_employment) == "CONTRACTOR_ID"] = "contractorid"
+names(contractor_yearly_employment)[names(contractor_yearly_employment) == "AVG_EMPLOYEE_CNT"] = "con_avg_employee_yr"
+names(contractor_yearly_employment)[names(contractor_yearly_employment) == "AVG_EMPLOYEE_HOURS"] = "con_employee_hours_yr"
+names(contractor_yearly_employment)[names(contractor_yearly_employment) == "ANNUAL_COAL_PRODUCTION"] = "con_coal_prod_yr"
+names(contractor_yearly_employment)[names(contractor_yearly_employment) == "ANNUAL_HOURS"] = "con_hours_yr"
+contractor_yearly_employment = contractor_yearly_employment[contractor_yearly_employment$SUBUNIT=="UNDERGROUND" & contractor_yearly_employment$COAL_METAL_IND=="C",]
+contractor_yearly_employment = contractor_yearly_employment[, c(-grep("COAL_METAL_IND", names(contractor_yearly_employment)), 
+                                                                -match("SUBUNIT", names(contractor_yearly_employment)), -match("CONTRACTOR_NAME", names(contractor_yearly_employment)), 
+                                                                -match("SUBUNIT_CD", names(contractor_yearly_employment)))]
+saveRDS(contractor_yearly_employment, file = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_contractor_employment_yearly.rds")
+######################################################################################################
+
 saveRDS(merged_violations, file = "X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_violations.rds")
 rm(assessments_violations, clean_inspections, common_varstbs, violnames, i)
+
+######################################################################################################

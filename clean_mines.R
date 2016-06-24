@@ -63,43 +63,6 @@ yearly_employment = yearly_employment[, c(-grep("COAL_METAL_IND", names(yearly_e
                                           -match("SUBUNIT", names(yearly_employment)), -match("SUBUNIT_CD", names(yearly_employment)))]
 saveRDS(yearly_employment, file = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_employment_yrly.rds")
 
-# OPEN DATA - QUARTERLY CONTRACTOR EMPLOYMENT/PRODUCTION
-contractor_quarterly_employment = read.table("X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA/open_data/ContractorProdQuarterly.txt", header = T, sep = "|")
-names(contractor_quarterly_employment)[names(contractor_quarterly_employment) == "CAL_YR"] = "year"
-names(contractor_quarterly_employment)[names(contractor_quarterly_employment) == "CAL_QTR"] = "quarter"
-names(contractor_quarterly_employment)[names(contractor_quarterly_employment) == "CONTRACTOR_ID"] = "contractorid"
-names(contractor_quarterly_employment)[names(contractor_quarterly_employment) == "AVG_EMPLOYEE_CNT"] = "con_avg_employee_cnt_qtr"
-names(contractor_quarterly_employment)[names(contractor_quarterly_employment) == "COAL_PRODUCTION"] = "con_coal_prod_qtr"
-names(contractor_quarterly_employment)[names(contractor_quarterly_employment) == "HOURS_WORKED"] = "con_employee_hours_qtr"
-contractor_quarterly_employment = contractor_quarterly_employment[contractor_quarterly_employment$SUBUNIT=="UNDERGROUND" & contractor_quarterly_employment$COAL_METAL_IND=="C",]
-contractor_quarterly_employment = contractor_quarterly_employment[, c(-grep("COAL_METAL_IND", names(contractor_quarterly_employment)), -match("SUBUNIT", names(contractor_quarterly_employment)), 
-                                                  -grep("FISCAL_YR", names(contractor_quarterly_employment)), -match("FISCAL_QTR", names(contractor_quarterly_employment)), 
-                                                  -match("SUBUNIT_CD", names(contractor_quarterly_employment)), -match("CONTRACTOR_NAME", names(contractor_quarterly_employment)))]
-
-contractor_quarterly_employment = ddply(contractor_quarterly_employment[, c(match("con_avg_employee_cnt_qtr", names(contractor_quarterly_employment)), 
-                                                        match("con_coal_prod_qtr", names(contractor_quarterly_employment)), 
-                                                        match("con_employee_hours_qtr", names(contractor_quarterly_employment)),
-                                                        match("contractorid", names(contractor_quarterly_employment)), 
-                                                        match("year", names(contractor_quarterly_employment)), 
-                                                        match("quarter", names(contractor_quarterly_employment)))], c("contractorid", "year", "quarter"), 
-                              function(x) colMeans(x[, c(match("con_avg_employee_cnt_qtr", names(x)), match("con_employee_hours_qtr", names(x)), 
-                                                         match("con_coal_prod_qtr", names(x)))], na.rm = T))
-saveRDS(contractor_quarterly_employment, file = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_contractor_employment.rds")
-
-# OPEN DATA - ANNUAL CONTRACTOR EMPLOYMENT/PRODUCTION
-contractor_yearly_employment = read.table("X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA/open_data/ContractorProdYearly.txt", header = T, sep = "|")
-names(contractor_yearly_employment)[names(contractor_yearly_employment) == "CAL_YR"] = "year"
-names(contractor_yearly_employment)[names(contractor_yearly_employment) == "CONTRACTOR_ID"] = "contractorid"
-names(contractor_yearly_employment)[names(contractor_yearly_employment) == "AVG_EMPLOYEE_CNT"] = "con_avg_employee_yr"
-names(contractor_yearly_employment)[names(contractor_yearly_employment) == "AVG_EMPLOYEE_HOURS"] = "con_employee_hours_yr"
-names(contractor_yearly_employment)[names(contractor_yearly_employment) == "ANNUAL_COAL_PRODUCTION"] = "con_coal_prod_yr"
-names(contractor_yearly_employment)[names(contractor_yearly_employment) == "ANNUAL_HOURS"] = "con_hours_yr"
-contractor_yearly_employment = contractor_yearly_employment[contractor_yearly_employment$SUBUNIT=="UNDERGROUND" & contractor_yearly_employment$COAL_METAL_IND=="C",]
-contractor_yearly_employment = contractor_yearly_employment[, c(-grep("COAL_METAL_IND", names(contractor_yearly_employment)), 
-                                                                -match("SUBUNIT", names(contractor_yearly_employment)), -match("CONTRACTOR_NAME", names(contractor_yearly_employment)), 
-                                                                -match("SUBUNIT_CD", names(contractor_yearly_employment)))]
-saveRDS(contractor_yearly_employment, file = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_contractor_employment_yearly.rds")
-
 ######################################################################################################
 
 #early_mines = read.csv("X:/Projects/Mining/NIOSH/analysis/data/1_converted/MSHA/mines_fromText.csv") #only 25 mines added and all are non-coal
@@ -181,7 +144,7 @@ mines_quarters = mines_quarters[!is.na(mines_quarters$coalcormetalmmine),]
 mines_quarters = merge(mines_quarters, underreporting_employment, by = c("mineid", "year", "quarter"), all = T)
 mines_quarters = mines_quarters[!is.na(mines_quarters$coalcormetalmmine),]
 
-# make sure we have only kept obsevrations from our environment of interest
+# make sure we have only kept observations from our environment of interest
 mines_quarters = mines_quarters[mines_quarters$coalcormetalmmine=="C",]
 mines_quarters = mines_quarters[(mines_quarters$minetype=="Underground"),]
 
