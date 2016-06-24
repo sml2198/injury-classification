@@ -212,7 +212,7 @@ for (i in 1:length(cfr_codes)) {
 }
 
 # THIS LOOP BELOW WILL PERFORM THE SAME PROCESS AS ABOVE, BUT FOR ALLL SUBSECTIONS OF THE SPECIFIED PART. 
-cfr_codes = MR_relevant_subsectcodes_77
+cfr_codes = MR_relevant_subsectcodes_47
 for (i in 1:length(cfr_codes)) {
   merged_violations[, cfr_codes[i]] = ifelse(merged_violations$subsection_code == cfr_codes[i], 1, 0)
   merged_violations[, paste(cfr_codes[i], "penaltypoints", sep = ".")] = apply(cbind(merged_violations[, "penaltypoints"], merged_violations[, cfr_codes[i]]), 1, prod)
@@ -239,10 +239,10 @@ for (i in 1:length(cfr_codes)) {
   }
 }
 
-merged_violations = merged_violations[, c(-grep("^47", names(merged_violations)),
-                                          -grep("^48", names(merged_violations)),
+merged_violations = merged_violations[, c(-grep("^48", names(merged_violations)),
                                           -grep("^71", names(merged_violations)),
                                           -grep("^72", names(merged_violations)),
+                                          -grep("^75", names(merged_violations)),
                                           -grep("^77", names(merged_violations)),
                                           -grep("^[a-z].+[0-9]$", names(merged_violations)))]
 
@@ -442,5 +442,6 @@ prediction_data = prediction_data[, c(-grep("merge", names(prediction_data)), -g
                                       -grep("coalcormetalmmine", names(prediction_data)), -grep("minetype", names(prediction_data)))]
 
 #saveRDS(prediction_data, file = "X:/Projects/Mining/NIOSH/analysis/data/4_collapsed/prediction_data.rds")
+saveRDS(prediction_data, file = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_47.rds")
 
 ######################################################################################################################################
