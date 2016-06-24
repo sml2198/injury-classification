@@ -127,6 +127,12 @@ contractor_quarterly_employment = ddply(contractor_quarterly_employment[, c(matc
                                                                             match("quarter", names(contractor_quarterly_employment)))], c("contractorid", "year", "quarter"), 
                                         function(x) colMeans(x[, c(match("con_avg_employee_cnt_qtr", names(x)), match("con_employee_hours_qtr", names(x)), 
                                                                    match("con_coal_prod_qtr", names(x)))], na.rm = T))
+# format date vars so that "quarter" contains date-formatted year AND quarter info
+contractor_quarterly_employment$quarter = paste(contractor_quarterly_employment$year, contractor_quarterly_employment$quarter, sep= "-")
+contractor_quarterly_employment$quarter = ifelse(contractor_quarterly_employment$quarter == "NA-NA", NA, contractor_quarterly_employment$quarter)
+contractor_quarterly_employment$quarter = as.yearqtr(contractor_quarterly_employment$quarter)
+contractor_quarterly_employment = contractor_quarterly_employment[, c(-grep("year", names(contractor_quarterly_employment)))]
+
 saveRDS(contractor_quarterly_employment, file = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_contractor_employment.rds")
 
 # OPEN DATA - ANNUAL CONTRACTOR EMPLOYMENT/PRODUCTION
@@ -144,23 +150,49 @@ contractor_yearly_employment = contractor_yearly_employment[, c(-grep("COAL_META
 saveRDS(contractor_yearly_employment, file = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_contractor_employment_yearly.rds")
 
 ######################################################################################################
-
 # Create variables for mine-quarter level prediction dataset, and for merging contractor data
 datevars = names(merged_violations)[grep("date", names(merged_violations))]
 for (i in 1:length(datevars)) {
   merged_violations[, datevars[i]] = as.Date(as.character(merged_violations[, datevars[i]]), "%m/%d/%Y")
 }
 merged_violations$quarter = as.yearqtr(merged_violations$dateissued)
+merged_violations$year = as.yearqtr(merged_violations$dateissued)
+merged_violations$year = as.numeric(format(merged_violations$quarter,'%Y'))
 
 # remove violations that we have no dateissued and therefore no quarter data (only 44 observations)
 merged_violations = merged_violations[complete.cases(merged_violations$quarter),]
 # drop observations before our study period (only 27 observations)
 merged_violations = merged_violations[(merged_violations$quarter > "1999 Q4"),]
+merged_violations = merged_violations[!is.na(merged_violations$quarter),]
 
+#turn blank cells to missing
+merged_violations$contractorid = sub("^$", NA, merged_violations$contractorid)
+# two observations are missing contractor id but the violator type is contractor and the violator is not missing 
+merged_violations$contractorid = ifelse(merged_violations$violatortypecode == "Contractor" & is.na(merged_violations$contractorid), merged_violations$violator_id, merged_violations$contractorid)
+
+#MERGE ON CONTRACTOR INFORMATION
+merged_violations = merge(merged_violations, contractor_quarterly_employment, by = c("contractorid", "quarter"), all = T)
+merged_violations = merge(merged_violations, contractor_yearly_employment, by = c("contractorid", "year"), all = T)
+
+#divide annual vars by 4 if missing quarterly info
+merged_violations$con_avg_employee_cnt_qtr = ifelse(is.na(merged_violations$con_avg_employee_cnt_qtr) &
+                                          !is.na(merged_violations$con_avg_employee_yr), (merged_violations$con_avg_employee_yr/4), merged_violations$con_avg_employee_cnt_qtr)
+merged_violations$con_employee_hours_qtr = ifelse(is.na(merged_violations$con_employee_hours_qtr) &
+                                                      !is.na(merged_violations$con_employee_hours_yr), (merged_violations$con_employee_hours_yr/4), merged_violations$con_employee_hours_qtr)
+merged_violations$con_coal_prod_qtr = ifelse(is.na(merged_violations$con_coal_prod_qtr) &
+                                                    !is.na(merged_violations$con_coal_prod_yr), (merged_violations$con_coal_prod_yr/4), merged_violations$con_coal_prod_qtr)
+
+# remove observations from contractor data that didn't merge onto our violations data 
+merged_violations = merged_violations[complete.cases(merged_violations$violationno),]
+
+######################################################################################################
 # remove unnecessary variables
-merged_violations = merged_violations[, c(-grep("datevacated", names(merged_violations)), -grep("primarymill", names(merged_violations)), -grep("generatedbyassessmt", names(merged_violations)),
-                                          -grep("sigandsubindicator", names(merged_violations)), -grep("dup", names(merged_violations)), -grep("source", names(merged_violations)),
-                                          -grep("merge", names(merged_violations)), -grep("samples", names(merged_violations)), -grep("sic", names(merged_violations)), 
+merged_violations = merged_violations[, c(-grep("datevacated", names(merged_violations)), -grep("primarymill", names(merged_violations)), 
+                                          -grep("generatedbyassessmt", names(merged_violations)), -grep("source", names(merged_violations)),
+                                          -grep("sigandsubindicator", names(merged_violations)), -grep("dup", names(merged_violations)), 
+                                          -grep("merge", names(merged_violations)), -grep("con_avg_employee_yr", names(merged_violations)), 
+                                          -grep("con_employee_hours_yr", names(merged_violations)), -grep("samples", names(merged_violations)), 
+                                          -grep("sic", names(merged_violations)), -grep("con_coal_prod_yr", names(merged_violations)),
                                           -grep("(latitude|longitude|idate|idesc)", names(merged_violations)), -match("outbyareas", names(merged_violations)), 
                                           -match("shafts", names(merged_violations)), -match("refusepiles", names(merged_violations)), 
                                           -match("shaftslopesinkingconstinspected", names(merged_violations)), -match("surfaceareasugmines", names(merged_violations)), 
