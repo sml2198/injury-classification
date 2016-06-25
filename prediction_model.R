@@ -128,6 +128,7 @@ lasso_results = glmnet(as.matrix(prediction_data[, grep("^[0-9][0-9]\\.[0-9]+\\.
                        as.vector(prediction_data$MR), family = "gaussian")
 print(lasso_results)
 #plot(lasso_results)
+#Argument s passed to "coef" is the lambda value at which LASSO coefficients are obtained
 lasso_coefs = coef(lasso_results, s = 1.260e-02)[,1]
 survng_vars = names(lasso_coefs)[lasso_coefs > 0]
 survng_vars[2:length(survng_vars)]
