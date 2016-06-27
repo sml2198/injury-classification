@@ -18,7 +18,7 @@ library(zoo)
 library(glmnet)
 library(randomForest)
 
-prediction_data = readRDS("X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75a.rds")
+prediction_data = readRDS("X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75c.rds")
 prediction_data = prediction_data[, c(-grep("minetype", names(prediction_data)), -grep("coalcormetalmmine", names(prediction_data)), -match("daysperweek", names(prediction_data)))]
 
 #Make categorical variables with numeric levels
@@ -98,7 +98,7 @@ mine_penpoints = c("contractorsizepoints", "controllersizepoints")
 
 #PCA
 
-pca_results = PCA(prediction_data[, grep("^[0-9][0-9]\\.[0-9]+", names(prediction_data))], graph = F)
+pca_results = PCA(prediction_data[, grep("^[0-9][0-9]\\.[0-9]+\\.penaltypoints", names(prediction_data))], graph = F)
 pca_inj_exp = PCA(prediction_data[,unlist(lapply(inj_exp, FUN = function(x) match(x, names(prediction_data))))], graph = F)
 pca_inspec_exp = PCA(prediction_data[,unlist(lapply(inspec_exp, FUN = function(x) match(x, names(prediction_data))))], graph = F)
 pca_mine_faults = PCA(prediction_data[,unlist(lapply(mine_faults, FUN = function(x) match(x, names(prediction_data))))], graph = F)
@@ -124,16 +124,16 @@ for (i in 1:3) {
 
 #LASSO
 
-lasso_results = glmnet(as.matrix(prediction_data[, grep("^[0-9][0-9]\\.[0-9]+\\.inspacty", names(prediction_data))]), 
+lasso_results = glmnet(as.matrix(prediction_data[, grep("^[0-9][0-9]\\.[0-9]+\\.penaltypoints", names(prediction_data))]), 
                        as.vector(prediction_data$MR), family = "gaussian")
 print(lasso_results)
 #plot(lasso_results)
-lasso_coefs = coef(lasso_results, s = 1.260e-02)[,1]
+lasso_coefs = coef(lasso_results, s = 0.0077500)[,1]
 survng_vars = names(lasso_coefs)[lasso_coefs > 0]
 survng_vars[2:length(survng_vars)]
 
 #RANDOM FOREST
-rf_results = randomForest(prediction_data[, grep("^[0-9][0-9]\\.[0-9]+\\.inspacty", names(prediction_data))], prediction_data$MR)
+rf_results = randomForest(prediction_data[, grep("^[0-9][0-9]\\.[0-9]+\\.penaltypoints", names(prediction_data))], prediction_data$MR)
 sort(rf_results$importance[,1], decreasing = T)
 
 #Exploring MCA - NOT USED
