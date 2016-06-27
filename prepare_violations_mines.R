@@ -73,7 +73,7 @@ merged_violations = merged_violations[, c(-grep("merge", names(merged_violations
 ######################################################################################################################################
 #DUMMY OUT FACTOR VARIABLES
 
-# FIRST - CLEAN UP THE FIELD THAT REPORTS THE TYPE OF INSPECTION
+# FIRST - CLEAN UP THE FIELD THAT REPORTS THE TYPE OF INSPECTION (some of this is unnecessary now that we merge codes but oh well)
 merged_violations$inspacty = tolower(merged_violations$inspacty)
 merged_violations[, "inspacty"] = ifelse(merged_violations[, "inspacty"] == "mine idle activity", "mine idle", merged_violations[, "inspacty"])
 merged_violations[, "inspacty"] = ifelse(merged_violations[, "inspacty"] == "na", "n", merged_violations[, "inspacty"])
@@ -86,7 +86,7 @@ merged_violations[, "inspacty"] = ifelse(merged_violations[, "inspacty"] == "103
 # can't have any missing values or our dummy method won't work
 merged_violations[, "inspacty"] = ifelse(is.na(merged_violations$inspacty), "unknown", merged_violations[, "inspacty"])
 
-# deal with too many categories
+# deal with too many categories here (so we don't have hundreds of vars later)
 merged_violations[, "inspacty"] = ifelse((merged_violations[, "inspacty"] == "regular inspection" |
                                             merged_violations[, "inspacty"] == "regular safety and health inspection"), "regular inspection", merged_violations[, "inspacty"])
 merged_violations[, "inspacty"] = ifelse(grepl("complaint", merged_violations[,"inspacty"]), "complaint inspection", merged_violations[, "inspacty"])
@@ -95,10 +95,28 @@ merged_violations[, "inspacty"] = ifelse(grepl("103", merged_violations[,"inspac
 merged_violations[, "inspacty"] = ifelse(grepl("(103|fatality|unknown|regular|complaint)", merged_violations[,"inspacty"]), merged_violations[, "inspacty"], "other")
 
 # can't have any missing values or our dummy method won't work
-merged_violations[, "violationtypecode"] = ifelse(is.na(merged_violations$violationtypecode), "unknown", merged_violations[, "violationtypecode"])
+merged_violations$violationtypecode = as.character(merged_violations$violationtypecode)
+merged_violations[, "violationtypecode"] = ifelse(is.na(merged_violations$violationtypecode), "Unknown", merged_violations[, "violationtypecode"])
 # these make up a grand total of 4 in our observations - not worth making dummies for 4 violation types
 merged_violations = merged_violations[(merged_violations$violationtypecode != "Notice" & merged_violations$violationtypecode != "Safeguard"),]
-merged_violations[, "assessmenttypecode"] = ifelse(is.na(merged_violations$assessmenttypecode), "unknown", merged_violations[, "assessmenttypecode"])
+merged_violations$assessmenttypecode = as.character(merged_violations$assessmenttypecode)
+merged_violations[, "assessmenttypecode"] = ifelse(is.na(merged_violations$assessmenttypecode), "Unknown", merged_violations[, "assessmenttypecode"])
+
+# for each of the categorical vars we replace missings with NA, format as character vars, and name all NA "unknown"
+is.na(merged_violations$likelihood) = merged_violations$likelihood==""
+levels(merged_violations$likelihood) = c("Unknown", "Highly", "NoLikelihood", "Occurred", "Reasonably", "Unlikely")
+merged_violations$likelihood = as.character(merged_violations$likelihood)
+merged_violations[, "likelihood"] = ifelse(is.na(merged_violations$likelihood), "Unknown", merged_violations[, "likelihood"])
+
+merged_violations$injuryillness = as.character(merged_violations$injuryillness)
+is.na(merged_violations$injuryillness) = merged_violations$injuryillness==""
+levels(merged_violations$injuryillness) = c("Unknown", "Fatal", "LostDays", "NoLostDays", "Permanent")
+merged_violations[, "injuryillness"] = ifelse(is.na(merged_violations$injuryillness), "Unknown", merged_violations[, "injuryillness"])
+
+is.na(merged_violations$negligence) = merged_violations$negligence==""
+levels(merged_violations$injuryillness) = c("Unknown", "HighNegligence", "LowNegligence", "ModNegligence", "NoNegligence", "Reckless")
+merged_violations$negligence = as.character(merged_violations$negligence)
+merged_violations[, "negligence"] = ifelse(is.na(merged_violations$negligence), "Unknown", merged_violations[, "negligence"])
 
 table(merged_violations$inspacty)
 #inspacty.n variables are numbered from left to right over these values
@@ -107,13 +125,25 @@ table(merged_violations$inspacty)
 
 table(merged_violations$violationtypecode)
 #violationtypecode.n variables are numbered from left to right over these values
-#Citation   Notice Order Safeguard unknown 
-#830340       3   11155       1   24717
+#Citation    Order  Unknown 
+#830340    11155    24717 
 
 table(merged_violations$assessmenttypecode)
 #assessmenttypecode.n variables are numbered from left to right over these values
-#Regular  Single Special unknown 
-#640739  187678   13082   24717
+#Regular  Single Special Unknown 
+#640735  187678   13082   24717 
+
+table(merged_violations$likelihood)
+#Highly NoLikelihood     Occurred   Reasonably      Unknown     Unlikely 
+#5472        23386         1475       271986        18984       544909 
+
+table(merged_violations$injuryillness)
+#Fatal   LostDays NoLostDays  Permanent    Unknown 
+#57634     584733     120395      84464      18986 
+
+table(merged_violations$negligence)
+#HighNegligence  LowNegligence  ModNegligence   NoNegligence       Reckless        Unknown 
+#36421          97549         711082           1221            959          18980 
 
 datdum <- function(x, data, name){
   data$rv <- rnorm(dim(data)[1],1,1)
@@ -130,9 +160,15 @@ test.data2 <- datdum(x="assessmenttypecode",data=merged_violations,name="assessm
 test.data2 <- test.data2 [, c(grep("assessmenttypecode", names(test.data2)))]
 test.data3 <- datdum(x="violationtypecode",data=merged_violations,name="violationtypecode")
 test.data3 <- test.data3 [, c(grep("violationtypecode", names(test.data3)))]
+test.data4 <- datdum(x="likelihood",data=merged_violations,name="likelihood")
+test.data4 <- test.data4 [, c(grep("likelihood", names(test.data4)))]
+test.data5 <- datdum(x="injuryillness",data=merged_violations,name="injuryillness")
+test.data5 <- test.data5 [, c(grep("injuryillness", names(test.data5)))]
+test.data6 <- datdum(x="negligence",data=merged_violations,name="negligence")
+test.data6 <- test.data6 [, c(grep("negligence", names(test.data6)))]
 
-merged_violations = cbind(merged_violations, test.data1, test.data2, test.data3)
-rm(test.data1, test.data2, test.data3, datdum)
+merged_violations = cbind(merged_violations, test.data1, test.data2, test.data3, test.data4, test.data5, test.data6)
+rm(test.data1, test.data2, test.data3, test.data4, test.data5, test.data6, datdum)
 
 ######################################################################################################################################
 # CLEAN & COLLAPSE ASSESSMENTS/VIOLATIONS
@@ -160,8 +196,11 @@ MR_relevant_subsectcodes_77 = levels(factor(merged_violations[(merged_violations
             merged_violations$MR_maybe_relevant == 1) & (grepl("77\\.", merged_violations[,"subsection_code"])),]$subsection_code))
 
 # create lists of number of dummies for violation, assessment, and inspection types 
-violationtypecodes = c("1", "2", "3", "4", "5")
-assessmenttypecodes = c("1", "2", "3", "4", "5")
+likelihoodcodes = seq(1, 6)
+injuryillnesscodes = seq(1, 5)
+negligencecodes = seq(1, 6)
+violationtypecodes = seq(1, 3)
+assessmenttypecodes = seq(1, 4)
 inspactycodes = seq(1, 6)
 
 #For CFR part-specific variable creation
@@ -184,14 +223,23 @@ for (i in 1:length(cfr_codes)) {
   merged_violations[, paste(cfr_codes[i], "contractor_repeated_viol_cnt", sep = ".")] = apply(cbind(merged_violations[, "contractor_repeated_viol_cnt"], merged_violations[, cfr_codes[i]]), 1, prod)
   merged_violations[, paste(cfr_codes[i], "operator_repeated_viol_pInspDay", sep = ".")] = apply(cbind(merged_violations[, "operator_repeated_viol_pInspDay"], merged_violations[, cfr_codes[i]]), 1, prod)
   # dummied out categorical vars
+  for (j in 1:length(inspactycodes)) {
+    merged_violations[, paste(cfr_codes[i], "inspacty", inspactycodes[j], sep = ".")] = ifelse(merged_violations[, cfr_codes[i]] == 1 & merged_violations[, paste("inspacty", inspactycodes[j], sep = ".")] == 1, 1, 0)
+  }
   for (j in 1:length(violationtypecodes)) {
     merged_violations[, paste(cfr_codes[i], "violationtypecode", violationtypecodes[j], sep = ".")] = ifelse(merged_violations[, cfr_codes[i]] == 1 & merged_violations[, paste("violationtypecode", violationtypecodes[j], sep = ".")] == 1, 1, 0)
   }
   for (j in 1:length(assessmenttypecodes)) {
     merged_violations[, paste(cfr_codes[i], "assessmenttypecode", assessmenttypecodes[j], sep = ".")] = ifelse(merged_violations[, cfr_codes[i]] == 1 & merged_violations[, paste("assessmenttypecode", assessmenttypecodes[j], sep = ".")] == 1, 1, 0)
   }
-  for (j in 1:length(inspactycodes)) {
-    merged_violations[, paste(cfr_codes[i], "inspacty", inspactycodes[j], sep = ".")] = ifelse(merged_violations[, cfr_codes[i]] == 1 & merged_violations[, paste("inspacty", inspactycodes[j], sep = ".")] == 1, 1, 0)
+  for (j in 1:length(likelihoodcodes)) {
+    merged_violations[, paste(cfr_codes[i], "likelihood", likelihoodcodes[j], sep = ".")] = ifelse(merged_violations[, cfr_codes[i]] == 1 & merged_violations[, paste("likelihood", likelihoodcodes[j], sep = ".")] == 1, 1, 0)
+  }
+  for (j in 1:length(injuryillnesscodes)) {
+    merged_violations[, paste(cfr_codes[i], "injuryillness", injuryillnesscodes[j], sep = ".")] = ifelse(merged_violations[, cfr_codes[i]] == 1 & merged_violations[, paste("injuryillness", injuryillnesscodes[j], sep = ".")] == 1, 1, 0)
+  }
+  for (j in 1:length(negligencecodes)) {
+    merged_violations[, paste(cfr_codes[i], "negligence", negligencecodes[j], sep = ".")] = ifelse(merged_violations[, cfr_codes[i]] == 1 & merged_violations[, paste("negligence", negligencecodes[j], sep = ".")] == 1, 1, 0)
   }
 }
 
