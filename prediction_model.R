@@ -17,6 +17,7 @@ library(dplyr)
 library(zoo)
 library(glmnet)
 library(randomForest)
+library(MASS)
 
 prediction_data = readRDS("X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75c.rds")
 prediction_data = prediction_data[, c(-grep("minetype", names(prediction_data)), -grep("coalcormetalmmine", names(prediction_data)), -match("daysperweek", names(prediction_data)))]
@@ -86,6 +87,7 @@ var_stats = describe(prediction_data[, c(-match("mineid", names(prediction_data)
                                          -match("operatorname", names(prediction_data)), -match("stateabbreviation", names(prediction_data)), -match("idate", names(prediction_data)))])
 nontriv_vars = rownames(var_stats[var_stats$sd > 0,])
 triv_vars = setdiff(names(prediction_data), nontriv_vars)
+#Warning: This excludes all non-numeric variables
 prediction_data = prediction_data[, nontriv_vars]
 
 #Run variable selection over CFR subsection codes
@@ -155,6 +157,9 @@ N = nrow(prediction_data)
 K = ncol(prediction_data) - 3
 X = as.matrix(prediction_data[, c(-grep("MR", names(prediction_data)), -grep("mineid", names(prediction_data)), -grep("quarter", names(prediction_data)))])
 Y = as.vector(prediction_data$MR)
+
+#Can adjust varlist to be as desired but shouldn't use "." shortcut since there is then a failure to converge
+test_pred_0 = glm.nb(formula = MR ~ total_violations + insp_hours_per_qtr, data = prediction_data)
 
 test_pred = glarma(Y, X, type = "NegBin", phiLags = c(1, 2), thetaLags = c(1, 2), phiInit = c(0.5, 0.5), thetaInit = c(0.25, 0.25), beta = rep(1, K), alphaInit = 1)
 #For some reason, unable to use usual formula abbreviations in this command
