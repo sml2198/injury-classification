@@ -242,9 +242,14 @@ mines_quarters$minestatus = ifelse((mines_quarters$statusquarter >= mines_quarte
                                         mines_quarters$minestatus == "Temporarily Idled" | mines_quarters$minestatus == "NonProducing" ), "Unknown", mines_quarters$minestatus)
 
 # we looked these missing instances up using the mine data retrieval system, and they are completely wacky.
-# sometimes the employmeny looks like it should be zero, but sometimes the employment is psoitive (and the hours are wrong). Let's drop these 563.
+# sometimes the employment looks like it should be zero, but sometimes the employment is positive (and the hours are wrong). Let's drop these 563.
 mines_quarters$missing = is.na(mines_quarters$employment_qtr)
 mines_quarters = mines_quarters[mines_quarters$missing == 0,]
+
+# remove mine quarters with minestatus "Temporarily Idled" and zero hours/emp/prod -> these are nonproducing 
+mines_quarters = mines_quarters[(mines_quarters$minestatus != "Temporarily Idled" | mines_quarters$hours_qtr != 0),]
+mines_quarters = mines_quarters[(mines_quarters$minestatus != "Temporarily Idled" | mines_quarters$employment_qtr != 0),]
+mines_quarters = mines_quarters[(mines_quarters$minestatus != "Temporarily Idled" | mines_quarters$coal_prod_qtr != 0),]
 
 mines_quarters = mines_quarters[, c(-grep("statusyear", names(mines_quarters)), -grep("statusquarter", names(mines_quarters)), 
                                     -grep("drop", names(mines_quarters)),  -grep("missing", names(mines_quarters)))]
@@ -271,6 +276,9 @@ mines_quarters = ddply(mines_quarters[, c(match("hours_qtr", names(mines_quarter
                                             match("mineid", names(mines_quarters)), match("year", names(mines_quarters)), match("quarter", names(mines_quarters)))], c("mineid", "quarter"), 
                       function(x) colMeans(x[, c(match("hours_qtr", names(x)), match("employment_qtr", names(x)), match("coal_prod_qtr", names(x)))], na.rm = T))
 mines_quarters = merge(mines_quarters, temp, by = c("mineid", "quarter"), all = T)
+
+# if there are no hours, we don't care about these quarters
+mines_quarters = mines_quarters[(mines_quarters$hours_qtr != 0),]
 
 rm(temp, open_data_mines)
 
