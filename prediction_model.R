@@ -149,14 +149,14 @@ sort(rf_results$importance[,1], decreasing = T)
 ######################################################################################################################################
 # EVERYTHING BELOW THIS LINE IS FOR THE ALGORITHM
 
-rm(multi_qtr_inspcs, mines_accidents_coded, summed_coded_accidents, summed_violations, summed_inspcs, averaged_violations)
-#To provide an intercept for the prediction stage:
-prediction_data$constant = 1
 #WARNING: Fails to converge with these initial values
 N = nrow(prediction_data)
 K = ncol(prediction_data) - 3
 X = as.matrix(prediction_data[, c(-grep("MR", names(prediction_data)), -grep("mineid", names(prediction_data)), -grep("quarter", names(prediction_data)))])
 Y = as.vector(prediction_data$MR)
+
+#Naive OLS prediction
+test_pred_naive = lm(formula = MR ~ ., data = prediction_data)
 
 #Can adjust varlist to be as desired but shouldn't use "." shortcut since there is then a failure to converge
 test_pred_0 = glm.nb(formula = MR ~ total_violations + insp_hours_per_qtr, data = prediction_data)
