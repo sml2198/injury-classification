@@ -89,9 +89,9 @@ prediction_data$MR_proportion = prediction_data$MR / prediction_data$totalinjuri
 prediction_data$no_terminations = ifelse(prediction_data$terminated < prediction_data$total_violations, 1, 0)
 
 #Create lagged variables of the 1st and 2nd order
-prediction_data = as.data.table(prediction_data)
+prediction_data = as.data.table(prediction_data[order(prediction_data$mineid, prediction_data$quarter, na.last = T),])
 prediction_data[, c("MR_indicator_l1", "MR_indicator_l2", "MR_proportion_l1", "MR_proportion_l2") := shift(.SD, 1:2), 
-            by = c("mineid", "quarter"), .SDcols = c("MR_indicator", "MR_proportion")]
+            by = mineid, .SDcols = c("MR_indicator", "MR_proportion")]
 prediction_data = as.data.frame(prediction_data)
 
 
