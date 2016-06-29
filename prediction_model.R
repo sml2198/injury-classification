@@ -19,7 +19,7 @@ library(glmnet)
 library(randomForest)
 library(MASS)
 
-prediction_data = readRDS("X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75c.rds")
+prediction_data = readRDS("X:/Projects/Mining/NIOSH/analysis/data/4_collapsed/prediction_data.rds")
 prediction_data = prediction_data[, c(-grep("minetype", names(prediction_data)), -grep("coalcormetalmmine", names(prediction_data)), -match("daysperweek", names(prediction_data)))]
 
 #Make categorical variables with numeric levels
@@ -41,6 +41,7 @@ prediction_data$idesc = ifelse(prediction_data$idesc == "Hazard", 1, ifelse(pred
                                                                                                         ifelse(prediction_data$idesc == "Removed From 103I Status", 7, NA)))))))
 
 
+######################################################################################################################################
 #FILL IN MISSING VALUES OF MINE CHARACTERISTICS BY MINE_ID/QUARTER GROUPS
 prediction_data = group_by(prediction_data, mineid, quarter)
 prediction_data = prediction_data[order(prediction_data$mineid, prediction_data$quarter, na.last = T),]
@@ -80,7 +81,7 @@ for (i in 1:length(num_vars)) {
      prediction_data[i_rowsmissing, num_vars[i]] = prediction_data[replace_rows, num_vars[i]]
    }
 }
-
+#####################################################################################################################################
 #Pare away variables with zero variation before model selection and prediction stages
 var_stats = describe(prediction_data[, c(-match("mineid", names(prediction_data)), -match("quarter", names(prediction_data)), -match("year", names(prediction_data)),
                                          -match("minename", names(prediction_data)), -match("minestatusdate", names(prediction_data)), -match("operatorid", names(prediction_data)),
@@ -97,6 +98,15 @@ mine_faults = c("total_violations", "contractor_repeated_viol_cnt", "operator_re
 inspec_exp = c("insp_hours_per_qtr", "onsite_insp_hours_per_qtr", "num_insp")
 inj_exp = c("productionshiftsperday", "coal_prod_qtr", "employment_qtr", "hours_qtr", "minesizepoints")
 mine_penpoints = c("contractorsizepoints", "controllersizepoints")
+
+# this line will report number of missings per var - should be zero!
+#apply(is.na(prediction_data),2,sum)
+
+# ADD VARIABLES FOR BINARY AND PROPORTIONAL DEPENDENT VARS, AND RESHAPE A FEW VARS OF INTEREST
+prediction_data$MR_indicator = ifelse(prediction_data$MR > 0, 1, 0)
+prediction_data$MR_proportion = prediction_data$MR / prediction_data$totalinjuries
+prediction_data$no_terminations = ifelse(prediction_data$terminated < prediction_data$total_violations, 1, 0)
+######################################################################################################################################
 
 #PCA
 
@@ -129,7 +139,7 @@ for (i in 1:3) {
 lasso_results = glmnet(as.matrix(prediction_data[, grep("^[0-9][0-9]\\.[0-9]+\\.penaltypoints", names(prediction_data))]), 
                        as.vector(prediction_data$MR), family = "gaussian")
 print(lasso_results)
-#plot(lasso_results)
+plot(lasso_results)
 #Argument s passed to "coef" is the lambda value at which LASSO coefficients are obtained
 lasso_coefs = coef(lasso_results, s = 1.260e-02)[,1]
 survng_vars = names(lasso_coefs)[lasso_coefs > 0]
