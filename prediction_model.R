@@ -41,6 +41,7 @@ prediction_data$idesc = ifelse(prediction_data$idesc == "Hazard", 1, ifelse(pred
                                                                                                         ifelse(prediction_data$idesc == "Removed From 103I Status", 7, NA)))))))
 
 
+######################################################################################################################################
 #FILL IN MISSING VALUES OF MINE CHARACTERISTICS BY MINE_ID/QUARTER GROUPS
 prediction_data = group_by(prediction_data, mineid, quarter)
 prediction_data = prediction_data[order(prediction_data$mineid, prediction_data$quarter, na.last = T),]
@@ -80,7 +81,7 @@ for (i in 1:length(num_vars)) {
      prediction_data[i_rowsmissing, num_vars[i]] = prediction_data[replace_rows, num_vars[i]]
    }
 }
-
+#####################################################################################################################################
 #Pare away variables with zero variation before model selection and prediction stages
 var_stats = describe(prediction_data[, c(-match("mineid", names(prediction_data)), -match("quarter", names(prediction_data)), -match("year", names(prediction_data)),
                                          -match("minename", names(prediction_data)), -match("minestatusdate", names(prediction_data)), -match("operatorid", names(prediction_data)),
@@ -100,6 +101,12 @@ mine_penpoints = c("contractorsizepoints", "controllersizepoints")
 
 # this line will report number of missings per var - should be zero!
 #apply(is.na(prediction_data),2,sum)
+
+# ADD VARIABLES FOR BINARY AND PROPORTIONAL DEPENDENT VARS, AND RESHAPE A FEW VARS OF INTEREST
+prediction_data$MR_indicator = ifelse(prediction_data$MR > 0, 1, 0)
+prediction_data$MR_proportion = prediction_data$MR / prediction_data$totalinjuries
+prediction_data$no_terminations = ifelse(prediction_data$terminated < prediction_data$total_violations, 1, 0)
+######################################################################################################################################
 
 #PCA
 
@@ -151,37 +158,6 @@ sort(rf_results$importance[,1], decreasing = T)
 
 ######################################################################################################################################
 # EVERYTHING BELOW THIS LINE IS FOR THE ALGORITHM
-
-prediction_data = prediction_data[, c(match("MR", names(prediction_data)), 
-                                            match("47.penaltypoints", names(prediction_data)), 
-                                            match("48.penaltypoints", names(prediction_data)),
-                                            match("71.penaltypoints", names(prediction_data)),
-                                            match("72.penaltypoints", names(prediction_data)),
-                                            match("75.penaltypoints", names(prediction_data)),
-                                            match("47.sigandsubdesignation", names(prediction_data)), 
-                                            match("48.sigandsubdesignation", names(prediction_data)),
-                                            match("71.sigandsubdesignation", names(prediction_data)),
-                                            match("72.sigandsubdesignation", names(prediction_data)),
-                                            match("75.sigandsubdesignation", names(prediction_data)),
-                                            match("47.operator_repeated_viol_pInspDay", names(prediction_data)), 
-                                            match("48.operator_repeated_viol_pInspDay", names(prediction_data)),
-                                            match("71.operator_repeated_viol_pInspDay", names(prediction_data)),
-                                            match("72.operator_repeated_viol_pInspDay", names(prediction_data)),
-                                            match("75.operator_repeated_viol_pInspDay", names(prediction_data)),
-                                            match("47.operator_violation_pInspDay", names(prediction_data)), 
-                                            match("48.operator_violation_pInspDay", names(prediction_data)),
-                                            match("71.operator_violation_pInspDay", names(prediction_data)),
-                                            match("72.operator_violation_pInspDay", names(prediction_data)),
-                                            match("75.operator_violation_pInspDay", names(prediction_data)),
-                                            match("mineid", names(prediction_data)), 
-                                            match("num_insp", names(prediction_data)), 
-                                            match("quarter", names(prediction_data)), 
-                                            match("totalinjuries", names(prediction_data)),
-                                            match("onsite_insp_hours_per_qtr", names(prediction_data)), 
-                                            match("employment_qtr", names(prediction_data)), 
-                                            match("total_violations", names(prediction_data)), 
-                                            match("coal_prod_qtr", names(prediction_data)), 
-                                            match("hours_qtr", names(prediction_data)))]
 
 #rm(multi_qtr_inspcs, mines_accidents_coded, summed_coded_accidents, summed_violations, summed_inspcs, averaged_violations)
 #To provide an intercept for the prediction stage:
