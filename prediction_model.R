@@ -102,7 +102,7 @@ var_stats = describe(prediction_data[, c(-match("mineid", names(prediction_data)
 nontriv_vars = rownames(var_stats[var_stats$sd > 0,])
 triv_vars = setdiff(names(prediction_data), nontriv_vars)
 #Warning: This excludes all non-numeric variables
-prediction_data = prediction_data[, nontriv_vars]
+prediction_data = prediction_data[, c(nontriv_vars, "mineid", "quarter")]
 
 #Run variable selection over CFR subsection codes
 #"terminated" is a count of all citations that have been terminated by MSHA for a mine. This reflects a mine's past citations but also its ability to
@@ -174,10 +174,10 @@ X = as.matrix(prediction_data[, c(-grep("MR", names(prediction_data)), -grep("mi
 Y = as.vector(prediction_data$MR)
 
 #Naive OLS prediction
-test_pred_naive = lm(formula = MR ~ ., data = prediction_data)
+test_pred_naive = lm(formula = MR ~ . -mineid -quarter, data = prediction_data)
 
 #Can adjust varlist to be as desired but shouldn't use "." shortcut since there is then a failure to converge
-test_pred_0 = glm.nb(formula = MR ~ total_violations + insp_hours_per_qtr, data = prediction_data)
+test_pred_0 = glm.nb(formula = MR ~ total_violations + insp_hours_per_qtr -mineid -quarter, data = prediction_data)
 
 test_pred = glarma(Y, X, type = "NegBin", phiLags = c(1, 2), thetaLags = c(1, 2), phiInit = c(0.5, 0.5), thetaInit = c(0.25, 0.25), beta = rep(1, K), alphaInit = 1)
 #For some reason, unable to use usual formula abbreviations in this command
