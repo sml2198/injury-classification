@@ -18,6 +18,7 @@ library(zoo)
 library(glmnet)
 library(randomForest)
 library(MASS)
+library(data.table)
 
 prediction_data = readRDS("X:/Projects/Mining/NIOSH/analysis/data/4_collapsed/prediction_data.rds")
 prediction_data = prediction_data[, c(-grep("minetype", names(prediction_data)), -grep("coalcormetalmmine", names(prediction_data)), -match("daysperweek", names(prediction_data)))]
@@ -82,6 +83,18 @@ for (i in 1:length(num_vars)) {
    }
 }
 #####################################################################################################################################
+# ADD VARIABLES FOR BINARY AND PROPORTIONAL DEPENDENT VARS, AND RESHAPE A FEW VARS OF INTEREST
+prediction_data$MR_indicator = ifelse(prediction_data$MR > 0, 1, 0)
+prediction_data$MR_proportion = prediction_data$MR / prediction_data$totalinjuries
+prediction_data$no_terminations = ifelse(prediction_data$terminated < prediction_data$total_violations, 1, 0)
+
+#Create lagged variables of the 1st and 2nd order
+prediction_data = as.data.table(prediction_data)
+prediction_data[, c("MR_indicator_l1", "MR_indicator_l2", "MR_proportion_l1", "MR_proportion_l2") := shift(.SD, 1:2), 
+            by = c("mineid", "quarter"), .SDcols = c("MR_indicator", "MR_proportion")]
+prediction_data = as.data.frame(prediction_data)
+
+
 #Pare away variables with zero variation before model selection and prediction stages
 var_stats = describe(prediction_data[, c(-match("mineid", names(prediction_data)), -match("quarter", names(prediction_data)), -match("year", names(prediction_data)),
                                          -match("minename", names(prediction_data)), -match("minestatusdate", names(prediction_data)), -match("operatorid", names(prediction_data)),
@@ -101,11 +114,6 @@ mine_penpoints = c("contractorsizepoints", "controllersizepoints")
 
 # this line will report number of missings per var - should be zero!
 #apply(is.na(prediction_data),2,sum)
-
-# ADD VARIABLES FOR BINARY AND PROPORTIONAL DEPENDENT VARS, AND RESHAPE A FEW VARS OF INTEREST
-prediction_data$MR_indicator = ifelse(prediction_data$MR > 0, 1, 0)
-prediction_data$MR_proportion = prediction_data$MR / prediction_data$totalinjuries
-prediction_data$no_terminations = ifelse(prediction_data$terminated < prediction_data$total_violations, 1, 0)
 ######################################################################################################################################
 
 #PCA
