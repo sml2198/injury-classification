@@ -19,7 +19,7 @@ library(glmnet)
 library(randomForest)
 library(MASS)
 
-prediction_data = readRDS("X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75c.rds")
+prediction_data = readRDS("X:/Projects/Mining/NIOSH/analysis/data/4_collapsed/prediction_data.rds")
 prediction_data = prediction_data[, c(-grep("minetype", names(prediction_data)), -grep("coalcormetalmmine", names(prediction_data)), -match("daysperweek", names(prediction_data)))]
 
 #Make categorical variables with numeric levels
@@ -98,6 +98,9 @@ inspec_exp = c("insp_hours_per_qtr", "onsite_insp_hours_per_qtr", "num_insp")
 inj_exp = c("productionshiftsperday", "coal_prod_qtr", "employment_qtr", "hours_qtr", "minesizepoints")
 mine_penpoints = c("contractorsizepoints", "controllersizepoints")
 
+# this line will report number of missings per var - should be zero!
+#apply(is.na(prediction_data),2,sum)
+
 #PCA
 
 pca_results = PCA(prediction_data[, grep("^[0-9][0-9]\\.[0-9]+\\.penaltypoints", names(prediction_data))], graph = F)
@@ -129,7 +132,7 @@ for (i in 1:3) {
 lasso_results = glmnet(as.matrix(prediction_data[, grep("^[0-9][0-9]\\.[0-9]+\\.penaltypoints", names(prediction_data))]), 
                        as.vector(prediction_data$MR), family = "gaussian")
 print(lasso_results)
-#plot(lasso_results)
+plot(lasso_results)
 #Argument s passed to "coef" is the lambda value at which LASSO coefficients are obtained
 lasso_coefs = coef(lasso_results, s = 1.260e-02)[,1]
 survng_vars = names(lasso_coefs)[lasso_coefs > 0]
@@ -149,7 +152,38 @@ sort(rf_results$importance[,1], decreasing = T)
 ######################################################################################################################################
 # EVERYTHING BELOW THIS LINE IS FOR THE ALGORITHM
 
-rm(multi_qtr_inspcs, mines_accidents_coded, summed_coded_accidents, summed_violations, summed_inspcs, averaged_violations)
+prediction_data = prediction_data[, c(match("MR", names(prediction_data)), 
+                                            match("47.penaltypoints", names(prediction_data)), 
+                                            match("48.penaltypoints", names(prediction_data)),
+                                            match("71.penaltypoints", names(prediction_data)),
+                                            match("72.penaltypoints", names(prediction_data)),
+                                            match("75.penaltypoints", names(prediction_data)),
+                                            match("47.sigandsubdesignation", names(prediction_data)), 
+                                            match("48.sigandsubdesignation", names(prediction_data)),
+                                            match("71.sigandsubdesignation", names(prediction_data)),
+                                            match("72.sigandsubdesignation", names(prediction_data)),
+                                            match("75.sigandsubdesignation", names(prediction_data)),
+                                            match("47.operator_repeated_viol_pInspDay", names(prediction_data)), 
+                                            match("48.operator_repeated_viol_pInspDay", names(prediction_data)),
+                                            match("71.operator_repeated_viol_pInspDay", names(prediction_data)),
+                                            match("72.operator_repeated_viol_pInspDay", names(prediction_data)),
+                                            match("75.operator_repeated_viol_pInspDay", names(prediction_data)),
+                                            match("47.operator_violation_pInspDay", names(prediction_data)), 
+                                            match("48.operator_violation_pInspDay", names(prediction_data)),
+                                            match("71.operator_violation_pInspDay", names(prediction_data)),
+                                            match("72.operator_violation_pInspDay", names(prediction_data)),
+                                            match("75.operator_violation_pInspDay", names(prediction_data)),
+                                            match("mineid", names(prediction_data)), 
+                                            match("num_insp", names(prediction_data)), 
+                                            match("quarter", names(prediction_data)), 
+                                            match("totalinjuries", names(prediction_data)),
+                                            match("onsite_insp_hours_per_qtr", names(prediction_data)), 
+                                            match("employment_qtr", names(prediction_data)), 
+                                            match("total_violations", names(prediction_data)), 
+                                            match("coal_prod_qtr", names(prediction_data)), 
+                                            match("hours_qtr", names(prediction_data)))]
+
+#rm(multi_qtr_inspcs, mines_accidents_coded, summed_coded_accidents, summed_violations, summed_inspcs, averaged_violations)
 #To provide an intercept for the prediction stage:
 prediction_data$constant = 1
 #WARNING: Fails to converge with these initial values
