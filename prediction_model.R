@@ -204,7 +204,12 @@ test_pred_0 = glm(formula = MR ~ . -mineid -quarter, family = "poisson", data = 
                                                                                                    match("hours_qtr", names(prediction_data)),
                                                                                                    match("onsite_insp_hours_per_qtr", names(prediction_data)))])
 
+# LOGIT ON BINARY OUTCOME VARIABLES
+logit = glm(MR_indicator ~ ., family = "binomial", data = sarah_prediction_data[,c(-match("MR", names(sarah_prediction_data)), 
+                                                                                -grep("MR_proportion", names(sarah_prediction_data)))])
+
 test_pred = glarma(Y, X, type = "NegBin", phiLags = c(1, 2), thetaLags = c(1, 2), phiInit = c(0.5, 0.5), thetaInit = c(0.25, 0.25), beta = rep(1, K), alphaInit = 1)
+
 #For some reason, unable to use usual formula abbreviations in this command
 names(prediction_data)[match("47.41", names(prediction_data))] = "subsection_47.41"
 test_pred_2 = pglm(MR ~  subsection_47.41 + penaltypoints_47.41 + totalinjuries ,
