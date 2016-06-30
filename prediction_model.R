@@ -205,8 +205,26 @@ test_pred_0 = glm(formula = MR ~ . -mineid -quarter, family = "poisson", data = 
                                                                                                    match("onsite_insp_hours_per_qtr", names(prediction_data)))])
 
 # LOGIT ON BINARY OUTCOME VARIABLES
-logit = glm(MR_indicator ~ ., family = "binomial", data = sarah_prediction_data[,c(-match("MR", names(sarah_prediction_data)), 
-                                                                                -grep("MR_proportion", names(sarah_prediction_data)))])
+logit = glm(MR_indicator ~ ., family = "binomial", data = prediction_data[, c(match("MR", names(prediction_data)), 
+                                                                              grep("^[0-9][0-9]$", names(prediction_data)), 
+                                                                              match("47.penaltypoints", names(prediction_data)), 
+                                                                              match("48.penaltypoints", names(prediction_data)),
+                                                                              match("71.penaltypoints", names(prediction_data)),
+                                                                              match("72.penaltypoints", names(prediction_data)),
+                                                                              match("75.penaltypoints", names(prediction_data)),
+                                                                              match("77.penaltypoints", names(prediction_data)),
+                                                                              match("47.sigandsubdesignation", names(prediction_data)), 
+                                                                              match("48.sigandsubdesignation", names(prediction_data)),
+                                                                              match("71.sigandsubdesignation", names(prediction_data)),
+                                                                              match("72.sigandsubdesignation", names(prediction_data)),
+                                                                              match("75.sigandsubdesignation", names(prediction_data)),
+                                                                              match("77.sigandsubdesignation", names(prediction_data)),
+                                                                              match("no_terminations", names(prediction_data)),  
+                                                                              match("total_violations", names(prediction_data)),
+                                                                              match("totalinjuries", names(prediction_data)),
+                                                                              match("num_insp", names(prediction_data)), 
+                                                                              match("hours_qtr", names(prediction_data)),
+                                                                              match("onsite_insp_hours_per_qtr", names(prediction_data)))]
 
 test_pred = glarma(Y, X, type = "NegBin", phiLags = c(1, 2), thetaLags = c(1, 2), phiInit = c(0.5, 0.5), thetaInit = c(0.25, 0.25), beta = rep(1, K), alphaInit = 1)
 
