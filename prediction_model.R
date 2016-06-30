@@ -199,10 +199,18 @@ test_pred_0 = glm(formula = MR ~ . -mineid -quarter, family = "poisson", data = 
                                                                                                    match("total_violations", names(prediction_data)),
                                                                                                    match("totalinjuries", names(prediction_data)),
                                                                                                    match("num_insp", names(prediction_data)),
-                                                                                                   match("employment_qtr", names(prediction_data)),
-                                                                                                   match("coal_prod_qtr", names(prediction_data)),
+                                                                                                   #match("employment_qtr", names(prediction_data)),
+                                                                                                   #match("coal_prod_qtr", names(prediction_data)),
                                                                                                    match("hours_qtr", names(prediction_data)),
                                                                                                    match("onsite_insp_hours_per_qtr", names(prediction_data)))])
+
+#Compares the Poisson & OLS predicted distributions with the observed response distribution
+test_pred_naive$fitted.values = ifelse(test_pred_naive$fitted.values < 0, 0, test_pred_naive$fitted.values)
+ols_pred = as.numeric(unlist(lapply(test_pred_naive$fitted.values, FUN = round)))
+poisson_pred = as.numeric(unlist(lapply(test_pred_0$fitted.values, FUN = round)))
+table(prediction_data$MR)
+table(poisson_pred)
+table(ols_pred)
 
 test_pred = glarma(Y, X, type = "NegBin", phiLags = c(1, 2), thetaLags = c(1, 2), phiInit = c(0.5, 0.5), thetaInit = c(0.25, 0.25), beta = rep(1, K), alphaInit = 1)
 #For some reason, unable to use usual formula abbreviations in this command
