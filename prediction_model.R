@@ -182,8 +182,13 @@ K = ncol(prediction_data) - 3
 X = as.matrix(prediction_data[, c(-grep("MR", names(prediction_data)), -grep("mineid", names(prediction_data)), -grep("quarter", names(prediction_data)))])
 Y = as.vector(prediction_data$MR)
 
+#Training/Test Set Creation
+set.seed(625)
+prediction_data$rand = runif(nrow(prediction_data))
+prediction_data = prediction_data[order(prediction_data$rand),]
+
 #Naive OLS prediction. Used as a check on variable selection
-test_pred_naive = lm(formula = MR ~ . -mineid -quarter, data = prediction_data[, c(match("MR", names(prediction_data)),
+test_pred_naive = lm(formula = MR ~ ., data = prediction_data[1:21965, c(match("MR", names(prediction_data)),
                                                                                    grep("^[0-9][0-9]$", names(prediction_data)),
                                                                                    match("47.penaltypoints", names(prediction_data)),
                                                                                    match("48.penaltypoints", names(prediction_data)),
@@ -197,8 +202,8 @@ test_pred_naive = lm(formula = MR ~ . -mineid -quarter, data = prediction_data[,
                                                                                    match("72.sigandsubdesignation", names(prediction_data)),
                                                                                    match("75.sigandsubdesignation", names(prediction_data)),
                                                                                    match("77.sigandsubdesignation", names(prediction_data)),
-                                                                                   match("mineid", names(prediction_data)),
-                                                                                   match("quarter", names(prediction_data)),
+                                                                                   #match("mineid", names(prediction_data)),
+                                                                                   #match("quarter", names(prediction_data)),
                                                                                    match("no_terminations", names(prediction_data)),  
                                                                                    match("total_violations", names(prediction_data)),
                                                                                    match("totalinjuries", names(prediction_data)),
@@ -211,7 +216,7 @@ test_pred_naive = lm(formula = MR ~ . -mineid -quarter, data = prediction_data[,
 #Can adjust varlist to be as desired but shouldn't use "." shortcut since there is then a failure to converge
 #Divergent estimates of theta assuming a NegBi(r, p) distribution on MR suggest failure of NB assumptions. We turn to Poisson regression
 #test_pred_0 = glm.nb(formula = MR ~ total_violations + insp_hours_per_qtr -mineid -quarter, data = prediction_data)
-test_pred_0 = glm(formula = MR ~ . -mineid -quarter -hours_qtr + offset(log(hours_qtr)), family = "poisson", data = prediction_data[, c(match("MR", names(prediction_data)),
+test_pred_0 = glm(formula = MR ~ . -hours_qtr + offset(log(hours_qtr)), family = "poisson", data = prediction_data[1:21965, c(match("MR", names(prediction_data)),
                                                                                                    grep("^[0-9][0-9]$", names(prediction_data)),
                                                                                                    match("47.penaltypoints", names(prediction_data)),
                                                                                                    match("48.penaltypoints", names(prediction_data)),
@@ -225,8 +230,8 @@ test_pred_0 = glm(formula = MR ~ . -mineid -quarter -hours_qtr + offset(log(hour
                                                                                                    match("72.sigandsubdesignation", names(prediction_data)),
                                                                                                    match("75.sigandsubdesignation", names(prediction_data)),
                                                                                                    match("77.sigandsubdesignation", names(prediction_data)),
-                                                                                                   match("mineid", names(prediction_data)),
-                                                                                                   match("quarter", names(prediction_data)),
+                                                                                                   #match("mineid", names(prediction_data)),
+                                                                                                   #match("quarter", names(prediction_data)),
                                                                                                    match("no_terminations", names(prediction_data)),  
                                                                                                    match("total_violations", names(prediction_data)),
                                                                                                    match("totalinjuries", names(prediction_data)),
@@ -236,7 +241,7 @@ test_pred_0 = glm(formula = MR ~ . -mineid -quarter -hours_qtr + offset(log(hour
 
 
 # LOGIT ON BINARY OUTCOME VARIABLES
-logit = glm(MR_indicator ~ ., family = "binomial", data = prediction_data[, c(match("MR_indicator", names(prediction_data)), 
+logit = glm(MR_indicator ~ ., family = "binomial", data = prediction_data[1:21965, c(match("MR_indicator", names(prediction_data)), 
                                                                               grep("^[0-9][0-9]$", names(prediction_data)), 
                                                                               match("47.penaltypoints", names(prediction_data)), 
                                                                               match("48.penaltypoints", names(prediction_data)),
@@ -256,6 +261,67 @@ logit = glm(MR_indicator ~ ., family = "binomial", data = prediction_data[, c(ma
                                                                               match("num_insp", names(prediction_data)), 
                                                                               match("hours_qtr", names(prediction_data)),
                                                                               match("onsite_insp_hours_per_qtr", names(prediction_data)))])
+
+ols_prediction = predict(test_pred_naive, newdata = prediction_data[21965:27456,c(match("MR", names(prediction_data)),
+                                                                                  grep("^[0-9][0-9]$", names(prediction_data)),
+                                                                                  match("47.penaltypoints", names(prediction_data)),
+                                                                                  match("48.penaltypoints", names(prediction_data)),
+                                                                                  match("71.penaltypoints", names(prediction_data)),
+                                                                                  match("72.penaltypoints", names(prediction_data)),
+                                                                                  match("75.penaltypoints", names(prediction_data)),
+                                                                                  match("77.penaltypoints", names(prediction_data)),
+                                                                                  match("47.sigandsubdesignation", names(prediction_data)),
+                                                                                  match("48.sigandsubdesignation", names(prediction_data)),
+                                                                                  match("71.sigandsubdesignation", names(prediction_data)),
+                                                                                  match("72.sigandsubdesignation", names(prediction_data)),
+                                                                                  match("75.sigandsubdesignation", names(prediction_data)),
+                                                                                  match("77.sigandsubdesignation", names(prediction_data)),
+                                                                                  #match("mineid", names(prediction_data)),
+                                                                                  #match("quarter", names(prediction_data)),
+                                                                                  match("no_terminations", names(prediction_data)),  
+                                                                                  match("total_violations", names(prediction_data)),
+                                                                                  match("totalinjuries", names(prediction_data)),
+                                                                                  match("num_insp", names(prediction_data)),
+                                                                                  #match("employment_qtr", names(prediction_data)),
+                                                                                  #match("coal_prod_qtr", names(prediction_data)),
+                                                                                  match("hours_qtr", names(prediction_data)),
+                                                                                  match("onsite_insp_hours_per_qtr", names(prediction_data)))])
+
+#This produces many negative predictions, which is totally perverse for this model.
+poisson_prediction = predict(test_pred_0, newdata = prediction_data[21965:27456,c(match("MR", names(prediction_data)),
+                                                                                  grep("^[0-9][0-9]$", names(prediction_data)),
+                                                                                  match("47.penaltypoints", names(prediction_data)),
+                                                                                  match("48.penaltypoints", names(prediction_data)),
+                                                                                  match("71.penaltypoints", names(prediction_data)),
+                                                                                  match("72.penaltypoints", names(prediction_data)),
+                                                                                  match("75.penaltypoints", names(prediction_data)),
+                                                                                  match("77.penaltypoints", names(prediction_data)),
+                                                                                  match("47.sigandsubdesignation", names(prediction_data)),
+                                                                                  match("48.sigandsubdesignation", names(prediction_data)),
+                                                                                  match("71.sigandsubdesignation", names(prediction_data)),
+                                                                                  match("72.sigandsubdesignation", names(prediction_data)),
+                                                                                  match("75.sigandsubdesignation", names(prediction_data)),
+                                                                                  match("77.sigandsubdesignation", names(prediction_data)),
+                                                                                  #match("mineid", names(prediction_data)),
+                                                                                  #match("quarter", names(prediction_data)),
+                                                                                  match("no_terminations", names(prediction_data)),  
+                                                                                  match("total_violations", names(prediction_data)),
+                                                                                  match("totalinjuries", names(prediction_data)),
+                                                                                  match("num_insp", names(prediction_data)),
+                                                                                  #match("employment_qtr", names(prediction_data)),
+                                                                                  #match("coal_prod_qtr", names(prediction_data)),
+                                                                                  match("hours_qtr", names(prediction_data)),
+                                                                                  match("onsite_insp_hours_per_qtr", names(prediction_data)))])
+
+ols_prediction_r = round(ols_prediction, 0)
+prediction_data$MR_r = round(prediction_data$MR, 0)
+sum(diag(table(prediction_data[21965:27456,]$MR_r, predicted = ols_prediction_r)))/nrow(prediction_data[21965:27456,])
+#Prediction rate for OLS currently 84.6%
+
+poisson_prediction_r = round(poisson_prediction, 0)
+prediction_data$MR_r = round(prediction_data$MR, 0)
+sum(diag(table(prediction_data[21965:27456,]$MR_r, predicted = poisson_prediction_r)))/nrow(prediction_data[21965:27456,])
+#Prediction rate is near 0, but there is likely a problem with the Poisson predictions
 
 #Compares the Poisson & OLS predicted distributions with the observed response distribution
 test_pred_naive$fitted.values = ifelse(test_pred_naive$fitted.values < 0, 0, test_pred_naive$fitted.values)
