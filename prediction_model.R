@@ -149,7 +149,7 @@ lasso_results = glmnet(as.matrix(prediction_data[, grep("^[0-9][0-9]\\.[0-9]+\\.
 print(lasso_results)
 plot(lasso_results)
 #Argument s passed to "coef" is the lambda value at which LASSO coefficients are obtained
-lasso_coefs = coef(lasso_results, s = 0.0571400)[,1]
+lasso_coefs = coef(lasso_results, s = 0.0128600)[,1]
 survng_vars = names(lasso_coefs)[lasso_coefs > 0]
 survng_vars[2:length(survng_vars)]
 
@@ -202,7 +202,7 @@ test_pred_naive = lm(formula = MR ~ . -mineid -quarter, data = prediction_data[,
 #Can adjust varlist to be as desired but shouldn't use "." shortcut since there is then a failure to converge
 #Divergent estimates of theta assuming a NegBi(r, p) distribution on MR suggest failure of NB assumptions. We turn to Poisson regression
 #test_pred_0 = glm.nb(formula = MR ~ total_violations + insp_hours_per_qtr -mineid -quarter, data = prediction_data)
-test_pred_0 = glm(formula = MR ~ . -mineid -quarter, family = "poisson", data = prediction_data[, c(match("MR", names(prediction_data)),
+test_pred_0 = glm(formula = MR ~ . -mineid -quarter -hours_qtr + offset(log(hours_qtr)), family = "poisson", data = prediction_data[, c(match("MR", names(prediction_data)),
                                                                                                    grep("^[0-9][0-9]$", names(prediction_data)),
                                                                                                    match("47.penaltypoints", names(prediction_data)),
                                                                                                    match("48.penaltypoints", names(prediction_data)),
