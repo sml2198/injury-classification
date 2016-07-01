@@ -259,7 +259,7 @@ for (i in 1:length(cfr_codes)) {
   merged_violations[, paste(cfr_codes[i], "operator_violation_pInspDay", sep = ".")] = apply(cbind(merged_violations[, "operator_violation_pInspDay"], merged_violations[, cfr_codes[i]]), 1, prod)
   merged_violations[, paste(cfr_codes[i], "contractor_repeated_viol_cnt", sep = ".")] = apply(cbind(merged_violations[, "contractor_repeated_viol_cnt"], merged_violations[, cfr_codes[i]]), 1, prod)
   merged_violations[, paste(cfr_codes[i], "operator_repeated_viol_pInspDay", sep = ".")] = apply(cbind(merged_violations[, "operator_repeated_viol_pInspDay"], merged_violations[, cfr_codes[i]]), 1, prod)
-  # dummied out categorical vars
+    # dummied out categorical vars
   for (j in 1:length(inspactycodes)) {
     merged_violations[, paste(cfr_codes[i], "inspacty", inspactycodes[j], sep = ".")] = ifelse(merged_violations[, cfr_codes[i]] == 1 & merged_violations[, paste("inspacty", inspactycodes[j], sep = ".")] == 1, 1, 0)
   }
@@ -306,7 +306,9 @@ merged_violations$terminated = ifelse(merged_violations$typeoftermination == "Te
 # select all variables to sum when we collapse to the mine-quarter lever (the first regex will grab all vars created above)
 # add indicator for if a mine q was terminated because of a violation (sum this for now - maybe we'll just make it an indicator later)
 violations_to_sum = merged_violations[, c(grep("^[0-9][0-9]", names(merged_violations)), 
-                                          match("total_violations", names(merged_violations)), 
+                                          match("total_violations", names(merged_violations)),
+                                          match("excessive_history_ind", names(merged_violations)), 
+                                          match("goodfaithind", names(merged_violations)), 
                                           match("terminated", names(merged_violations)),
                                           match("mineid", names(merged_violations)), match("quarter", names(merged_violations)))]
 
@@ -314,13 +316,16 @@ violations_to_sum = merged_violations[, c(grep("^[0-9][0-9]", names(merged_viola
 violations_to_sum = violations_to_sum[, c(-grep("operator_repeated_viol_pInspDay", names(violations_to_sum)), -grep("contractor_repeated_viol_cnt", names(violations_to_sum)))]
 summed_violations = ddply(violations_to_sum, c("mineid", "quarter"), function(x) colSums(x[, c(grep("^[0-9][0-9]", names(x)), 
                                                                                                match("total_violations", names(x)),
+                                                                                               match("excessive_history_ind", names(merged_violations)), 
+                                                                                               match("goodfaithind", names(merged_violations)), 
                                                                                                match("terminated", names(x)))], na.rm = T))
 
 averaged_violations = ddply(merged_violations[, c(grep("operator_repeated_viol_pInspDay", names(merged_violations)), grep("minesizepoints", names(merged_violations)), grep("controllersizepoints", names(merged_violations)),
-                                                                  grep("contractorsizepoints", names(merged_violations)), grep("contractor_repeated_viol_cnt", names(merged_violations)),
-                                                                  match("mineid", names(merged_violations)), match("quarter", names(merged_violations)))], c("mineid", "quarter"), 
+                                                  grep("contractorsizepoints", names(merged_violations)), grep("contractor_repeated_viol_cnt", names(merged_violations)),
+                                                  match("exlate_interest_amt", names(merged_violations)), match("mineid", names(merged_violations)), match("quarter", names(merged_violations)))], c("mineid", "quarter"), 
                                     function(x) colMeans(x[, c(grep("operator_repeated_viol_pInspDay", names(x)), grep("minesizepoints", names(x)), grep("controllersizepoints", names(x)),
-                                                               grep("contractorsizepoints", names(x)), grep("contractor_repeated_viol_cnt", names(x)))], na.rm = T))
+                                                               grep("contractorsizepoints", names(x)), grep("contractor_repeated_viol_cnt", names(x)),
+                                                               match("exlate_interest_amt", names(x)))], na.rm = T))
 
 rm(violations_to_sum)
 #Question: Check if operator variables vary by mine? Are indep. contractors the only operators @ a mine or are they only a part of the operation? A: Inspections generate
