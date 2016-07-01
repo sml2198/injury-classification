@@ -165,6 +165,15 @@ sort(rf_results$importance[,1], decreasing = T)
 #mfa_results = MFA(data, group = c(81, 2, 13), type = c("c", "n", "c"), name.group = c("quant1", "quali1", "quant2"))
 
 ######################################################################################################################################
+# save prediction data to run models in Stata
+# varnames = names(prediction_data)
+# varnames = gsub("\\.", "_", varnames)
+# varnames = gsub("-", "_", varnames)
+# varnames = paste("_", varnames, sep ="")
+# names(prediction_data) = varnames
+# write.csv(prediction_data, "C:/Users/slevine2/Desktop/prediction_data.csv")
+
+######################################################################################################################################
 # EVERYTHING BELOW THIS LINE IS FOR THE ALGORITHM
 
 #WARNING: Fails to converge with these initial values
