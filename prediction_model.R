@@ -315,13 +315,13 @@ poisson_prediction = predict(test_pred_0, newdata = prediction_data[21965:27456,
 
 ols_prediction_r = round(ols_prediction, 0)
 prediction_data$MR_r = round(prediction_data$MR, 0)
-sum(diag(table(prediction_data[21965:27456,]$MR_r, predicted = ols_prediction_r)))/nrow(prediction_data[21965:27456,])
-#Prediction rate for OLS currently 84.6%
+sum(ols_prediction_r == prediction_data[21965:27456,]$MR_r)/nrow(prediction_data[21965:27456,])
+#OLS prediction accuracy is currently 84.6%
 
-poisson_prediction_r = round(poisson_prediction, 0)
+poisson_prediction_r = round(exp(poisson_prediction), 0)
 prediction_data$MR_r = round(prediction_data$MR, 0)
-sum(diag(table(prediction_data[21965:27456,]$MR_r, predicted = poisson_prediction_r)))/nrow(prediction_data[21965:27456,])
-#Prediction rate is near 0, but there is likely a problem with the Poisson predictions
+sum(poisson_prediction_r == prediction_data[21965:27456,]$MR_r)/nrow(prediction_data[21965:27456,])
+#Poisson prediction accuracy is currently 80.8%
 
 #Compares the Poisson & OLS predicted distributions with the observed response distribution
 test_pred_naive$fitted.values = ifelse(test_pred_naive$fitted.values < 0, 0, test_pred_naive$fitted.values)
