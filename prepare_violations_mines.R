@@ -522,6 +522,22 @@ gc()
 #part 75 csv
 data_75a = readRDS(prediction_data, file = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75a.rds")
 data_75a  = data_75a[,c(match("MR", names(data_75a)),
+                        match("year", names(data_75a)),
+                        match("minename", names(data_75a)),
+                        match("minesizepoints", names(data_75a)),
+                        match("controllersizepoints", names(data_75a)),
+                        match("contractorsizepoints", names(data_75a)),
+                        match("hours_qtr", names(data_75a)),
+                        match("employment_qtr", names(data_75a)),
+                        match("coal_prod_qtr", names(data_75a)),
+                        match("productionshiftsperday", names(data_75a)),
+                        match("terminated", names(data_75a)),
+                        match("contractor_repeated_viol_cnt", names(data_75a)),
+                        match("insp_hours_per_qtr", names(data_75a)),
+                        match("terminated", names(data_75a)),
+                        match("idesc", names(data_75a)),
+                        match("minestatus", names(data_75a)),
+                        grep("75.inspacty", names(data_75a)),
                         grep("^75\\.[0-9]+$", names(data_75a)),
                         grep("penaltypoints", names(data_75a)),
                         grep("sigandsubdesignation", names(data_75a)),
@@ -532,11 +548,6 @@ data_75a  = data_75a[,c(match("MR", names(data_75a)),
                         match("mineid", names(data_75a)), 
                         match("quarter", names(data_75a)),
                         match("onsite_insp_hours_per_qtr", names(data_75a)))]
-varnames = names(data_75a)
-varnames = gsub("\\.", "_", varnames)
-varnames = gsub("-", "_", varnames)
-varnames = paste("_", varnames, sep ="")
-names(data_75a) = varnames
 
 data_75b = readRDS(prediction_data, file = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75b.rds")
 data_75b  = data_75b[, c(match("mineid", names(data_75b)), 
@@ -544,11 +555,6 @@ data_75b  = data_75b[, c(match("mineid", names(data_75b)),
                         grep("^75\\.[0-9]+$", names(data_75b)),
                         grep("penaltypoints", names(data_75b)),
                         grep("sigandsubdesignation", names(data_75b)))]
-varnames = names(data_75b)
-varnames = gsub("\\.", "_", varnames)
-varnames = gsub("-", "_", varnames)
-varnames = paste("_", varnames, sep ="")
-names(data_75b) = varnames
 
 data_75c = readRDS(prediction_data, file = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75c.rds")
 data_75c  = data_75c[, c(match("mineid", names(data_75c)), 
@@ -556,16 +562,19 @@ data_75c  = data_75c[, c(match("mineid", names(data_75c)),
                         grep("^75\\.[0-9]+$", names(data_75c)),
                         grep("penaltypoints", names(data_75c)),
                         grep("sigandsubdesignation", names(data_75c)))]
-varnames = names(data_75c)
+
+part75_select_vars = merge(data_75a, data_75b, by = c("mineid", "quarter"), all=T)
+part75_select_vars = merge(part75_select_vars, data_75c, by = c("mineid", "quarter"), all=T)
+
+part75_select_vars = part75_select_vars[,c(-grep("\\.(x|y)$", names(part75_select_vars)))]
+saveRDS(part75_select_vars, "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75.rds")
+
+varnames = names(part75_select_vars)
 varnames = gsub("\\.", "_", varnames)
 varnames = gsub("-", "_", varnames)
 varnames = paste("_", varnames, sep ="")
-names(data_75c) = varnames
+names(part75_select_vars) = varnames
 
-part75_select_vars = merge(data_75a, data_75b, by = c("_mineid", "_quarter"), all=T)
-part75_select_vars = merge(part75_select_vars, data_75c, by = c("_mineid", "_quarter"), all=T)
-part75_select_vars = part75_select_vars[,c(-grep("\\.(x|y)$", names(part75_select_vars)))]
-saveRDS(data_75c, "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75.rds")
-write.csv(data_75c, "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75.csv")
+write.csv(part75_select_vars, "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75.csv")
 
 ######################################################################################################################################
