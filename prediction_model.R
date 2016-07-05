@@ -216,7 +216,7 @@ test_pred_naive = lm(formula = MR ~ ., data = prediction_data[1:21965, c(match("
 #Can adjust varlist to be as desired but shouldn't use "." shortcut since there is then a failure to converge
 #Divergent estimates of theta assuming a NegBi(r, p) distribution on MR suggest failure of NB assumptions. We turn to Poisson regression
 #test_pred_0 = glm.nb(formula = MR ~ total_violations + insp_hours_per_qtr -mineid -quarter, data = prediction_data)
-test_pred_0 = glm(formula = MR ~ . -hours_qtr + offset(log(hours_qtr)), family = "poisson", data = prediction_data[1:21965, c(match("MR", names(prediction_data)),
+test_pred_0 = glm(formula = MR ~ ., family = "poisson", data = prediction_data[1:21965, c(match("MR", names(prediction_data)),
                                                                                                    grep("^[0-9][0-9]$", names(prediction_data)),
                                                                                                    match("47.penaltypoints", names(prediction_data)),
                                                                                                    match("48.penaltypoints", names(prediction_data)),
@@ -308,7 +308,7 @@ poisson_prediction = predict(test_pred_0, newdata = prediction_data[21965:27456,
                                                                                   match("total_violations", names(prediction_data)),
                                                                                   match("totalinjuries", names(prediction_data)),
                                                                                   match("num_insp", names(prediction_data)),
-                                                                                  #match("employment_qtr", names(prediction_data)),
+                                                                                  match("employment_qtr", names(prediction_data)),
                                                                                   #match("coal_prod_qtr", names(prediction_data)),
                                                                                   match("hours_qtr", names(prediction_data)),
                                                                                   match("onsite_insp_hours_per_qtr", names(prediction_data)))])
@@ -321,7 +321,7 @@ sum(ols_prediction_r == prediction_data[21965:27456,]$MR_r)/nrow(prediction_data
 poisson_prediction_r = round(exp(poisson_prediction), 0)
 prediction_data$MR_r = round(prediction_data$MR, 0)
 sum(poisson_prediction_r == prediction_data[21965:27456,]$MR_r)/nrow(prediction_data[21965:27456,])
-#Poisson prediction accuracy is currently 80.8%
+#Poisson prediction accuracy is currently 83.9%
 
 #Compares the Poisson & OLS predicted distributions with the observed response distribution
 test_pred_naive$fitted.values = ifelse(test_pred_naive$fitted.values < 0, 0, test_pred_naive$fitted.values)
