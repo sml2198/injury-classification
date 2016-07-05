@@ -171,12 +171,17 @@ sort(rf_results$importance[,1], decreasing = T)
 
 ######################################################################################################################################
 #save prediction data to run models in Stata
-# varnames = names(logit_data)
+
+# prediction_data = prediction_data[!is.na(prediction_data$MR_indicator_l3),]
+# prediction_data = prediction_data[!is.na(prediction_data$`75.penaltypoints_l3`),]
+# prediction_data = prediction_data[!is.na(prediction_data$`75.sigandsubdesignation_l3`),]
+# prediction_data = prediction_data[!is.na(prediction_data$`75_l3`),]
+# varnames = names(prediction_data)
 # varnames = gsub("\\.", "_", varnames)
 # varnames = gsub("-", "_", varnames)
 # varnames = paste("_", varnames, sep ="")
-# names(logit_data) = varnames
-# write.csv(logit_data, "C:/Users/slevine2/Desktop/prediction_data_75.csv")
+# names(prediction_data) = varnames
+# write.csv(prediction_data, "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75.csv")
 
 ######################################################################################################################################
 # EVERYTHING BELOW THIS LINE IS FOR THE ALGORITHM
@@ -248,15 +253,12 @@ test_pred_0 = glm(formula = MR ~ ., family = "poisson", data = prediction_data[1
 logit_data = prediction_data[, c(grep("MR_indicator", names(prediction_data)), 
                                 grep("^[0-9][0-9]$", names(prediction_data)), 
                                 grep("^[0-9][0-9]_l[1-3]$", names(prediction_data)), 
-                                grep("75.+penaltypoints", names(prediction_data)),
-                                grep("75.+sigandsubdesignation", names(prediction_data)),
+                                grep("75.penaltypoints", names(prediction_data)),
+                                grep("75.sigandsubdesignation", names(prediction_data)),
                                 match("no_terminations", names(prediction_data)),  
                                 match("total_violations", names(prediction_data)),
-                                match("totalinjuries", names(prediction_data)),
                                 match("num_insp", names(prediction_data)), 
                                 match("hours_qtr", names(prediction_data)),
-                                match("mineid", names(prediction_data)), 
-                                match("quarter", names(prediction_data)),
                                 match("onsite_insp_hours_per_qtr", names(prediction_data)))]
 # remove observations that are missing the third lagged var (this will also by default remove obs that are missing either the first
 # or second lagged var) these are the first three quarters of a mines operation so there is no prior data to lag
@@ -265,18 +267,19 @@ logit_data = logit_data[!is.na(logit_data$`75.penaltypoints_l3`),]
 logit_data = logit_data[!is.na(logit_data$`75.sigandsubdesignation_l3`),]
 logit_data = logit_data[!is.na(logit_data$`75_l3`),]
 
-logit_train_data = logit_data[1:21965,]
-#Pare away variables with zero variation before model selection and prediction stages
-var_stats = describe(logit_train_data[1:21965, c(-match("mineid", names(logit_train_data)), -match("quarter", names(logit_train_data)))])
-nontriv_vars = rownames(var_stats[var_stats$sd > 0,])
-triv_vars = setdiff(names(train_data), nontriv_vars)
-#Warning: This excludes all non-numeric variables
-logit_train_data = logit_train_data[, nontriv_vars]
+# logit_train_data = logit_data[1:21965,]
+# #Pare away variables with zero variation before model selection and prediction stages
+# var_stats = describe(logit_train_data[1:21965, c(-match("mineid", names(logit_train_data)), -match("quarter", names(logit_train_data)))])
+# nontriv_vars = rownames(var_stats[var_stats$sd > 0,])
+# triv_vars = setdiff(names(train_data), nontriv_vars)
+# #Warning: This excludes all non-numeric variables
+# logit_train_data = logit_train_data[, nontriv_vars]
+# logit_test_data = logit_data[21965:27456,nontriv_vars]
 
 # LOGIT ON BINARY OUTCOME VARIABLES
-logit = glm(MR_indicator ~ . , family = "binomial", data = logit_train_data)
+logit = glm(MR_indicator ~ . , family = "binomial", data = logit_data[1:21965,])
 
-logit_prediction = predict(logit, newdata = logit_data[21965:27456,c(-match("mineid", names(prediction_data)),-match("quarter", names(prediction_data)))])
+logit_prediction = predict(logit, newdata = logit_data[21965:27456,])
 
 ols_prediction = predict(test_pred_naive, newdata = prediction_data[21965:27456,c(match("MR", names(prediction_data)),
                                                                                   grep("^[0-9][0-9]$", names(prediction_data)),
@@ -327,6 +330,12 @@ poisson_prediction = predict(test_pred_0, newdata = prediction_data[21965:27456,
                                                                                   match("num_insp", names(prediction_data)),
                                                                                   match("hours_qtr", names(prediction_data)),
                                                                                   match("onsite_insp_hours_per_qtr", names(prediction_data)))])
+
+
+logit_prediction_r = round(logit_prediction, 0)
+prediction_data$MR_r = round(prediction_data$MR, 0)
+sum(logit_prediction_r == prediction_data[21965:27456,]$MR_r)/nrow(prediction_data[21965:27456,])
+#OLS prediction accuracy is currently 84.6%
 
 ols_prediction_r = round(ols_prediction, 0)
 prediction_data$MR_r = round(prediction_data$MR, 0)
