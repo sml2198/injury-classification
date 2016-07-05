@@ -90,8 +90,10 @@ prediction_data$no_terminations = ifelse(prediction_data$terminated < prediction
 
 #Create lagged variables of the 1st and 2nd order
 prediction_data = as.data.table(prediction_data[order(prediction_data$mineid, prediction_data$quarter, na.last = T),])
-prediction_data[, c("MR_indicator_l1", "MR_indicator_l2", "MR_proportion_l1", "MR_proportion_l2") := shift(.SD, 1:2), 
-            by = mineid, .SDcols = c("MR_indicator", "MR_proportion")]
+prediction_data[, c("MR_l1", "MR_l2", "MR_l3", 
+                    "MR_indicator_l1", "MR_indicator_l2", "MR_indicator_l3", 
+                    "MR_proportion_l1", "MR_proportion_l2", "MR_proportion_l3") := shift(.SD, 1:3), 
+            by = mineid, .SDcols = c("MR", "MR_indicator", "MR_proportion")]
 prediction_data = as.data.frame(prediction_data)
 
 
@@ -112,7 +114,7 @@ inspec_exp = c("insp_hours_per_qtr", "onsite_insp_hours_per_qtr", "num_insp")
 inj_exp = c("productionshiftsperday", "coal_prod_qtr", "employment_qtr", "hours_qtr", "minesizepoints")
 mine_penpoints = c("contractorsizepoints", "controllersizepoints")
 
-# this line will report number of missings per var - should be zero!
+# this line will report number of missings per var - should be zero (except lagged vars which will be missing for first quarter)!
 #apply(is.na(prediction_data),2,sum)
 ######################################################################################################################################
 
@@ -240,27 +242,35 @@ test_pred_0 = glm(formula = MR ~ ., family = "poisson", data = prediction_data[1
                                                                                                    match("onsite_insp_hours_per_qtr", names(prediction_data)))])
 
 
+
+logit_data = prediction_data[, c(match("MR_indicator", names(prediction_data)), grep("MR_indicator_l", names(prediction_data)),
+                                grep("^[0-9][0-9]$", names(prediction_data)), 
+                                match("47.penaltypoints", names(prediction_data)), 
+                                match("48.penaltypoints", names(prediction_data)),
+                                match("71.penaltypoints", names(prediction_data)),
+                                match("72.penaltypoints", names(prediction_data)),
+                                match("75.penaltypoints", names(prediction_data)),
+                                match("77.penaltypoints", names(prediction_data)),
+                                match("47.sigandsubdesignation", names(prediction_data)), 
+                                match("48.sigandsubdesignation", names(prediction_data)),
+                                match("71.sigandsubdesignation", names(prediction_data)),
+                                match("72.sigandsubdesignation", names(prediction_data)),
+                                match("75.sigandsubdesignation", names(prediction_data)),
+                                match("77.sigandsubdesignation", names(prediction_data)),
+                                match("no_terminations", names(prediction_data)),  
+                                match("total_violations", names(prediction_data)),
+                                match("totalinjuries", names(prediction_data)),
+                                match("num_insp", names(prediction_data)), 
+                                match("hours_qtr", names(prediction_data)),
+                                match("mineid", names(prediction_data)), 
+                                match("quarter", names(prediction_data)),
+                                match("onsite_insp_hours_per_qtr", names(prediction_data)))]
+# remove observations that are missing the third lagged var (this will also by default remove obs that are missing either the first
+# or second lagged var) these are the first three quarters of a mines operation so there is no prior data to lag
+logit_data = logit_data[!is.na(logit_data$MR_indicator_l3),]
+
 # LOGIT ON BINARY OUTCOME VARIABLES
-logit = glm(MR_indicator ~ ., family = "binomial", data = prediction_data[1:21965, c(match("MR_indicator", names(prediction_data)), 
-                                                                              grep("^[0-9][0-9]$", names(prediction_data)), 
-                                                                              match("47.penaltypoints", names(prediction_data)), 
-                                                                              match("48.penaltypoints", names(prediction_data)),
-                                                                              match("71.penaltypoints", names(prediction_data)),
-                                                                              match("72.penaltypoints", names(prediction_data)),
-                                                                              match("75.penaltypoints", names(prediction_data)),
-                                                                              match("77.penaltypoints", names(prediction_data)),
-                                                                              match("47.sigandsubdesignation", names(prediction_data)), 
-                                                                              match("48.sigandsubdesignation", names(prediction_data)),
-                                                                              match("71.sigandsubdesignation", names(prediction_data)),
-                                                                              match("72.sigandsubdesignation", names(prediction_data)),
-                                                                              match("75.sigandsubdesignation", names(prediction_data)),
-                                                                              match("77.sigandsubdesignation", names(prediction_data)),
-                                                                              match("no_terminations", names(prediction_data)),  
-                                                                              match("total_violations", names(prediction_data)),
-                                                                              match("totalinjuries", names(prediction_data)),
-                                                                              match("num_insp", names(prediction_data)), 
-                                                                              match("hours_qtr", names(prediction_data)),
-                                                                              match("onsite_insp_hours_per_qtr", names(prediction_data)))])
+logit = glm(MR_indicator ~ ., family = "binomial", data = logit_data)
 
 ols_prediction = predict(test_pred_naive, newdata = prediction_data[21965:27456,c(match("MR", names(prediction_data)),
                                                                                   grep("^[0-9][0-9]$", names(prediction_data)),
