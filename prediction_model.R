@@ -21,6 +21,7 @@ library(MASS)
 library(data.table)
 
 prediction_data = readRDS("X:/Projects/Mining/NIOSH/analysis/data/4_collapsed/prediction_data.rds")
+#prediction_data = readRDS("X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75.rds")
 prediction_data = prediction_data[, c(-grep("minetype", names(prediction_data)), -grep("coalcormetalmmine", names(prediction_data)), -match("daysperweek", names(prediction_data)))]
 
 #Make categorical variables with numeric levels
@@ -90,10 +91,13 @@ prediction_data$no_terminations = ifelse(prediction_data$terminated < prediction
 
 #Create lagged variables of the 1st and 2nd order
 prediction_data = as.data.table(prediction_data[order(prediction_data$mineid, prediction_data$quarter, na.last = T),])
-prediction_data[, c("MR_l1", "MR_l2", "MR_l3", 
+prediction_data[, c("75.penaltypoints_l1", "75.penaltypoints_l2", "75.penaltypoints_l3",
+                    "75.sigandsubdesignation_l1", "75.sigandsubdesignation_l2", "75.sigandsubdesignation_l3",
+                    "75_l1", "75_l2", "75_l3", 
+                    "MR_l1", "MR_l2", "MR_l3", 
                     "MR_indicator_l1", "MR_indicator_l2", "MR_indicator_l3", 
                     "MR_proportion_l1", "MR_proportion_l2", "MR_proportion_l3") := shift(.SD, 1:3), 
-            by = mineid, .SDcols = c("MR", "MR_indicator", "MR_proportion")]
+                 by = mineid, .SDcols = c("75.penaltypoints", "75.sigandsubdesignation", "75", "MR", "MR_indicator", "MR_proportion")]
 prediction_data = as.data.frame(prediction_data)
 
 
