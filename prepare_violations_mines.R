@@ -192,6 +192,8 @@ MR_relevant_subsectcodes_75b = levels(factor(merged_violations[(merged_violation
             merged_violations$MR_maybe_relevant == 1) & (grepl("75\\.14", merged_violations[,"subsection_code"])),]$subsection_code))
 MR_relevant_subsectcodes_75c = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 | 
            merged_violations$MR_maybe_relevant == 1) & (grepl("75\\.1[5-7]", merged_violations[,"subsection_code"])),]$subsection_code))
+#MR_relevant_subsectcodes_75c = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 | 
+          # merged_violations$MR_maybe_relevant == 1) & (grepl("75\\.", merged_violations[,"subsection_code"])),]$subsection_code))
 MR_relevant_subsectcodes_77 = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 | 
             merged_violations$MR_maybe_relevant == 1) & (grepl("77\\.", merged_violations[,"subsection_code"])),]$subsection_code))
 
@@ -514,5 +516,56 @@ prediction_data = prediction_data[, c(-grep("merge", names(prediction_data)), -g
 
 saveRDS(prediction_data, file = "X:/Projects/Mining/NIOSH/analysis/data/4_collapsed/prediction_data.rds")
 #saveRDS(prediction_data, file = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75a.rds")
+
+######################################################################################################################################
+gc()
+#part 75 csv
+data_75a = readRDS(prediction_data, file = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75a.rds")
+data_75a  = data_75a[,c(match("MR", names(data_75a)),
+                        grep("^75\\.[0-9]+$", names(data_75a)),
+                        grep("penaltypoints", names(data_75a)),
+                        grep("sigandsubdesignation", names(data_75a)),
+                        match("total_violations", names(data_75a)),
+                        match("totalinjuries", names(data_75a)),
+                        match("num_insp", names(data_75a)), 
+                        match("hours_qtr", names(data_75a)),
+                        match("mineid", names(data_75a)), 
+                        match("quarter", names(data_75a)),
+                        match("onsite_insp_hours_per_qtr", names(data_75a)))]
+varnames = names(data_75a)
+varnames = gsub("\\.", "_", varnames)
+varnames = gsub("-", "_", varnames)
+varnames = paste("_", varnames, sep ="")
+names(data_75a) = varnames
+
+data_75b = readRDS(prediction_data, file = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75b.rds")
+data_75b  = data_75b[, c(match("mineid", names(data_75b)), 
+                        match("quarter", names(data_75b)),
+                        grep("^75\\.[0-9]+$", names(data_75b)),
+                        grep("penaltypoints", names(data_75b)),
+                        grep("sigandsubdesignation", names(data_75b)))]
+varnames = names(data_75b)
+varnames = gsub("\\.", "_", varnames)
+varnames = gsub("-", "_", varnames)
+varnames = paste("_", varnames, sep ="")
+names(data_75b) = varnames
+
+data_75c = readRDS(prediction_data, file = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75c.rds")
+data_75c  = data_75c[, c(match("mineid", names(data_75c)), 
+                        match("quarter", names(data_75c)),
+                        grep("^75\\.[0-9]+$", names(data_75c)),
+                        grep("penaltypoints", names(data_75c)),
+                        grep("sigandsubdesignation", names(data_75c)))]
+varnames = names(data_75c)
+varnames = gsub("\\.", "_", varnames)
+varnames = gsub("-", "_", varnames)
+varnames = paste("_", varnames, sep ="")
+names(data_75c) = varnames
+
+part75_select_vars = merge(data_75a, data_75b, by = c("_mineid", "_quarter"), all=T)
+part75_select_vars = merge(part75_select_vars, data_75c, by = c("_mineid", "_quarter"), all=T)
+part75_select_vars = part75_select_vars[,c(-grep("\\.(x|y)$", names(part75_select_vars)))]
+saveRDS(data_75c, "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75.rds")
+write.csv(data_75c, "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75.csv")
 
 ######################################################################################################################################
