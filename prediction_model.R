@@ -248,19 +248,20 @@ test_pred_0 = glm(formula = MR ~ ., family = "poisson", data = prediction_data[1
 
 
 
-logit_data = prediction_data[, c(match("MR_indicator", names(prediction_data)), grep("MR_indicator_l", names(prediction_data)),
+logit_data = prediction_data[, c(grep("MR_indicator", names(prediction_data)), 
                                 grep("^[0-9][0-9]$", names(prediction_data)), 
+                                grep("^[0-9][0-9]_l[1-3]$", names(prediction_data)), 
                                 match("47.penaltypoints", names(prediction_data)), 
                                 match("48.penaltypoints", names(prediction_data)),
                                 match("71.penaltypoints", names(prediction_data)),
                                 match("72.penaltypoints", names(prediction_data)),
-                                match("75.penaltypoints", names(prediction_data)),
+                                grep("75.penaltypoints", names(prediction_data)),
                                 match("77.penaltypoints", names(prediction_data)),
                                 match("47.sigandsubdesignation", names(prediction_data)), 
                                 match("48.sigandsubdesignation", names(prediction_data)),
                                 match("71.sigandsubdesignation", names(prediction_data)),
                                 match("72.sigandsubdesignation", names(prediction_data)),
-                                match("75.sigandsubdesignation", names(prediction_data)),
+                                grep("75.sigandsubdesignation", names(prediction_data)),
                                 match("77.sigandsubdesignation", names(prediction_data)),
                                 match("no_terminations", names(prediction_data)),  
                                 match("total_violations", names(prediction_data)),
@@ -275,7 +276,7 @@ logit_data = prediction_data[, c(match("MR_indicator", names(prediction_data)), 
 logit_data = logit_data[!is.na(logit_data$MR_indicator_l3),]
 
 # LOGIT ON BINARY OUTCOME VARIABLES
-logit = glm(MR_indicator ~ ., family = "binomial", data = logit_data)
+logit = glm(MR_indicator ~ . -mineid, family = "binomial", data = logit_data)
 
 ols_prediction = predict(test_pred_naive, newdata = prediction_data[21965:27456,c(match("MR", names(prediction_data)),
                                                                                   grep("^[0-9][0-9]$", names(prediction_data)),
