@@ -218,7 +218,38 @@ test_pred_naive = lm(formula = MR ~ ., data = prediction_data[1:21965, c(match("
                                                                          #match("coal_prod_qtr", names(prediction_data)),
                                                                          match("hours_qtr", names(prediction_data)),
                                                                          match("onsite_insp_hours_per_qtr", names(prediction_data)))])
-
+test_df = prediction_data[1:21965, c(match("MR", names(prediction_data)),
+                                     grep("^[0-9][0-9]$", names(prediction_data)),
+                                     match("47.penaltypoints", names(prediction_data)),
+                                     match("48.penaltypoints", names(prediction_data)),
+                                     match("71.penaltypoints", names(prediction_data)),
+                                     match("72.penaltypoints", names(prediction_data)),
+                                     match("75.penaltypoints", names(prediction_data)),
+                                     match("77.penaltypoints", names(prediction_data)),
+                                     match("47.sigandsubdesignation", names(prediction_data)),
+                                     match("48.sigandsubdesignation", names(prediction_data)),
+                                     match("71.sigandsubdesignation", names(prediction_data)),
+                                     match("72.sigandsubdesignation", names(prediction_data)),
+                                     match("75.sigandsubdesignation", names(prediction_data)),
+                                     match("77.sigandsubdesignation", names(prediction_data)),
+                                     match("mineid", names(prediction_data)),
+                                     match("quarter", names(prediction_data)),
+                                     match("no_terminations", names(prediction_data)),  
+                                     match("total_violations", names(prediction_data)),
+                                     match("totalinjuries", names(prediction_data)),
+                                     match("num_insp", names(prediction_data)),
+                                     #match("employment_qtr", names(prediction_data)),
+                                     #match("coal_prod_qtr", names(prediction_data)),
+                                     match("hours_qtr", names(prediction_data)),
+                                     match("onsite_insp_hours_per_qtr", names(prediction_data)))]
+test_df = test_df[order(test_df$mineid, test_df$quarter, na.last = T),]
+bgtest_results = bgtest(formula = MR ~ . -mineid -quarter, order = 1, type = "Chisq", data = test_df)
+test_df$residuals = test_pred_naive$residuals
+test_df = as.data.table(test_df[order(test_df$mineid, test_df$quarter, na.last = T),])
+test_df[, c("residualsl1", "residualsl2", "residualsl3", "residualsl4") := shift(.SD, 1:4), 
+                by = mineid, .SDcols = c("residuals")]
+test_df = as.data.frame(test_df)
+serialcorr_test = lm(formula = residuals ~ . -mineid -quarter, data = test_df)
 #Can adjust varlist to be as desired but shouldn't use "." shortcut since there is then a failure to converge
 #Divergent estimates of theta assuming a NegBi(r, p) distribution on MR suggest failure of NB assumptions. We turn to Poisson regression
 #test_pred_0 = glm.nb(formula = MR ~ total_violations + insp_hours_per_qtr -mineid -quarter, data = prediction_data)
