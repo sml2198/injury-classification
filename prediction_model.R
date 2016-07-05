@@ -21,7 +21,7 @@ library(MASS)
 library(data.table)
 
 prediction_data = readRDS("X:/Projects/Mining/NIOSH/analysis/data/4_collapsed/prediction_data.rds")
-#prediction_data = readRDS("X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75.rds")
+prediction_data = readRDS("X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75.rds")
 prediction_data = prediction_data[, c(-grep("minetype", names(prediction_data)), -grep("coalcormetalmmine", names(prediction_data)), -match("daysperweek", names(prediction_data)))]
 
 #Make categorical variables with numeric levels
@@ -100,7 +100,6 @@ prediction_data[, c("75.penaltypoints_l1", "75.penaltypoints_l2", "75.penaltypoi
                  by = mineid, .SDcols = c("75.penaltypoints", "75.sigandsubdesignation", "75", "MR", "MR_indicator", "MR_proportion")]
 prediction_data = as.data.frame(prediction_data)
 
-
 #Pare away variables with zero variation before model selection and prediction stages
 var_stats = describe(prediction_data[, c(-match("mineid", names(prediction_data)), -match("quarter", names(prediction_data)), -match("year", names(prediction_data)),
                                          -match("minename", names(prediction_data)), -match("minestatusdate", names(prediction_data)), -match("operatorid", names(prediction_data)),
@@ -171,13 +170,13 @@ sort(rf_results$importance[,1], decreasing = T)
 #mfa_results = MFA(data, group = c(81, 2, 13), type = c("c", "n", "c"), name.group = c("quant1", "quali1", "quant2"))
 
 ######################################################################################################################################
-# save prediction data to run models in Stata
-# varnames = names(prediction_data)
+#save prediction data to run models in Stata
+# varnames = names(logit_data)
 # varnames = gsub("\\.", "_", varnames)
 # varnames = gsub("-", "_", varnames)
 # varnames = paste("_", varnames, sep ="")
-# names(prediction_data) = varnames
-# write.csv(prediction_data, "C:/Users/slevine2/Desktop/prediction_data.csv")
+# names(logit_data) = varnames
+# write.csv(logit_data, "C:/Users/slevine2/Desktop/prediction_data_75.csv")
 
 ######################################################################################################################################
 # EVERYTHING BELOW THIS LINE IS FOR THE ALGORITHM
@@ -246,23 +245,11 @@ test_pred_0 = glm(formula = MR ~ ., family = "poisson", data = prediction_data[1
                                                                                           match("hours_qtr", names(prediction_data)),
                                                                                           match("onsite_insp_hours_per_qtr", names(prediction_data)))])
 
-
-
 logit_data = prediction_data[, c(grep("MR_indicator", names(prediction_data)), 
                                 grep("^[0-9][0-9]$", names(prediction_data)), 
                                 grep("^[0-9][0-9]_l[1-3]$", names(prediction_data)), 
-                                match("47.penaltypoints", names(prediction_data)), 
-                                match("48.penaltypoints", names(prediction_data)),
-                                match("71.penaltypoints", names(prediction_data)),
-                                match("72.penaltypoints", names(prediction_data)),
-                                grep("75.penaltypoints", names(prediction_data)),
-                                match("77.penaltypoints", names(prediction_data)),
-                                match("47.sigandsubdesignation", names(prediction_data)), 
-                                match("48.sigandsubdesignation", names(prediction_data)),
-                                match("71.sigandsubdesignation", names(prediction_data)),
-                                match("72.sigandsubdesignation", names(prediction_data)),
-                                grep("75.sigandsubdesignation", names(prediction_data)),
-                                match("77.sigandsubdesignation", names(prediction_data)),
+                                grep("75.+penaltypoints", names(prediction_data)),
+                                grep("75.+sigandsubdesignation", names(prediction_data)),
                                 match("no_terminations", names(prediction_data)),  
                                 match("total_violations", names(prediction_data)),
                                 match("totalinjuries", names(prediction_data)),
@@ -274,9 +261,22 @@ logit_data = prediction_data[, c(grep("MR_indicator", names(prediction_data)),
 # remove observations that are missing the third lagged var (this will also by default remove obs that are missing either the first
 # or second lagged var) these are the first three quarters of a mines operation so there is no prior data to lag
 logit_data = logit_data[!is.na(logit_data$MR_indicator_l3),]
+logit_data = logit_data[!is.na(logit_data$`75.penaltypoints_l3`),]
+logit_data = logit_data[!is.na(logit_data$`75.sigandsubdesignation_l3`),]
+logit_data = logit_data[!is.na(logit_data$`75_l3`),]
+
+logit_train_data = logit_data[1:21965,]
+#Pare away variables with zero variation before model selection and prediction stages
+var_stats = describe(logit_train_data[1:21965, c(-match("mineid", names(logit_train_data)), -match("quarter", names(logit_train_data)))])
+nontriv_vars = rownames(var_stats[var_stats$sd > 0,])
+triv_vars = setdiff(names(train_data), nontriv_vars)
+#Warning: This excludes all non-numeric variables
+logit_train_data = logit_train_data[, nontriv_vars]
 
 # LOGIT ON BINARY OUTCOME VARIABLES
-logit = glm(MR_indicator ~ . -mineid, family = "binomial", data = logit_data)
+logit = glm(MR_indicator ~ . , family = "binomial", data = logit_train_data)
+
+logit_prediction = predict(logit, newdata = logit_data[21965:27456,c(-match("mineid", names(prediction_data)),-match("quarter", names(prediction_data)))])
 
 ols_prediction = predict(test_pred_naive, newdata = prediction_data[21965:27456,c(match("MR", names(prediction_data)),
                                                                                   grep("^[0-9][0-9]$", names(prediction_data)),
