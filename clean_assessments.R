@@ -75,6 +75,7 @@ open_data_assessments = merge(open_data_assessments, mine_types, by = c("mineid"
 open_data_assessments = open_data_assessments[!is.na(open_data_assessments$eventno),]
 
 # only keep observations from environment we care about
+# (facility means a mill/processing location, always above ground, according to April Ramirez @ DOL on 6/6/16)
 open_data_assessments = open_data_assessments[open_data_assessments$minetype == "Underground",]
 
 open_data_assessments = open_data_assessments[, c(-match("coalcormetalmmine", names(open_data_assessments)))]
