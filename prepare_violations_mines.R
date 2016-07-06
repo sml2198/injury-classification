@@ -191,10 +191,12 @@ MR_relevant_subsectcodes_75a = levels(factor(merged_violations[(merged_violation
 MR_relevant_subsectcodes_75b = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 | 
             merged_violations$MR_maybe_relevant == 1) & (grepl("75\\.14", merged_violations[,"subsection_code"])),]$subsection_code))
 MR_relevant_subsectcodes_75c = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 | 
-            merged_violations$MR_maybe_relevant == 1) & (grepl("75\\.1[5-7]", merged_violations[,"subsection_code"])),]$subsection_code))
+            merged_violations$MR_maybe_relevant == 1) & (grepl("75\\.1[5-9]", merged_violations[,"subsection_code"])),]$subsection_code))
 MR_relevant_subsectcodes_75d = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 | 
-            merged_violations$MR_maybe_relevant == 1) & (grepl("75\\.[2-6]", merged_violations[,"subsection_code"])),]$subsection_code))
+            merged_violations$MR_maybe_relevant == 1) & (grepl("75\\.[2-4]", merged_violations[,"subsection_code"])),]$subsection_code))
 MR_relevant_subsectcodes_75e = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 | 
+            merged_violations$MR_maybe_relevant == 1) & (grepl("75\\.[5-6]", merged_violations[,"subsection_code"])),]$subsection_code))
+MR_relevant_subsectcodes_75f = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 | 
             merged_violations$MR_maybe_relevant == 1) & (grepl("75\\.[7-9]", merged_violations[,"subsection_code"])),]$subsection_code))
 MR_relevant_subsectcodes_75 = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 | 
             merged_violations$MR_maybe_relevant == 1) & (grepl("75\\.", merged_violations[,"subsection_code"])),]$subsection_code))
@@ -202,7 +204,18 @@ MR_relevant_subsectcodes_77 = levels(factor(merged_violations[(merged_violations
             merged_violations$MR_maybe_relevant == 1) & (grepl("77\\.", merged_violations[,"subsection_code"])),]$subsection_code))
 
 # ADDED BY SARAH 7/5/2016 - THESE VIOLATIONS HAVE SO FEW OBSERVATIONS (< 15)THEY ARE NOT WORTH ANALYZING.
-remove_subcodes = c("75.1431", "75.1436", "75.1438", "75.151", "75.153", "75.155", "75.156", "75.160", "75.1721", "75.1727", "75.1728")
+remove_subcodes = c("75.1431", "75.1436", "75.1438", "75.151", "75.153", "75.155", "75.156", "75.160", "75.1721", "75.1727", "75.1728", 
+                    "75.341", "75.402-2", "75.500-1", "75.502", "75.503-1", "75.505", "75.508-1", "75.510", "75.510-1", "75.511-1", "75.512-1", "75.516-1", "75.517-1", 
+                    "75.517-2", "75.519", "75.522", "75.524", 
+                    "75.600", "75.601-2", "75.601-3","75.700-1", "75.701-4", "75.702", "75.702-1", "75.703-1", "75.703-2", "75.703-4", "75.704", "75.705", "75.705-1",
+                    "75.705-2", "75.705-3", "75.705-8", "75.800-2", "75.801", "75.803-2", "75.805", "75.806", "75.812", "75.812-2", "75.814", "75.815", "75.817", 
+                    "75.818", "75.819", "75.820", "75.825", "75.827", "75.830", "75.831", "75.832", "75.833", "75.834", "75.900-2", "75.902-1", "75.905", "75.906")
+MR_relevant_subsectcodes_75a = setdiff(MR_relevant_subsectcodes_75a, remove_subcodes)
+MR_relevant_subsectcodes_75b = setdiff(MR_relevant_subsectcodes_75b, remove_subcodes)
+MR_relevant_subsectcodes_75c = setdiff(MR_relevant_subsectcodes_75c, remove_subcodes)
+MR_relevant_subsectcodes_75d = setdiff(MR_relevant_subsectcodes_75d, remove_subcodes)
+MR_relevant_subsectcodes_75e = setdiff(MR_relevant_subsectcodes_75e, remove_subcodes)
+MR_relevant_subsectcodes_75f = setdiff(MR_relevant_subsectcodes_75f, remove_subcodes)
 MR_relevant_subsectcodes_75 = setdiff(MR_relevant_subsectcodes_75, remove_subcodes)
 
 # create lists of number of dummies for violation, assessment, and inspection types 
@@ -253,8 +266,8 @@ for (i in 1:length(cfr_codes)) {
   }
 }
 
-# THIS LOOP BELOW WILL PERFORM THE SAME PROCESS AS ABOVE, BUT FOR ALLL SUBSECTIONS OF THE SPECIFIED PART. 
-cfr_codes = MR_relevant_subsectcodes_75d
+# THIS LOOP BELOW WILL PERFORM THE SAME PROCESS AS ABOVE, BUT FOR ALL SUBSECTIONS OF THE SPECIFIED PART. 
+cfr_codes = MR_relevant_subsectcodes_75e
 for (i in 1:length(cfr_codes)) {
   merged_violations[, cfr_codes[i]] = ifelse(merged_violations$subsection_code == cfr_codes[i], 1, 0)
   merged_violations[, paste(cfr_codes[i], "penaltypoints", sep = ".")] = apply(cbind(merged_violations[, "penaltypoints"], merged_violations[, cfr_codes[i]]), 1, prod)
@@ -524,7 +537,7 @@ prediction_data = prediction_data[, c(-grep("merge", names(prediction_data)), -g
                                       -grep("coalcormetalmmine", names(prediction_data)), -grep("minetype", names(prediction_data)))]
 
 #saveRDS(prediction_data, file = "X:/Projects/Mining/NIOSH/analysis/data/4_collapsed/prediction_data.rds")
-saveRDS(prediction_data, file = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75d.rds")
+saveRDS(prediction_data, file = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75e.rds")
 
 ######################################################################################################################################
 gc()
@@ -592,10 +605,18 @@ data_75e  = data_75e[, c(match("mineid", names(data_75e)),
                          grep("penaltypoints", names(data_75e)),
                          grep("sigandsubdesignation", names(data_75e)))]
 
+data_75f = readRDS("X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75f.rds")
+data_75f  = data_75f[, c(match("mineid", names(data_75f)), 
+                         match("quarter", names(data_75f)),
+                         grep("^75\\.[0-9]+$", names(data_75f)),
+                         grep("penaltypoints", names(data_75f)),
+                         grep("sigandsubdesignation", names(data_75f)))]
+
 part75_select_vars = merge(data_75a, data_75b, by = c("mineid", "quarter"), all=T)
 part75_select_vars = merge(part75_select_vars, data_75c, by = c("mineid", "quarter"), all=T)
 part75_select_vars = merge(part75_select_vars, data_75d, by = c("mineid", "quarter"), all=T)
 part75_select_vars = merge(part75_select_vars, data_75e, by = c("mineid", "quarter"), all=T)
+part75_select_vars = merge(part75_select_vars, data_75f, by = c("mineid", "quarter"), all=T)
 
 part75_select_vars = part75_select_vars[,c(-grep("\\.(x|y)$", names(part75_select_vars)))]
 saveRDS(part75_select_vars, "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75.rds")
