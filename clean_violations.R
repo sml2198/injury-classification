@@ -61,9 +61,10 @@ open_data_viols[, "violationno"] = as.character(open_data_viols[, "violationno"]
 open_data_viols[, "eventno"] = as.character(open_data_viols[, "eventno"])
 
 # only keep observations from environment we care about
-open_data_viols = open_data_viols[open_data_viols$minetype == "Underground",]
 open_data_viols = open_data_viols[open_data_viols$coalcormetalm == "C",]
 open_data_viols = open_data_viols[!is.na(open_data_viols$coalcormetalm),]
+# (facility means a mill/processing location, always above ground, according to April Ramirez @ DOL on 6/6/16)
+open_data_viols = open_data_viols[open_data_viols$minetype == "Underground",]
 
 open_data_viols$mineid = str_pad(open_data_viols$mineid, 7, pad = "0")
 open_data_viols$mineid = withr::with_options(c(scipen = 999), str_pad(open_data_viols$mineid, 7, pad = "0"))

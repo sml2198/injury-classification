@@ -6,7 +6,7 @@ library(plyr)
 library(devtools)
 
 # THIS FILE BRINGS IN AND CLEANS UP EMPLOYMENT/PRODUCTION DATA, TO BE MERGED ONTO FINAL VIOLATIONS/ACCIDENTS/MINES DATASET.
-# IT THEN BRINGS IN THE MINES DATA AND COLLAPSES TO THE MINE-QUARTER LEVEL.S
+# IT THEN BRINGS IN THE MINES DATA AND COLLAPSES TO THE MINE-QUARTER LEVEL.
 
 ######################################################################################################
 
@@ -146,6 +146,7 @@ mines_quarters = mines_quarters[!is.na(mines_quarters$coalcormetalmmine),]
 
 # make sure we have only kept observations from our environment of interest
 mines_quarters = mines_quarters[mines_quarters$coalcormetalmmine=="C",]
+# (facility means a mill/processing location, always above ground, according to April Ramirez @ DOL on 6/6/16)
 mines_quarters = mines_quarters[(mines_quarters$minetype=="Underground"),]
 
 mines_quarters$datasource = ifelse(is.na(mines_quarters$datasource), "emp/prod data", mines_quarters$datasource)

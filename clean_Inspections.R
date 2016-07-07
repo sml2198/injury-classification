@@ -117,6 +117,7 @@ early_inspecs_hours$mergecheck.hrs = 1
 clean_inspecs = merge(clean_inspecs, early_inspecs_hours, by = c("mineid", "eventno"), all = T)
 rm(early_inspecs_hours)
 clean_inspecs = clean_inspecs[!is.na(clean_inspecs$calendaryear) & !is.na(clean_inspecs$calendarquarter) & !is.na(clean_inspecs$program_area),]
+# (facility means a mill/processing location, always above ground, according to April Ramirez @ DOL on 6/6/16)
 clean_inspecs = clean_inspecs[clean_inspecs$minetype == "Underground",]
 
 clean_inspecs = clean_inspecs[!is.na(clean_inspecs$mergecheck.hrs) & !is.na(clean_inspecs$mergecheck.inspec),]
