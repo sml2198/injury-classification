@@ -20,8 +20,9 @@ library(randomForest)
 library(MASS)
 library(data.table)
 
+
 prediction_data = readRDS("X:/Projects/Mining/NIOSH/analysis/data/4_collapsed/prediction_data.rds")
-#prediction_data = readRDS("X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75.rds")
+prediction_data = readRDS("X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75.rds")
 prediction_data = prediction_data[, c(-grep("minetype", names(prediction_data)), -grep("coalcormetalmmine", names(prediction_data)), -match("daysperweek", names(prediction_data)))]
 
 #Make categorical variables with numeric levels
@@ -41,23 +42,7 @@ prediction_data$idesc = ifelse(prediction_data$idesc == "Hazard", 1, ifelse(pred
                                                                                           ifelse(prediction_data$idesc == "Inspect Once Every 5-days", 5,
                                                                                                  ifelse(prediction_data$idesc == "Never Had 103I Status", 6, 
                                                                                                         ifelse(prediction_data$idesc == "Removed From 103I Status", 7, NA)))))))
-#Create mine/quarter specific dummies
-datdum <- function(x, data, name){
-  data$rv <- rnorm(dim(data)[1],1,1)
-  mm <- data.frame(model.matrix(lm(data$rv~-1+factor(data[,x]))))
-  names(mm) <- paste(name,1:dim(mm)[2],sep=".")
-  data$rv <- NULL
-  data <- cbind(data,mm)
-  return(data)
-}
 
-test.data1 <- datdum(x="mineid",data=prediction_data,name="mine")
-test.data1 <- test.data1[, c(grep("^mine\\.", names(test.data1)))]
-test.data2 <- datdum(x="quarter",data=prediction_data,name="quart")
-test.data2 <- test.data2[, c(grep("^quart\\.", names(test.data2)))]
-
-prediction_data = cbind(prediction_data, test.data1, test.data2)
-rm(test.data1, test.data2)
 
 ######################################################################################################################################
 #FILL IN MISSING VALUES OF MINE CHARACTERISTICS BY MINE_ID/QUARTER GROUPS
@@ -107,12 +92,12 @@ prediction_data$no_terminations = ifelse(prediction_data$terminated < prediction
 
 #Create lagged variables of the 1st and 2nd order
 prediction_data = as.data.table(prediction_data[order(prediction_data$mineid, prediction_data$quarter, na.last = T),])
-prediction_data[, c("75.penaltypoints_l1", "75.penaltypoints_l2", "75.penaltypoints_l3",
-                    "75.sigandsubdesignation_l1", "75.sigandsubdesignation_l2", "75.sigandsubdesignation_l3",
-                    "75_l1", "75_l2", "75_l3", 
-                    "MR_l1", "MR_l2", "MR_l3", 
-                    "MR_indicator_l1", "MR_indicator_l2", "MR_indicator_l3", 
-                    "MR_proportion_l1", "MR_proportion_l2", "MR_proportion_l3") := shift(.SD, 1:3), 
+prediction_data[, c("75.penaltypoints_l1", "75.penaltypoints_l2", "75.penaltypoints_l3", "75.penaltypoints_l4",
+                    "75.sigandsubdesignation_l1", "75.sigandsubdesignation_l2", "75.sigandsubdesignation_l3", "75.sigandsubdesignation_l4",
+                    "75_l1", "75_l2", "75_l3", "75_l4", 
+                    "MR_l1", "MR_l2", "MR_l3", "MR_l4", 
+                    "MR_indicator_l1", "MR_indicator_l2", "MR_indicator_l3", "MR_indicator_l4", 
+                    "MR_proportion_l1", "MR_proportion_l2", "MR_proportion_l3", "MR_proportion_l4") := shift(.SD, 1:4), 
                  by = mineid, .SDcols = c("75.penaltypoints", "75.sigandsubdesignation", "75", "MR", "MR_indicator", "MR_proportion")]
 prediction_data = as.data.frame(prediction_data)
 
@@ -188,16 +173,16 @@ sort(rf_results$importance[,1], decreasing = T)
 ######################################################################################################################################
 #save prediction data to run models in Stata
 
-# prediction_data = prediction_data[!is.na(prediction_data$MR_indicator_l3),]
-# prediction_data = prediction_data[!is.na(prediction_data$`75.penaltypoints_l3`),]
-# prediction_data = prediction_data[!is.na(prediction_data$`75.sigandsubdesignation_l3`),]
-# prediction_data = prediction_data[!is.na(prediction_data$`75_l3`),]
-# varnames = names(prediction_data)
-# varnames = gsub("\\.", "_", varnames)
-# varnames = gsub("-", "_", varnames)
-# varnames = paste("_", varnames, sep ="")
-# names(prediction_data) = varnames
-# write.csv(prediction_data, "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75.csv")
+prediction_data = prediction_data[!is.na(prediction_data$MR_indicator_l4),]
+prediction_data = prediction_data[!is.na(prediction_data$`75.penaltypoints_l4`),]
+prediction_data = prediction_data[!is.na(prediction_data$`75.sigandsubdesignation_l4`),]
+prediction_data = prediction_data[!is.na(prediction_data$`75_l4`),]
+varnames = names(prediction_data)
+varnames = gsub("\\.", "_", varnames)
+varnames = gsub("-", "_", varnames)
+varnames = paste("_", varnames, sep ="")
+names(prediction_data) = varnames
+write.csv(prediction_data, "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75.csv")
 
 ######################################################################################################################################
 # EVERYTHING BELOW THIS LINE IS FOR THE ALGORITHM
@@ -216,9 +201,6 @@ prediction_data = prediction_data[order(prediction_data$rand),]
 #Naive OLS prediction. Used as a check on variable selection
 test_pred_naive = lm(formula = MR ~ . -mineid -quarter, data = prediction_data[1:21965, c(match("MR", names(prediction_data)),
                                                                          grep("^[0-9][0-9]$", names(prediction_data)),
-                                                                         grep("MR_l", names(prediction_data)),
-                                                                         grep("mine\\.", names(prediction_data)),
-                                                                         #grep("^quart\\.", names(prediction_data)),
                                                                          match("47.penaltypoints", names(prediction_data)),
                                                                          match("48.penaltypoints", names(prediction_data)),
                                                                          match("71.penaltypoints", names(prediction_data)),
@@ -241,8 +223,30 @@ test_pred_naive = lm(formula = MR ~ . -mineid -quarter, data = prediction_data[1
                                                                          #match("coal_prod_qtr", names(prediction_data)),
                                                                          match("hours_qtr", names(prediction_data)),
                                                                          match("onsite_insp_hours_per_qtr", names(prediction_data)))])
-ols_fit = summary.lm(test_pred_naive)
-test_df = test_pred_naive$model
+test_df = prediction_data[1:21965, c(match("MR", names(prediction_data)),
+                                     grep("^[0-9][0-9]$", names(prediction_data)),
+                                     match("47.penaltypoints", names(prediction_data)),
+                                     match("48.penaltypoints", names(prediction_data)),
+                                     match("71.penaltypoints", names(prediction_data)),
+                                     match("72.penaltypoints", names(prediction_data)),
+                                     match("75.penaltypoints", names(prediction_data)),
+                                     match("77.penaltypoints", names(prediction_data)),
+                                     match("47.sigandsubdesignation", names(prediction_data)),
+                                     match("48.sigandsubdesignation", names(prediction_data)),
+                                     match("71.sigandsubdesignation", names(prediction_data)),
+                                     match("72.sigandsubdesignation", names(prediction_data)),
+                                     match("75.sigandsubdesignation", names(prediction_data)),
+                                     match("77.sigandsubdesignation", names(prediction_data)),
+                                     match("mineid", names(prediction_data)),
+                                     match("quarter", names(prediction_data)),
+                                     match("no_terminations", names(prediction_data)),  
+                                     match("total_violations", names(prediction_data)),
+                                     match("totalinjuries", names(prediction_data)),
+                                     match("num_insp", names(prediction_data)),
+                                     #match("employment_qtr", names(prediction_data)),
+                                     #match("coal_prod_qtr", names(prediction_data)),
+                                     match("hours_qtr", names(prediction_data)),
+                                     match("onsite_insp_hours_per_qtr", names(prediction_data)))]
 test_df = test_df[order(test_df$mineid, test_df$quarter, na.last = T),]
 bgtest_results = bgtest(formula = MR ~ . -mineid -quarter, order = 1, type = "Chisq", data = test_df)
 test_df$residuals = test_pred_naive$residuals
@@ -277,8 +281,6 @@ test_pred_0 = glm(formula = MR ~ . -mineid -quarter, family = "poisson", data = 
                                                                                           match("num_insp", names(prediction_data)),
                                                                                           match("hours_qtr", names(prediction_data)),
                                                                                           match("onsite_insp_hours_per_qtr", names(prediction_data)))])
-
-poisson_fit = summary.glm(test_pred_0)
 
 logit_data = prediction_data[, c(grep("MR_indicator", names(prediction_data)), 
                                 grep("^[0-9][0-9]$", names(prediction_data)), 
