@@ -42,7 +42,21 @@ prediction_data$idesc = ifelse(prediction_data$idesc == "Hazard", 1, ifelse(pred
                                                                                           ifelse(prediction_data$idesc == "Inspect Once Every 5-days", 5,
                                                                                                  ifelse(prediction_data$idesc == "Never Had 103I Status", 6, 
                                                                                                         ifelse(prediction_data$idesc == "Removed From 103I Status", 7, NA)))))))
-
+#Create mine/quarter specific dummies
+datdum <- function(x, data, name){
+  data$rv <- rnorm(dim(data)[1],1,1)
+  mm <- data.frame(model.matrix(lm(data$rv~-1+factor(data[,x]))))
+  names(mm) <- paste(name,1:dim(mm)[2],sep=".")
+  data$rv <- NULL
+  data <- cbind(data,mm)
+  return(data)
+}
+test.data1 <- datdum(x="mineid",data=prediction_data,name="mine")
+test.data1 <- test.data1[, c(grep("^mine\\.", names(test.data1)))]
+test.data2 <- datdum(x="quarter",data=prediction_data,name="quart")
+test.data2 <- test.data2[, c(grep("^quart\\.", names(test.data2)))]
+prediction_data = cbind(prediction_data, test.data1, test.data2)
+rm(test.data1, test.data2)
 
 ######################################################################################################################################
 #FILL IN MISSING VALUES OF MINE CHARACTERISTICS BY MINE_ID/QUARTER GROUPS
@@ -199,7 +213,7 @@ prediction_data$rand = runif(nrow(prediction_data))
 prediction_data = prediction_data[order(prediction_data$rand),]
 
 #Naive OLS prediction. Used as a check on variable selection
-test_pred_naive = lm(formula = MR ~ . -mineid -quarter, data = prediction_data[1:21965, c(match("MR", names(prediction_data)),
+test_pred_naive = lm(formula = MR ~ . , data = prediction_data[1:21965, c(match("MR", names(prediction_data)),
                                                                          grep("^[0-9][0-9]$", names(prediction_data)),
                                                                          match("47.penaltypoints", names(prediction_data)),
                                                                          match("48.penaltypoints", names(prediction_data)),
@@ -213,8 +227,8 @@ test_pred_naive = lm(formula = MR ~ . -mineid -quarter, data = prediction_data[1
                                                                          match("72.sigandsubdesignation", names(prediction_data)),
                                                                          match("75.sigandsubdesignation", names(prediction_data)),
                                                                          match("77.sigandsubdesignation", names(prediction_data)),
-                                                                         match("mineid", names(prediction_data)),
-                                                                         match("quarter", names(prediction_data)),
+                                                                         #match("mineid", names(prediction_data)),
+                                                                         #match("quarter", names(prediction_data)),
                                                                          match("no_terminations", names(prediction_data)),  
                                                                          match("total_violations", names(prediction_data)),
                                                                          match("totalinjuries", names(prediction_data)),
@@ -258,7 +272,7 @@ serialcorr_test = lm(formula = residuals ~ . -mineid -quarter, data = test_df)
 #Can adjust varlist to be as desired but shouldn't use "." shortcut since there is then a failure to converge
 #Divergent estimates of theta assuming a NegBi(r, p) distribution on MR suggest failure of NB assumptions. We turn to Poisson regression
 #test_pred_0 = glm.nb(formula = MR ~ total_violations + insp_hours_per_qtr -mineid -quarter, data = prediction_data)
-test_pred_0 = glm(formula = MR ~ . -mineid -quarter, family = "poisson", data = prediction_data[1:21965, c(match("MR", names(prediction_data)),
+test_pred_0 = glm(formula = MR ~ . , family = "poisson", data = prediction_data[1:21965, c(match("MR", names(prediction_data)),
                                                                                           grep("^[0-9][0-9]$", names(prediction_data)),
                                                                                           grep("(77|75).penaltypoints", names(prediction_data)),
                                                                                           grep("(77|75).gravitylikelihoodpoints", names(prediction_data)),
@@ -273,14 +287,16 @@ test_pred_0 = glm(formula = MR ~ . -mineid -quarter, family = "poisson", data = 
                                                                                           grep("(77|75|48|47).assessmenttypecode", names(prediction_data)),
                                                                                           grep("(77|75).likelihood", names(prediction_data)),
                                                                                           grep("(77|75).injuryillness", names(prediction_data)),
-                                                                                          match("mineid", names(prediction_data)),
-                                                                                          match("quarter", names(prediction_data)),
+                                                                                          #match("mineid", names(prediction_data)),
+                                                                                          #match("quarter", names(prediction_data)),
                                                                                           match("no_terminations", names(prediction_data)),  
                                                                                           match("total_violations", names(prediction_data)),
                                                                                           match("totalinjuries", names(prediction_data)),
                                                                                           match("num_insp", names(prediction_data)),
                                                                                           match("hours_qtr", names(prediction_data)),
                                                                                           match("onsite_insp_hours_per_qtr", names(prediction_data)))])
+
+poisson_fit = summary.glm(test_pred_0)
 
 logit_data = prediction_data[, c(grep("MR_indicator", names(prediction_data)), 
                                 grep("^[0-9][0-9]$", names(prediction_data)), 
@@ -327,8 +343,6 @@ ols_prediction = predict(test_pred_naive, newdata = prediction_data[21965:27456,
                                                                                   match("72.sigandsubdesignation", names(prediction_data)),
                                                                                   match("75.sigandsubdesignation", names(prediction_data)),
                                                                                   match("77.sigandsubdesignation", names(prediction_data)),
-                                                                                  #match("mineid", names(prediction_data)),
-                                                                                  #match("quarter", names(prediction_data)),
                                                                                   match("no_terminations", names(prediction_data)),  
                                                                                   match("total_violations", names(prediction_data)),
                                                                                   match("totalinjuries", names(prediction_data)),
@@ -354,8 +368,6 @@ poisson_prediction = predict(test_pred_0, newdata = prediction_data[21965:27456,
                                                                                   grep("(77|75|48|47).assessmenttypecode", names(prediction_data)),
                                                                                   grep("(77|75).likelihood", names(prediction_data)),
                                                                                   grep("(77|75).injuryillness", names(prediction_data)),
-                                                                                  #match("mineid", names(prediction_data)),
-                                                                                  #match("quarter", names(prediction_data)),
                                                                                   match("no_terminations", names(prediction_data)),  
                                                                                   match("total_violations", names(prediction_data)),
                                                                                   match("totalinjuries", names(prediction_data)),
@@ -371,11 +383,18 @@ sum(logit_prediction_r == prediction_data[21965:27456,]$MR_r)/nrow(prediction_da
 
 ols_prediction_r = round(ols_prediction, 0)
 prediction_data$MR_r = round(prediction_data$MR, 0)
+ols_predict_data = prediction_data[21965:27456,]
+# get accuracy conditional on positive outcome
+sum(ols_prediction_r[ols_prediction_r > 0] == ols_predict_data[ols_predict_data$MR_r > 0,]$MR_r)/nrow(ols_predict_data[ols_predict_data$MR_r > 0,])
 sum(ols_prediction_r == prediction_data[21965:27456,]$MR_r)/nrow(prediction_data[21965:27456,])
 #OLS prediction accuracy is currently 84.6%
 
+poisson_prediction = ifelse(is.na(poisson_prediction), 0, poisson_prediction)
 poisson_prediction_r = round(exp(poisson_prediction), 0)
 prediction_data$MR_r = round(prediction_data$MR, 0)
+possion_predict_data = prediction_data[21965:27456,]
+# get accuracy conditional on positive outcome
+sum(poisson_prediction_r[poisson_prediction_r > 0] == possion_predict_data[possion_predict_data$MR_r > 0,]$MR_r) /nrow(possion_predict_data[possion_predict_data$MR_r > 0,])
 sum(poisson_prediction_r == prediction_data[21965:27456,]$MR_r)/nrow(prediction_data[21965:27456,])
 #Poisson prediction accuracy is currently 83.9%
 
