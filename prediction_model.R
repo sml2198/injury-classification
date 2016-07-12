@@ -20,8 +20,7 @@ library(randomForest)
 library(MASS)
 library(data.table)
 
-
-prediction_data = readRDS("X:/Projects/Mining/NIOSH/analysis/data/4_collapsed/prediction_data.rds")
+#prediction_data = readRDS("X:/Projects/Mining/NIOSH/analysis/data/4_collapsed/prediction_data.rds")
 prediction_data = readRDS("X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75.rds")
 prediction_data = prediction_data[, c(-grep("minetype", names(prediction_data)), -grep("coalcormetalmmine", names(prediction_data)), -match("daysperweek", names(prediction_data)))]
 
@@ -169,7 +168,7 @@ lasso_results = glmnet(as.matrix(prediction_data[, grep("^[0-9][0-9]\\.[0-9]+\\.
 print(lasso_results)
 plot(lasso_results)
 #Argument s passed to "coef" is the lambda value at which LASSO coefficients are obtained
-lasso_coefs = coef(lasso_results, s = 0.0128600)[,1]
+lasso_coefs = coef(lasso_results, s = 0.05)[,1]
 survng_vars = names(lasso_coefs)[lasso_coefs > 0]
 survng_vars[2:length(survng_vars)]
 
@@ -187,16 +186,16 @@ sort(rf_results$importance[,1], decreasing = T)
 ######################################################################################################################################
 #save prediction data to run models in Stata
 
-prediction_data = prediction_data[!is.na(prediction_data$MR_indicator_l4),]
-prediction_data = prediction_data[!is.na(prediction_data$`75.penaltypoints_l4`),]
-prediction_data = prediction_data[!is.na(prediction_data$`75.sigandsubdesignation_l4`),]
-prediction_data = prediction_data[!is.na(prediction_data$`75_l4`),]
-varnames = names(prediction_data)
-varnames = gsub("\\.", "_", varnames)
-varnames = gsub("-", "_", varnames)
-varnames = paste("_", varnames, sep ="")
-names(prediction_data) = varnames
-write.csv(prediction_data, "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75.csv")
+# prediction_data = prediction_data[!is.na(prediction_data$MR_indicator_l4),]
+# prediction_data = prediction_data[!is.na(prediction_data$`75.penaltypoints_l4`),]
+# prediction_data = prediction_data[!is.na(prediction_data$`75.sigandsubdesignation_l4`),]
+# prediction_data = prediction_data[!is.na(prediction_data$`75_l4`),]
+# varnames = names(prediction_data)
+# varnames = gsub("\\.", "_", varnames)
+# varnames = gsub("-", "_", varnames)
+# varnames = paste("_", varnames, sep ="")
+# names(prediction_data) = varnames
+# write.csv(prediction_data, "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75.csv")
 
 ######################################################################################################################################
 # EVERYTHING BELOW THIS LINE IS FOR THE ALGORITHM
@@ -213,8 +212,11 @@ prediction_data$rand = runif(nrow(prediction_data))
 prediction_data = prediction_data[order(prediction_data$rand),]
 
 #Naive OLS prediction. Used as a check on variable selection
-test_pred_naive = lm(formula = MR ~ . , data = prediction_data[1:21965, c(match("MR", names(prediction_data)),
+test_pred_naive = lm(formula = MR ~ ., data = prediction_data[1:21965, c(match("MR", names(prediction_data)),
                                                                          grep("^[0-9][0-9]$", names(prediction_data)),
+                                                                         #grep("MR_l", names(prediction_data)),
+                                                                         grep("mine\\.", names(prediction_data)),
+                                                                         #grep("^quart\\.", names(prediction_data)),
                                                                          match("47.penaltypoints", names(prediction_data)),
                                                                          match("48.penaltypoints", names(prediction_data)),
                                                                          match("71.penaltypoints", names(prediction_data)),
@@ -237,6 +239,7 @@ test_pred_naive = lm(formula = MR ~ . , data = prediction_data[1:21965, c(match(
                                                                          #match("coal_prod_qtr", names(prediction_data)),
                                                                          match("hours_qtr", names(prediction_data)),
                                                                          match("onsite_insp_hours_per_qtr", names(prediction_data)))])
+
 test_df = prediction_data[1:21965, c(match("MR", names(prediction_data)),
                                      grep("^[0-9][0-9]$", names(prediction_data)),
                                      match("47.penaltypoints", names(prediction_data)),
@@ -263,17 +266,27 @@ test_df = prediction_data[1:21965, c(match("MR", names(prediction_data)),
                                      match("onsite_insp_hours_per_qtr", names(prediction_data)))]
 test_df = test_df[order(test_df$mineid, test_df$quarter, na.last = T),]
 bgtest_results = bgtest(formula = MR ~ . -mineid -quarter, order = 1, type = "Chisq", data = test_df)
+ols_fit = summary.lm(test_pred_naive)
+test_df = test_pred_naive$model
+
+#Serial-Correlation Block
+
+#Breusch-Godfrey test commented out since strong tendency to reject time-independence due to our large N
+#test_df = test_df[order(test_df$mineid, test_df$quarter, na.last = T),]
+#bgtest_results = bgtest(formula = MR ~ . -mineid -quarter, order = 1, type = "Chisq", data = test_df)
+#Manually assess degree and order of serial-correlation
 test_df$residuals = test_pred_naive$residuals
 test_df = as.data.table(test_df[order(test_df$mineid, test_df$quarter, na.last = T),])
 test_df[, c("residualsl1", "residualsl2", "residualsl3", "residualsl4") := shift(.SD, 1:4), 
                 by = mineid, .SDcols = c("residuals")]
 test_df = as.data.frame(test_df)
-serialcorr_test = lm(formula = residuals ~ . -mineid -quarter, data = test_df)
-#Can adjust varlist to be as desired but shouldn't use "." shortcut since there is then a failure to converge
+serialcorr_test = lm(formula = residuals ~ ., data = test_df)
+
 #Divergent estimates of theta assuming a NegBi(r, p) distribution on MR suggest failure of NB assumptions. We turn to Poisson regression
 #test_pred_0 = glm.nb(formula = MR ~ total_violations + insp_hours_per_qtr -mineid -quarter, data = prediction_data)
-test_pred_0 = glm(formula = MR ~ . , family = "poisson", data = prediction_data[1:21965, c(match("MR", names(prediction_data)),
+test_pred_0 = glm(formula = MR ~ ., family = "poisson", data = prediction_data[1:21965, c(match("MR", names(prediction_data)),
                                                                                           grep("^[0-9][0-9]$", names(prediction_data)),
+                                                                                          grep("mine\\.", names(prediction_data)),
                                                                                           grep("(77|75).penaltypoints", names(prediction_data)),
                                                                                           grep("(77|75).gravitylikelihoodpoints", names(prediction_data)),
                                                                                           grep("(77|75).gravityinjurypoints", names(prediction_data)),
@@ -331,6 +344,7 @@ logit_prediction = predict(logit, newdata = logit_data[21965:27456,])
 
 ols_prediction = predict(test_pred_naive, newdata = prediction_data[21965:27456,c(match("MR", names(prediction_data)),
                                                                                   grep("^[0-9][0-9]$", names(prediction_data)),
+                                                                                  grep("mine\\.", names(prediction_data)),
                                                                                   match("47.penaltypoints", names(prediction_data)),
                                                                                   match("48.penaltypoints", names(prediction_data)),
                                                                                   match("71.penaltypoints", names(prediction_data)),
