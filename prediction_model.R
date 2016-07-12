@@ -105,13 +105,14 @@ prediction_data$no_terminations = ifelse(prediction_data$terminated < prediction
 
 #Create lagged variables of the 1st and 2nd order
 prediction_data = as.data.table(prediction_data[order(prediction_data$mineid, prediction_data$quarter, na.last = T),])
-prediction_data[, c("75.penaltypoints_l1", "75.penaltypoints_l2", "75.penaltypoints_l3", "75.penaltypoints_l4",
-                    "75.sigandsubdesignation_l1", "75.sigandsubdesignation_l2", "75.sigandsubdesignation_l3", "75.sigandsubdesignation_l4",
-                    "75_l1", "75_l2", "75_l3", "75_l4", 
-                    "MR_l1", "MR_l2", "MR_l3", "MR_l4", 
-                    "MR_indicator_l1", "MR_indicator_l2", "MR_indicator_l3", "MR_indicator_l4", 
-                    "MR_proportion_l1", "MR_proportion_l2", "MR_proportion_l3", "MR_proportion_l4") := shift(.SD, 1:4), 
-                 by = mineid, .SDcols = c("75.penaltypoints", "75.sigandsubdesignation", "75", "MR", "MR_indicator", "MR_proportion")]
+prediction_data[, c("75.penaltypoints_l1", "75.penaltypoints_l2", "75.penaltypoints_l3", "75.penaltypoints_l4", "75.penaltypoints_l5", "75.penaltypoints_l6",
+                    "75.sigandsubdesignation_l1", "75.sigandsubdesignation_l2", "75.sigandsubdesignation_l3", "75.sigandsubdesignation_l4", "75.sigandsubdesignation_l5", "75.sigandsubdesignation_l6",
+                    "75_l1", "75_l2", "75_l3", "75_l4", "75_l5", "75_l6",
+                    "75.1405_l1", "75.1405_l2", "75.1405_l3", "75.1405_l4", "75.1405_l5", "75.1405_l6",
+                    "MR_l1", "MR_l2", "MR_l3", "MR_l4", "MR_l5", "MR_l6", 
+                    "MR_indicator_l1", "MR_indicator_l2", "MR_indicator_l3", "MR_indicator_l4", "MR_indicator_l5", "MR_indicator_l6",
+                    "MR_proportion_l1", "MR_proportion_l2", "MR_proportion_l3", "MR_proportion_l4","MR_proportion_l5","MR_proportion_l6") := shift(.SD, 1:6), 
+                 by = mineid, .SDcols = c("75.penaltypoints", "75.sigandsubdesignation", "75", "75.1405", "MR", "MR_indicator", "MR_proportion")]
 prediction_data = as.data.frame(prediction_data)
 
 #Pare away variables with zero variation before model selection and prediction stages
@@ -133,6 +134,35 @@ mine_penpoints = c("contractorsizepoints", "controllersizepoints")
 
 # this line will report number of missings per var - should be zero (except lagged vars which will be missing for first quarter)!
 #apply(is.na(prediction_data),2,sum)
+
+######################################################################################################################################
+#save prediction data to run models in Stata
+
+# remove observations that are missing the third lagged var (this will also by default remove obs that are missing either the first
+# or second lagged var) these are the first three quarters of a mines operation so there is no prior data to lag
+prediction_data = prediction_data[!is.na(prediction_data$`75.penaltypoints_l6`),]
+prediction_data = prediction_data[!is.na(prediction_data$`75.sigandsubdesignation_l6`),]
+prediction_data = prediction_data[!is.na(prediction_data$`75_l6`),]
+
+prediction_data$sum_75_1_2 = rowSums(prediction_data[,c("75_l1", "75_l2")])
+prediction_data$sum_75_1_3 = rowSums(prediction_data[,c("75_l1", "75_l2", "75_l3")])
+prediction_data$sum_75_1_4 = rowSums(prediction_data[,c("75_l1", "75_l2", "75_l3", "75_l4")])
+prediction_data$sum_75_1_5 = rowSums(prediction_data[,c("75_l1", "75_l2", "75_l3", "75_l4", "75_l5")])
+prediction_data$sum_75_1_6 = rowSums(prediction_data[,c("75_l1", "75_l2", "75_l3", "75_l4", "75_l5", "75_l6")])
+
+prediction_data$sum_75.1405_1_2 = rowSums(prediction_data[,c("75.1405_l1", "75.1405_l2")])
+prediction_data$sum_75.1405_1_3 = rowSums(prediction_data[,c("75.1405_l1", "75.1405_l2", "75.1405_l3")])
+prediction_data$sum_75.1405_1_4 = rowSums(prediction_data[,c("75.1405_l1", "75.1405_l2", "75.1405_l3", "75.1405_l4")])
+prediction_data$sum_75.1405_1_5 = rowSums(prediction_data[,c("75.1405_l1", "75.1405_l2", "75.1405_l3", "75.1405_l4", "75.1405_l5")])
+prediction_data$sum_75.1405_1_6 = rowSums(prediction_data[,c("75.1405_l1", "75.1405_l2", "75.1405_l3", "75.1405_l4", "75.1405_l5", "75.1405_l6")])
+
+varnames = names(prediction_data)
+varnames = gsub("\\.", "_", varnames)
+varnames = gsub("-", "_", varnames)
+varnames = paste("_", varnames, sep ="")
+names(prediction_data) = varnames
+write.csv(prediction_data, "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75.csv")
+
 ######################################################################################################################################
 
 #PCA
@@ -182,20 +212,6 @@ sort(rf_results$importance[,1], decreasing = T)
 
 #EXPLORING MFA - There is an obscure error thrown with this code. NOT USED
 #mfa_results = MFA(data, group = c(81, 2, 13), type = c("c", "n", "c"), name.group = c("quant1", "quali1", "quant2"))
-
-######################################################################################################################################
-#save prediction data to run models in Stata
-
-# prediction_data = prediction_data[!is.na(prediction_data$MR_indicator_l4),]
-# prediction_data = prediction_data[!is.na(prediction_data$`75.penaltypoints_l4`),]
-# prediction_data = prediction_data[!is.na(prediction_data$`75.sigandsubdesignation_l4`),]
-# prediction_data = prediction_data[!is.na(prediction_data$`75_l4`),]
-# varnames = names(prediction_data)
-# varnames = gsub("\\.", "_", varnames)
-# varnames = gsub("-", "_", varnames)
-# varnames = paste("_", varnames, sep ="")
-# names(prediction_data) = varnames
-# write.csv(prediction_data, "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75.csv")
 
 ######################################################################################################################################
 # EVERYTHING BELOW THIS LINE IS FOR THE ALGORITHM
