@@ -49,12 +49,10 @@ datdum <- function(x, data, name){
   data <- cbind(data,mm)
   return(data)
 }
-
 test.data1 <- datdum(x="mineid",data=prediction_data,name="mine")
 test.data1 <- test.data1[, c(grep("^mine\\.", names(test.data1)))]
 test.data2 <- datdum(x="quarter",data=prediction_data,name="quart")
 test.data2 <- test.data2[, c(grep("^quart\\.", names(test.data2)))]
-
 prediction_data = cbind(prediction_data, test.data1, test.data2)
 rm(test.data1, test.data2)
 
@@ -106,13 +104,14 @@ prediction_data$no_terminations = ifelse(prediction_data$terminated < prediction
 
 #Create lagged variables of the 1st and 2nd order
 prediction_data = as.data.table(prediction_data[order(prediction_data$mineid, prediction_data$quarter, na.last = T),])
-prediction_data[, c("75.penaltypoints_l1", "75.penaltypoints_l2", "75.penaltypoints_l3",
-                    "75.sigandsubdesignation_l1", "75.sigandsubdesignation_l2", "75.sigandsubdesignation_l3",
-                    "75_l1", "75_l2", "75_l3", 
-                    "MR_l1", "MR_l2", "MR_l3", 
-                    "MR_indicator_l1", "MR_indicator_l2", "MR_indicator_l3", 
-                    "MR_proportion_l1", "MR_proportion_l2", "MR_proportion_l3") := shift(.SD, 1:3), 
-                 by = mineid, .SDcols = c("75.penaltypoints", "75.sigandsubdesignation", "75", "MR", "MR_indicator", "MR_proportion")]
+prediction_data[, c("75.penaltypoints_l1", "75.penaltypoints_l2", "75.penaltypoints_l3", "75.penaltypoints_l4", "75.penaltypoints_l5", "75.penaltypoints_l6",
+                    "75.sigandsubdesignation_l1", "75.sigandsubdesignation_l2", "75.sigandsubdesignation_l3", "75.sigandsubdesignation_l4", "75.sigandsubdesignation_l5", "75.sigandsubdesignation_l6",
+                    "75_l1", "75_l2", "75_l3", "75_l4", "75_l5", "75_l6",
+                    "75.1405_l1", "75.1405_l2", "75.1405_l3", "75.1405_l4", "75.1405_l5", "75.1405_l6",
+                    "MR_l1", "MR_l2", "MR_l3", "MR_l4", "MR_l5", "MR_l6", 
+                    "MR_indicator_l1", "MR_indicator_l2", "MR_indicator_l3", "MR_indicator_l4", "MR_indicator_l5", "MR_indicator_l6",
+                    "MR_proportion_l1", "MR_proportion_l2", "MR_proportion_l3", "MR_proportion_l4","MR_proportion_l5","MR_proportion_l6") := shift(.SD, 1:6), 
+                 by = mineid, .SDcols = c("75.penaltypoints", "75.sigandsubdesignation", "75", "75.1405", "MR", "MR_indicator", "MR_proportion")]
 prediction_data = as.data.frame(prediction_data)
 
 #Pare away variables with zero variation before model selection and prediction stages
@@ -134,6 +133,35 @@ mine_penpoints = c("contractorsizepoints", "controllersizepoints")
 
 # this line will report number of missings per var - should be zero (except lagged vars which will be missing for first quarter)!
 #apply(is.na(prediction_data),2,sum)
+
+######################################################################################################################################
+#save prediction data to run models in Stata
+
+# remove observations that are missing the third lagged var (this will also by default remove obs that are missing either the first
+# or second lagged var) these are the first three quarters of a mines operation so there is no prior data to lag
+prediction_data = prediction_data[!is.na(prediction_data$`75.penaltypoints_l6`),]
+prediction_data = prediction_data[!is.na(prediction_data$`75.sigandsubdesignation_l6`),]
+prediction_data = prediction_data[!is.na(prediction_data$`75_l6`),]
+
+prediction_data$sum_75_1_2 = rowSums(prediction_data[,c("75_l1", "75_l2")])
+prediction_data$sum_75_1_3 = rowSums(prediction_data[,c("75_l1", "75_l2", "75_l3")])
+prediction_data$sum_75_1_4 = rowSums(prediction_data[,c("75_l1", "75_l2", "75_l3", "75_l4")])
+prediction_data$sum_75_1_5 = rowSums(prediction_data[,c("75_l1", "75_l2", "75_l3", "75_l4", "75_l5")])
+prediction_data$sum_75_1_6 = rowSums(prediction_data[,c("75_l1", "75_l2", "75_l3", "75_l4", "75_l5", "75_l6")])
+
+prediction_data$sum_75.1405_1_2 = rowSums(prediction_data[,c("75.1405_l1", "75.1405_l2")])
+prediction_data$sum_75.1405_1_3 = rowSums(prediction_data[,c("75.1405_l1", "75.1405_l2", "75.1405_l3")])
+prediction_data$sum_75.1405_1_4 = rowSums(prediction_data[,c("75.1405_l1", "75.1405_l2", "75.1405_l3", "75.1405_l4")])
+prediction_data$sum_75.1405_1_5 = rowSums(prediction_data[,c("75.1405_l1", "75.1405_l2", "75.1405_l3", "75.1405_l4", "75.1405_l5")])
+prediction_data$sum_75.1405_1_6 = rowSums(prediction_data[,c("75.1405_l1", "75.1405_l2", "75.1405_l3", "75.1405_l4", "75.1405_l5", "75.1405_l6")])
+
+varnames = names(prediction_data)
+varnames = gsub("\\.", "_", varnames)
+varnames = gsub("-", "_", varnames)
+varnames = paste("_", varnames, sep ="")
+names(prediction_data) = varnames
+write.csv(prediction_data, "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75.csv")
+
 ######################################################################################################################################
 
 #PCA
@@ -185,20 +213,6 @@ sort(rf_results$importance[,1], decreasing = T)
 #mfa_results = MFA(data, group = c(81, 2, 13), type = c("c", "n", "c"), name.group = c("quant1", "quali1", "quant2"))
 
 ######################################################################################################################################
-#save prediction data to run models in Stata
-
-# prediction_data = prediction_data[!is.na(prediction_data$MR_indicator_l3),]
-# prediction_data = prediction_data[!is.na(prediction_data$`75.penaltypoints_l3`),]
-# prediction_data = prediction_data[!is.na(prediction_data$`75.sigandsubdesignation_l3`),]
-# prediction_data = prediction_data[!is.na(prediction_data$`75_l3`),]
-# varnames = names(prediction_data)
-# varnames = gsub("\\.", "_", varnames)
-# varnames = gsub("-", "_", varnames)
-# varnames[grep("^[0-9][0-9]", varnames)] = paste("_", varnames[grep("^[0-9][0-9]", varnames)], sep ="")
-# names(prediction_data) = varnames
-# write.csv(prediction_data, "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75.csv")
-
-######################################################################################################################################
 # EVERYTHING BELOW THIS LINE IS FOR THE ALGORITHM
 
 #WARNING: Fails to converge with these initial values
@@ -240,6 +254,33 @@ test_pred_naive = lm(formula = MR ~ ., data = prediction_data[1:21965, c(match("
                                                                          #match("coal_prod_qtr", names(prediction_data)),
                                                                          match("hours_qtr", names(prediction_data)),
                                                                          match("onsite_insp_hours_per_qtr", names(prediction_data)))])
+
+test_df = prediction_data[1:21965, c(match("MR", names(prediction_data)),
+                                     grep("^[0-9][0-9]$", names(prediction_data)),
+                                     match("47.penaltypoints", names(prediction_data)),
+                                     match("48.penaltypoints", names(prediction_data)),
+                                     match("71.penaltypoints", names(prediction_data)),
+                                     match("72.penaltypoints", names(prediction_data)),
+                                     match("75.penaltypoints", names(prediction_data)),
+                                     match("77.penaltypoints", names(prediction_data)),
+                                     match("47.sigandsubdesignation", names(prediction_data)),
+                                     match("48.sigandsubdesignation", names(prediction_data)),
+                                     match("71.sigandsubdesignation", names(prediction_data)),
+                                     match("72.sigandsubdesignation", names(prediction_data)),
+                                     match("75.sigandsubdesignation", names(prediction_data)),
+                                     match("77.sigandsubdesignation", names(prediction_data)),
+                                     match("mineid", names(prediction_data)),
+                                     match("quarter", names(prediction_data)),
+                                     match("no_terminations", names(prediction_data)),  
+                                     match("total_violations", names(prediction_data)),
+                                     match("totalinjuries", names(prediction_data)),
+                                     match("num_insp", names(prediction_data)),
+                                     #match("employment_qtr", names(prediction_data)),
+                                     #match("coal_prod_qtr", names(prediction_data)),
+                                     match("hours_qtr", names(prediction_data)),
+                                     match("onsite_insp_hours_per_qtr", names(prediction_data)))]
+test_df = test_df[order(test_df$mineid, test_df$quarter, na.last = T),]
+bgtest_results = bgtest(formula = MR ~ . -mineid -quarter, order = 1, type = "Chisq", data = test_df)
 ols_fit = summary.lm(test_pred_naive)
 test_df = test_pred_naive$model
 
@@ -331,8 +372,6 @@ ols_prediction = predict(test_pred_naive, newdata = prediction_data[21965:27456,
                                                                                   match("72.sigandsubdesignation", names(prediction_data)),
                                                                                   match("75.sigandsubdesignation", names(prediction_data)),
                                                                                   match("77.sigandsubdesignation", names(prediction_data)),
-                                                                                  #match("mineid", names(prediction_data)),
-                                                                                  #match("quarter", names(prediction_data)),
                                                                                   match("no_terminations", names(prediction_data)),  
                                                                                   match("total_violations", names(prediction_data)),
                                                                                   match("totalinjuries", names(prediction_data)),
@@ -358,8 +397,6 @@ poisson_prediction = predict(test_pred_0, newdata = prediction_data[21965:27456,
                                                                                   grep("(77|75|48|47).assessmenttypecode", names(prediction_data)),
                                                                                   grep("(77|75).likelihood", names(prediction_data)),
                                                                                   grep("(77|75).injuryillness", names(prediction_data)),
-                                                                                  #match("mineid", names(prediction_data)),
-                                                                                  #match("quarter", names(prediction_data)),
                                                                                   match("no_terminations", names(prediction_data)),  
                                                                                   match("total_violations", names(prediction_data)),
                                                                                   match("totalinjuries", names(prediction_data)),
@@ -375,11 +412,18 @@ sum(logit_prediction_r == prediction_data[21965:27456,]$MR_r)/nrow(prediction_da
 
 ols_prediction_r = round(ols_prediction, 0)
 prediction_data$MR_r = round(prediction_data$MR, 0)
+ols_predict_data = prediction_data[21965:27456,]
+# get accuracy conditional on positive outcome
+sum(ols_prediction_r[ols_prediction_r > 0] == ols_predict_data[ols_predict_data$MR_r > 0,]$MR_r)/nrow(ols_predict_data[ols_predict_data$MR_r > 0,])
 sum(ols_prediction_r == prediction_data[21965:27456,]$MR_r)/nrow(prediction_data[21965:27456,])
 #OLS prediction accuracy is currently 84.6%
 
+poisson_prediction = ifelse(is.na(poisson_prediction), 0, poisson_prediction)
 poisson_prediction_r = round(exp(poisson_prediction), 0)
 prediction_data$MR_r = round(prediction_data$MR, 0)
+possion_predict_data = prediction_data[21965:27456,]
+# get accuracy conditional on positive outcome
+sum(poisson_prediction_r[poisson_prediction_r > 0] == possion_predict_data[possion_predict_data$MR_r > 0,]$MR_r) /nrow(possion_predict_data[possion_predict_data$MR_r > 0,])
 sum(poisson_prediction_r == prediction_data[21965:27456,]$MR_r)/nrow(prediction_data[21965:27456,])
 #Poisson prediction accuracy is currently 83.9%
 
