@@ -137,12 +137,6 @@ mine_penpoints = c("contractorsizepoints", "controllersizepoints")
 ######################################################################################################################################
 #save prediction data to run models in Stata
 
-# remove observations that are missing the third lagged var (this will also by default remove obs that are missing either the first
-# or second lagged var) these are the first three quarters of a mines operation so there is no prior data to lag
-prediction_data = prediction_data[!is.na(prediction_data$`75.penaltypoints_l6`),]
-prediction_data = prediction_data[!is.na(prediction_data$`75.sigandsubdesignation_l6`),]
-prediction_data = prediction_data[!is.na(prediction_data$`75_l6`),]
-
 prediction_data$sum_75_1_2 = rowSums(prediction_data[,c("75_l1", "75_l2")])
 prediction_data$sum_75_1_3 = rowSums(prediction_data[,c("75_l1", "75_l2", "75_l3")])
 prediction_data$sum_75_1_4 = rowSums(prediction_data[,c("75_l1", "75_l2", "75_l3", "75_l4")])
