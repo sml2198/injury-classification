@@ -5,8 +5,6 @@
 # strategies and prints their accuracy. If the data.type is set to "real accidents data", this file will read in
 # and classify all accidents by the algorithm with the highest accuracy.
 
-* JULIAWUZHERE
-
 install.packages("zoo")
 install.packages("rpart")
 install.packages("rpart.plot")
