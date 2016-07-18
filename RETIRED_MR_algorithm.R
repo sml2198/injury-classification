@@ -1,6 +1,6 @@
-# This code pulls in the merged accidents-mines data (created in clean-accidents.R), cleans it, imputes missing values,
-# appends the training set (created in prepare-MR.R) and runs a random forest and boosting. This code is the product 
-# of testing done in RETIRED_analyze_MR_R.R.
+# THIS CODE IS RETIRED.
+# This was going to be the final MR algorithm, but we wound up just bringing the real accidents into the regular analyze file.
+# This can be deleted eventually, after a final read-through to make sure we're not missing anything. 
 
 install.packages("zoo")
 library(zoo)
