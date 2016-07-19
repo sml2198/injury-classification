@@ -1,14 +1,10 @@
-##NIOSH STUDY##
-##Professor Alison Morantz##
-##Stanford Law School##
+# NIOSH Project 2014-N-15776
 
-#Coded by Nikhil Saifullah
+# 8 - Clean Inspections
+    # This file cleans the inspections data we downloaded from MSHA's open data portal. The portions commented out 
+    # are to load and clean data from Carolyn Stasik's (MSHA) data pull from May 20th, 2015. 
 
-#Description
-
-
-# This file cleans the inspections data we downloaded from MSHA's open data portal. The portions commented out are to load and clean data from
-# Carolyn Stasik's (MSHA) data pull from May 20th, 2015. THIS FILE MUST BE RUN AFTER MINES DATA IS CLEANED.
+# Last edit 7/19/16
 
 ######################################################################################################
 

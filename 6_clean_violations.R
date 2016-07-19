@@ -1,10 +1,15 @@
-# This file cleans the violations data we downloaded from MSHA's open data portal. The portions commented out are to load 
-# and clean data from Carolyn Stasik's (MSHA) data pull from May 20th, 2015
+# NIOSH Project 2014-N-15776
+
+# 6 - Clean Violations
+    # This file cleans the violations data we downloaded from MSHA's open data portal. The portions commented out are to load 
+    # and clean data from Carolyn Stasik's (MSHA) data pull from May 20th, 2015
+
+# Last edit 7/19/16
+
+######################################################################################################
 
 #early_viols = read.csv("X:/Projects/Mining/NIOSH/analysis/data/1_converted/MSHA/violations_fromText.csv")
 open_data_viols = read.table("X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA/open_data/Violations.txt", header = T, sep = "|")
-
-######################################################################################################
 
 #Renaming for MSHA Open Data
 names(open_data_viols)[names(open_data_viols) == "VIOLATION_NO"] = "violationno"

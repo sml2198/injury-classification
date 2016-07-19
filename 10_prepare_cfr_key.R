@@ -1,19 +1,17 @@
-##NIOSH STUDY##
-##Professor Alison Morantz##
-##Stanford Law School##
+# NIOSH Project 2014-N-15776
 
-#Coded by Nikhil Saifullah
+# 10 - Prepare CFR Key
+    # This file marks all subsection codes as either relevent or maybe relevant to each subtype.
 
-#Description
+# Last edit 7/19/16
 
-#Coded by Nikhil Saifullah
+# In this file we code all violations as either "relevant" or "maybe relevant" to the cause of
+# pinning and striking (PS) and maintenance and repair (MR) injuries, respectively. Violation
+# codes not flagged as "relevant" or "maybe relevant" can be regarded as irrelevant. These codings
+# came from a meeting between Alison Morantz, Nikhil Saifullah, and Sarah Levine at NIOSH in
+# Pittsburgh in February of 2016.
 
-#In this file we code all violations as either "relevant" or "maybe relevant" to the cause of
-#pinning and striking (PS) and maintenance and repair (MR) injuries, respectively. Violation
-#codes not flagged as "relevant" or "maybe relevant" can be regarded as irrelevant. These codings
-#came from a meeting between Alison Morantz, Nikhil Saifullah, and Sarah Levine at NIOSH in
-#Pittsburgh in February of 2016.
-
+######################################################################################################
 
 library(stringr)
 
@@ -23,7 +21,9 @@ cfr_key$cfr_section_code_desc = as.character(cfr_key$cfr_section_code_desc)
 subsection_code_length = attr(regexpr("[0-9]+\\.[0-9]+(-)*[0-9]*", cfr_key$cfr_section_code_desc), "match.length")
 cfr_key$subsection_code = substr(cfr_key$cfr_section_code_desc, 2, 1+subsection_code_length)
 
-##PINNING & STRIKING##
+######################################################################################################
+
+# PINNING & STRIKING
 
 cfr_key$PS_relevant = ifelse(cfr_key$cfr_part_code == "48" & (cfr_key$cfr_subpart_code %in% c("Subpart A", "Subpart B")) & 
                                !(cfr_key$subsection_code %in% c("48.10", "48.3", "48.9", "48.23", "48.29", "48.30", "48.31", "48.32")), 1, 0)
@@ -68,8 +68,10 @@ cfr_key$PS_maybe_relevant = ifelse(cfr_key$cfr_part_code == "75" & (cfr_key$cfr_
                                      (cfr_key$subsection_code %in% c("75.1315", "75.1316", "75.1318", "75.1322")), 1, cfr_key$PS_maybe_relevant)
 cfr_key$PS_maybe_relevant = ifelse(cfr_key$cfr_part_code == "75" & (cfr_key$cfr_subpart_code %in% c("Subpart O")) & 
                                      (cfr_key$subsection_code %in% c("75.1403-5")), 1, cfr_key$PS_maybe_relevant)
+                                     
+######################################################################################################
 
-##MAINTENANCE & REPAIR##
+# MAINTENANCE & REPAIR
 
 cfr_key$MR_relevant = ifelse(cfr_key$cfr_part_code == "48" & (cfr_key$cfr_subpart_code %in% c("Subpart A", "Subpart B")) & 
                                !(cfr_key$subsection_code %in% c("48.10", "48.3", "48.9", "48.23", "48.29", "48.30", "48.31", "48.32")), 1, 0)

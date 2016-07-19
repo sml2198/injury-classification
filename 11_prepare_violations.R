@@ -1,14 +1,13 @@
-##NIOSH STUDY##
-##Professor Alison Morantz##
-##Stanford Law School##
+# NIOSH Project 2014-N-15776
 
-#Coded by Nikhil Saifullah and Sarah Levine
+# 11 - Prepare Violations
+    # This file merges our merged violations data from "merge_violations_mines.R" with our prepared CFR 
+    # subsection codes from "prepare_cfr_key.R", accidents data, and employment/production data. We then 
+    # collapse the merged data to the mine-quarter level for use in the prediction stage and run some candidate models.
 
-#Description
+# Last edit 7/19/16
 
-#This file merges our merged violations data from "merge_violations_mines.R" with our prepared CFR subsection codes from "prepare_cfr_key.R",
-#accidents data, and employment/production data. We then collapse the merged data to the mine-quarter level for use in the prediction stage
-#and run some candidate models.
+######################################################################################################
 
 library(plyr)
 library(zoo)

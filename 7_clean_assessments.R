@@ -1,10 +1,13 @@
-# This file cleans the assessments data we downloaded from MSHA's open data portal. The portions 
-# commented out are to load and clean data from Carolyn Stasik's (MSHA) data pull from March 3rd, 2015
+# NIOSH Project 2014-N-15776
 
-open_data_assessments = read.table("X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA/open_data/AssessedViolations.txt", header = T, sep = "|")
-mine_types = readRDS("X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/mine_types.rds")
+# 7 - Clean Assessments
+    # This file cleans the assessments data we downloaded from MSHA's open data portal. The portions 
+    # commented out are to load and clean data from Carolyn Stasik's (MSHA) data pull from March 3rd, 2015
+
+# Last edit 7/19/16
 
 ######################################################################################################
+
 # RETIRED CODE.
 
 #early_assessments = read.csv("X:/Projects/Mining/NIOSH/analysis/data/1_converted/MSHA/assessments_fromText.csv")
@@ -16,6 +19,10 @@ mine_types = readRDS("X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/mine_type
 #names(early_assessments)[names(early_assessments) == "Ã.Ã.violationno"] = "violationno"
 
 ######################################################################################################
+
+open_data_assessments = read.table("X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA/open_data/AssessedViolations.txt", header = T, sep = "|")
+mine_types = readRDS("X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/mine_types.rds")
+
 names(open_data_assessments)[names(open_data_assessments) == "VIOLATION_NO"] = "violationno"
 names(open_data_assessments)[names(open_data_assessments) == "VIOLATION_ID"] = "violationid"
 names(open_data_assessments)[names(open_data_assessments) == "VIOLATOR_NAME"] = "violatorname"

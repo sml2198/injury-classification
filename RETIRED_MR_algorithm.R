@@ -1,6 +1,14 @@
-# THIS CODE IS RETIRED.
+# NIOSH Project 2014-N-15776
+
+# RETIRED - MR Algorithm
+    # THIS CODE IS RETIRED.
+
+# Last edit 7/19/16
+
 # This was going to be the final MR algorithm, but we wound up just bringing the real accidents into the regular analyze file.
 # This can be deleted eventually, after a final read-through to make sure we're not missing anything. 
+
+######################################################################################################
 
 install.packages("zoo")
 library(zoo)

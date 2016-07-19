@@ -1,13 +1,11 @@
-##NIOSH STUDY##
-##Professor Alison Morantz##
-##Stanford Law School##
+# NIOSH Project 2014-N-15776
 
-#Coded by Nikhil Saifullah
+# 9 - Merge Violations
+    # In this file, we merge inspections and assessments to each violation.
 
-#Description
+# Last edit 7/19/16
 
-#In this file, we merge inspections and assessments to each 
-#violation.
+######################################################################################################
 
 library(stringr)
 
@@ -15,7 +13,6 @@ clean_assessments = readRDS("X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/cl
 clean_violations = readRDS("X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_violations.rds")
 clean_inspections = readRDS("X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_inspections.rds")
 
-######################################################################################################
 # MERGE VIOLATIONS AND ASSESSMENTS
 assessments_violations = merge(clean_assessments, clean_violations, by = c("mineid","violationno"), all = T)
 
