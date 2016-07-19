@@ -1,3 +1,10 @@
+# NIOSH Project 2014-N-15776
+
+# 5 - Analyze MR (Maintenance and Repair Injuries)
+  # Loads accidents training set, creates keywords and various predictors, implements various classification algorithms.
+
+# Last edit 7/19/16
+
 # This code pulls in 1000 observations from the manually coded training set for maintenance and repair (MR)
 # injuries. It then appends 23 MR fatalities that were scraped from MSHA: http://arlweb.msha.gov/fatals/coal/2014/
 # It then prepares all variables for various machine learning algoritms by formatting vars, imputing missing values, 
@@ -5,6 +12,8 @@
 # strategies and prints their accuracy. If the "data.type" is set to "real accidents data" then this file will read in
 # and classify all accidents in the historic dataset by the algorithm with the highest accuracy (boosting with post-
 # processing).
+
+######################################################################################################
 
 install.packages("zoo")
 install.packages("rpart")
