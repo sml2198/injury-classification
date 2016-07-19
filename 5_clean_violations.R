@@ -1,13 +1,5 @@
-##NIOSH STUDY##
-##Professor Alison Morantz##
-##Stanford Law School##
-
-#Coded by Nikhil Saifullah
-
-#Description
-
-#This file cleans the violations data we downloaded from MSHA's open data portal. The portions commented out are to load and clean data from
-#Carolyn Stasik's (MSHA) data pull from May 20th, 2015
+# This file cleans the violations data we downloaded from MSHA's open data portal. The portions commented out are to load 
+# and clean data from Carolyn Stasik's (MSHA) data pull from May 20th, 2015
 
 #Load in CSV from STATA conversion
 #early_viols = read.csv("X:/Projects/Mining/NIOSH/analysis/data/1_converted/MSHA/violations_fromText.csv")
