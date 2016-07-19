@@ -1,7 +1,6 @@
 # This file cleans the violations data we downloaded from MSHA's open data portal. The portions commented out are to load 
 # and clean data from Carolyn Stasik's (MSHA) data pull from May 20th, 2015
 
-#Load in CSV from STATA conversion
 #early_viols = read.csv("X:/Projects/Mining/NIOSH/analysis/data/1_converted/MSHA/violations_fromText.csv")
 open_data_viols = read.table("X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA/open_data/Violations.txt", header = T, sep = "|")
 
@@ -71,6 +70,7 @@ rm(open_data_viols)
 saveRDS(clean_violations, file = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_violations.rds")
 
 ######################################################################################################
+# THIS CODE IS RETIRED.
 
 #Keep only observations from Carolyn Stasik's data in years prior to the Open Data's time range
 #early_viols = early_viols[early_viols$calendaryear <= 1999 & early_viols$calendaryear >= 1983,]
@@ -96,4 +96,3 @@ saveRDS(clean_violations, file = "X:/Projects/Mining/NIOSH/analysis/data/2_clean
 #clean_violations = clean_violations[, -grep("merge", names(clean_violations))]
 
 ######################################################################################################
-
