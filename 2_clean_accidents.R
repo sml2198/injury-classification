@@ -4,6 +4,7 @@
   # Reads and cleans open source accidents data (post-2000)
   # Reads and cleans non-open source accidents data (1983-2013)
   # Merges open source accidents data (post-2000) and non-open source accidents data (1983-2013)
+  # Outputs clean and merged accidents data
 
 # Last edit 7/19/16
 
@@ -129,7 +130,7 @@ acc.83.13 = acc.83.13[acc.83.13$calendaryear < 2000, ]
 
 ######################################################################################################
 
-# MERGE OPEN SOURCE ACCIDENTS DATA (post-2000) AND NON-OPEN SOURCE ACCIDENTS DATA (1983-2013) AND OUTPUT
+# MERGE OPEN SOURCE ACCIDENTS DATA (post-2000) AND NON-OPEN SOURCE ACCIDENTS DATA (1983-2013), THEN OUTPUT
 
 accidents = rbind(acc.83.13, acc.2000.16) # should have 675902 observations
 
@@ -179,7 +180,6 @@ saveRDS(accidents, file = accidents.file.name)
 ######################################################################################################
 
 
-
 ### HELP! I AM A LOST DATA PUP... PLEASE MOVE ME IN A NEW FILE WHERE I BELONG! ### 
 ### I HAVE COMMENTED THIS CODE, SO IT REALLY ONLY NEEDS TO BE MOVED, NO EDITS NECESSARY ###
 
@@ -187,6 +187,7 @@ saveRDS(accidents, file = accidents.file.name)
 
 # [[INSERT NUMBER]] - Merge Accidents and Mines Data
   # Merges complete accidents data and mines data on mineid
+  # Outputs clean and merged mines and accidents data
 
 # Last edit 7/19/16
 
@@ -199,10 +200,12 @@ setwd("X:/Projects/Mining/NIOSH/analysis/")
 accidents.file.name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_accidents.rds" 
   # input: clean and merged mines data
 mines.file.name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_mines.rds" 
+  # output: merged mines and accidents data
+mines.accidents.file.name = "X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_mines_accidents.rds"
 
 ######################################################################################################
 
-# MERGE MINES AND ACCIDENTS DATA AND OUTPUT
+# MERGE MINES AND ACCIDENTS DATA, THEN OUTPUT
 
 # read data files
 accidents = readRDS(accidents.file.name)
@@ -220,8 +223,10 @@ mines.accidents = mines.accidents[!(is.na(mines.accidents$documentno) | mines.ac
 mines.accidents = mines.accidents[!(is.na(mines.accidents$mineid) | mines.accidents$mineid == ""), ]
 
 # drop problematic observations
-mines.accidents = mines.accidents[mines.accidents$problem!=1, ]
+mines.accidents = mines.accidents[mines.accidents$problem != 1, ]
 mines.accidents = mines.accidents[, c(-match("problem", names(mines.accidents)))]
 
-# office computer directory
-saveRDS(mines.accidents, file = "X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_mines_accidents.rds")
+# output merged mines and accidents data
+saveRDS(mines.accidents, file = mines.accidents.file.name)
+
+######################################################################################################
