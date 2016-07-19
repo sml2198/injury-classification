@@ -1,12 +1,12 @@
-##NIOSH STUDY##
-##Professor Alison Morantz##
-##Stanford Law School##
+# NIOSH Project 2014-N-15776
 
-#Coded by Nikhil Saifullah
+# 12 - Prediction Model
+    # This file performs the model selection stage for our prediction data from prepared_violations_mines.R 
+    # and runs some preliminary models
 
-#Description
+# Last edit 7/19/16
 
-#This file performs the model selection stage for our prediction data from prepared_violations_mines.R and runs some preliminary models
+######################################################################################################
 
 library(FactoMineR)
 library(stats)
