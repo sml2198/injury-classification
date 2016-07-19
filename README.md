@@ -1,5 +1,5 @@
 # Injury Classification
-Sarah L. &amp; Nikhil S. play with ML
+Sarah L. &amp; Julia B. play with ML (previously Sarah L. &amp; Nikhil S.)
 
 
 A project to predict accidents based on patterns of violations.
