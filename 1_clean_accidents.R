@@ -5,16 +5,17 @@
   # Reads and cleans non-open source accidents data (1983-2013)
   # Merges open source accidents data (post-2000) and non-open source accidents data (1983-2013)
 
-# Last edit 7/18/16
+# Last edit 7/19/16
 
 ######################################################################################################
 
 setwd("X:/Projects/Mining/NIOSH/analysis/")
 
 # define file names
-acc.2000.16.file.name = "data/0_originals/MSHA/open_data/Accidents.txt"
-acc.83.13.file.name = "data/0_originals/MSHA/rec_2015_06_02/Accidents_1983_2013/Accidents_1983_2013.csv"
-  
+acc.2000.16.file.name = "data/0_originals/MSHA/open_data/Accidents.txt" # input: open source accidents data (post-2000)
+acc.83.13.file.name = "data/0_originals/MSHA/rec_2015_06_02/Accidents_1983_2013/Accidents_1983_2013.csv" # input: non-open source accidents data (1983-2013)
+accidents.file.name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_accidents.rds" # output: clean and merged accidents data
+
 ######################################################################################################
 
 # READ AND CLEAN OPEN SOURCE ACCIDENTS DATA (post-2000)
@@ -99,7 +100,6 @@ acc.2000.16 = acc.2000.16[!is.na(acc.2000.16$coalcormetalm), ]
 acc.2000.16$subunit = tolower(acc.2000.16$subunit)
 acc.2000.16 = acc.2000.16[acc.2000.16$subunit == "underground", ]
 
-
 ######################################################################################################
 
 # READ AND CLEAN NON-OPEN SOURCE ACCIDENTS DATA (1983-2013)
@@ -124,10 +124,9 @@ acc.83.13$subunit = tolower(acc.83.13$subunit)
 acc.83.13 = acc.83.13[acc.83.13$subunit == "underground", ]
 acc.83.13 = acc.83.13[acc.83.13$calendaryear < 2000, ]
 
-
 ######################################################################################################
 
-# MERGE OPEN SOURCE ACCIDENTS DATA (post-2000) AND NON-OPEN SOURCE ACCIDENTS DATA (1983-2013)
+# MERGE OPEN SOURCE ACCIDENTS DATA (post-2000) AND NON-OPEN SOURCE ACCIDENTS DATA (1983-2013) AND OUTPUT
 
 accidents = rbind(acc.83.13, acc.2000.16) # should have 675902 observations
 
@@ -135,17 +134,18 @@ accidents = rbind(acc.83.13, acc.2000.16) # should have 675902 observations
 accidents$mineid = sprintf("%07s", accidents$mineid)
 accidents$documentno = sprintf("%12s", accidents$documentno)
 
-
-
-## RESUME CLEANING HERE
-
-# We've already done this as a merge in Stata so we know that observations not merged from master data (msha) are all 1983-1999 observations (good) 
-# except for 2 from 2013 and 1 from 2005, and all observations not merged from using data (opendata) are 2013+ (good) except for 1 from 2005, 2008, 
-# 2010, 2011, each, and 9 from 2012.
-# mystery doc no's with _merge == 1: (2005): 220052270088 (2013): 220133400002 220140070002 
-# mystery doc no's with _merge == 2: (2005): 220052270088 (2008):  220153560029 (2010): 220153240004 (2011): 220152580041  		
-# note that 220052270088 appears in both lists (because mineid is different)
-# cont'd (2012): 220151480037 220151520023 220151910032 220151970035 220152260215 220152260218 220153080004 220160040025 220160680001
+# remove problematic observations identified from previous analysis in Stata:
+  # mystery doc nos with _merge == 1:
+    # (2005): 220052270088 
+    # (2013): 220133400002 220140070002 
+  # mystery doc nos with _merge == 2: 
+    # (2005): 220052270088
+    # (2008):  220153560029 
+    # (2010): 220153240004 
+    # (2011): 220152580041  		
+    # (2012): 220151480037 220151520023 220151910032 220151970035 220152260215 
+    # (2012, ctd): 220152260218 220153080004 220160040025 220160680001
+      # 220052270088 appears in both lists because mineid is different
 accidents$problem = ifelse((accidents$documentno == "220052270088" | accidents$documentno == "220133400002" |
                             accidents$documentno == "220140070002" | accidents$documentno == "220153560029" |
                             accidents$documentno == "220153240004" | accidents$documentno == "220152580041" |
@@ -154,9 +154,9 @@ accidents$problem = ifelse((accidents$documentno == "220052270088" | accidents$d
                             accidents$documentno == "220152260215" | accidents$documentno == "220152260218" |
                             accidents$documentno == "220153080004" | accidents$documentno == "220160040025" |
                             accidents$documentno == "220160680001"), 1, 0)
-names(accidents)[names(accidents) == 'narrativemodified'] <- 'narrative'
 
-# MAKE SURE NARRATIVE & CHARACTER VARS ARE ALL LOWERCASE
+# formate variables in merged data
+names(accidents)[names(accidents) == "narrativemodified"] = "narrative"
 accidents$mineractivity = tolower(accidents$mineractivity)
 accidents$narrative = tolower(accidents$narrative)
 accidents$natureofinjury = tolower(accidents$natureofinjury)
@@ -170,9 +170,15 @@ accidents$equipmanufacturer = tolower(accidents$equipmanufacturer)
 accidents$accidentclassification = tolower(accidents$accidentclassification)
 accidents$occupation = tolower(accidents$occupation)
 
-saveRDS(accidents, file = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_accidents.rds")
+# output clean and merged accidents data
+saveRDS(accidents, file = accidents.file.name)
 
 ######################################################################################################
+
+
+
+### HELP! I AM A LOST DATA PUP... PLEASE MOVE ME WHERE I BELONG! ### 
+
 # MERGE MINES AND ACCIDENTS DATA 
 
 mines_quarters = readRDS("X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_mines.rds")
@@ -194,5 +200,3 @@ mines.accidents = mines.accidents[, c(-match("problem", names(mines.accidents)))
 
 # office computer directory
 saveRDS(mines.accidents, file = "X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_mines_accidents.rds")
-
-######################################################################################################
