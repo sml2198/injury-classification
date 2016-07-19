@@ -1,6 +1,6 @@
 # NIOSH Project 2014-N-15776
 
-# 1 - Clean Accidents Data
+# 2 - Clean Accidents Data
   # Reads and cleans open source accidents data (post-2000)
   # Reads and cleans non-open source accidents data (1983-2013)
   # Merges open source accidents data (post-2000) and non-open source accidents data (1983-2013)
@@ -185,7 +185,7 @@ saveRDS(accidents, file = accidents.file.name)
 
 # NIOSH Project 2014-N-15776
 
-# [[INSERT NUMBER]] - Merge Accidents and Mines Data
+# 3 - Merge Accidents and Mines Data
   # Merges complete accidents data and mines data on mineid
   # Outputs clean and merged mines and accidents data
 
