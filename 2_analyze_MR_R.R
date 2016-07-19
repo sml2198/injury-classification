@@ -1,9 +1,10 @@
 # This code pulls in 1000 observations from the manually coded training set for maintenance and repair (MR)
 # injuries. It then appends 23 MR fatalities that were scraped from MSHA: http://arlweb.msha.gov/fatals/coal/2014/
-# It then prepares all variables for analyses in CART-RF-MR.R by formatting, imputing missing values, 
+# It then prepares all variables for various machine learning algoritms by formatting vars, imputing missing values, 
 # dropping extraneous parameters, and dummying out large factor variables. It then performs a number of modeling
-# strategies and prints their accuracy. If the data.type is set to "real accidents data", this file will read in
-# and classify all accidents by the algorithm with the highest accuracy.
+# strategies and prints their accuracy. If the "data.type" is set to "real accidents data" then this file will read in
+# and classify all accidents in the historic dataset by the algorithm with the highest accuracy (boosting with post-
+# processing).
 
 install.packages("zoo")
 install.packages("rpart")

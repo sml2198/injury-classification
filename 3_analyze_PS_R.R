@@ -1,13 +1,8 @@
-##NIOSH STUDY##
-##Professor Alison Morantz##
-##Stanford Law School##
-
-#Coded by Nikhil Saifullah
-
-#Description
-
-#This file loads the training set sent to us by Miguel Reyes on January 29th, 2016 for use in constructing our Pinning & Striking
-#injury classification algorithm. We also test the accuracy of this algorithm using a 40% hold-out.
+# This file loads the training set sent to us by Miguel Reyes on January 29th, 2016 for use in constructing our 
+# Pinning & Striking injury classification algorithm. We clean and format the variables, conduct narrative analysis
+# on the injury description fields, and group existing categorical variables by how likely they are to predict "PS"
+# injuries. We then employ various machine learning algorithms including CaRT, random forest, and boosting. We also 
+# create a compound-algorithm using several models and pre- and post-processing for maximum accuracy.
 
 #install.packages("dummies")
 install.packages("rpart")

@@ -1,14 +1,11 @@
-##HEADER##
-
-# THIS FILE READS IN THE MINES DATA, MERGES IN EMPLOYMENT/PRODUCTION/HOURS DATA, AND COLLAPSES TO THE MINE-QUARTER LEVEL. 
+# THIS FILE BRINGS IN AND CLEANS UP EMPLOYMENT/PRODUCTION DATA, TO BE MERGED ONTO FINAL VIOLATIONS/ACCIDENTS/MINES DATASET.
+# IT THEN BRINGS IN THE MINES DATA AND COLLAPSES TO THE MINE-QUARTER LEVEL.
 
 library(plyr)
 library(devtools)
 
-# THIS FILE BRINGS IN AND CLEANS UP EMPLOYMENT/PRODUCTION DATA, TO BE MERGED ONTO FINAL VIOLATIONS/ACCIDENTS/MINES DATASET.
-# IT THEN BRINGS IN THE MINES DATA AND COLLAPSES TO THE MINE-QUARTER LEVEL.
-
 ######################################################################################################
+# This code brings in all of the various employment and production data sets.
 
 # DATA FROM UNDERREPORTING - QUARTERLY MINE EMPLOYMENT/PRODUCTION DATA
 underreporting_employment = read.table("X:/Projects/Mining/MSHA_OSHA_Underreporting/analysis/data/0_originals/MSHA/rec_2015_03_03/Operator_Quarterly_Emp_Production/Operator_Quarterly_Emp_Production.txt", fileEncoding="UCS-2LE", header = T, sep = "|")
@@ -64,6 +61,8 @@ yearly_employment = yearly_employment[, c(-grep("COAL_METAL_IND", names(yearly_e
 saveRDS(yearly_employment, file = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_employment_yrly.rds")
 
 ######################################################################################################
+# This code brings in the mines data and cleans it. Commented out code brings in data fro Carolyn Stasik's old data
+# pull - is very messy and turns out being unecessary.
 
 #early_mines = read.csv("X:/Projects/Mining/NIOSH/analysis/data/1_converted/MSHA/mines_fromText.csv") #only 25 mines added and all are non-coal
 open_data_mines = read.table("X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA/open_data/Mines.txt", header = T, sep = "|")
