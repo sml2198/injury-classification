@@ -1,21 +1,21 @@
 # This file cleans the assessments data we downloaded from MSHA's open data portal. The portions 
 # commented out are to load and clean data from Carolyn Stasik's (MSHA) data pull from March 3rd, 2015
 
-#early_assessments = read.csv("X:/Projects/Mining/NIOSH/analysis/data/1_converted/MSHA/assessments_fromText.csv")
 open_data_assessments = read.table("X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA/open_data/AssessedViolations.txt", header = T, sep = "|")
 mine_types = readRDS("X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/mine_types.rds")
 
 ######################################################################################################
+# RETIRED CODE.
 
+#early_assessments = read.csv("X:/Projects/Mining/NIOSH/analysis/data/1_converted/MSHA/assessments_fromText.csv")
 #early_assessments[, "dup"] = duplicated(early_assessments) #Checks out with total number of duplicates implied by STATA's "duplicates" command
 #table(early_assessments$dup)
 #FALSE    TRUE 
 #2639669    3238
-
 #early_assessments = early_assessments[early_assessments$dup == F,]
-
 #names(early_assessments)[names(early_assessments) == "Ã.Ã.violationno"] = "violationno"
 
+######################################################################################################
 names(open_data_assessments)[names(open_data_assessments) == "VIOLATION_NO"] = "violationno"
 names(open_data_assessments)[names(open_data_assessments) == "VIOLATION_ID"] = "violationid"
 names(open_data_assessments)[names(open_data_assessments) == "VIOLATOR_NAME"] = "violatorname"
