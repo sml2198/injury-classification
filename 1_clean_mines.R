@@ -2,7 +2,8 @@
 
 # 1 - Clean Mines Data
   # Reads, cleans, then outputs quarterly under-reporting employment/production data
-  # Reads, cleans, then outputs open-source quarterly employment/production data
+  # Reads, cleans, then outputs open source quarterly employment/production data
+  # Reads, cleans, then outputs open source annual employment/production data
 
 # Last edit 7/19/16
 
@@ -19,14 +20,16 @@ library(devtools)
 underreporting_employment.in.file.name = "X:/Projects/Mining/MSHA_OSHA_Underreporting/analysis/data/0_originals/MSHA/rec_2015_03_03/Operator_Quarterly_Emp_Production/Operator_Quarterly_Emp_Production.txt"
   # output: clean quarterly under-reporting employment/production data
 underreporting_employment.out.file.name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_underreporting_employment.rds"
-  # input: open-source quarterly employment/production data
+  # input: open source quarterly employment/production data
 quarterly_employment.in.file.name = "X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA/open_data/MinesProdQuarterly.txt"
-  # output: clean open-source quarterly employment/production data
+  # output: clean open source quarterly employment/production data
 quarterly_employment.out.file.name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_employment.rds"
-  # input: open-source annual employment/production data
+  # input: open source annual employment/production data
 yearly_employment.in.file.name = "X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA/open_data/MinesProdYearly.txt"
-  # output: open-source annual employment/production data
+  # output: open source annual employment/production data
 yearly_employment.out.file.name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_employment_yrly.rds"
+  # input: open source annual employment/production data
+open_data_mines.file.name = "X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA/open_data/Mines.txt"
 
 ######################################################################################################
 
@@ -59,11 +62,11 @@ saveRDS(underreporting_employment, file = underreporting_employment.out.file.nam
 
 # READ AND CLEAN OPEN SOURCE QUARTERLY EMPLOYMENT/PRODUCTION DATA, THEN OUTPUT
 
-# read open-source quarterly employment/production data
+# read open source quarterly employment/production data
   # dataset downloaded on 4/20/16 from http://arlweb.msha.gov/OpenGovernmentData/OGIMSHA.asp 
 quarterly_employment = read.table(quarterly_employment.in.file.name, header = T, sep = "|")
 
-# re-name variables in open-source quarterly employment/production data
+# re-name variables in open source quarterly employment/production data
 names(quarterly_employment)[names(quarterly_employment) == "CAL_YR"] = "year"
 names(quarterly_employment)[names(quarterly_employment) == "CAL_QTR"] = "quarter"
 names(quarterly_employment)[names(quarterly_employment) == "MINE_ID"] = "mineid"
@@ -71,7 +74,7 @@ names(quarterly_employment)[names(quarterly_employment) == "HOURS_WORKED"] = "ho
 names(quarterly_employment)[names(quarterly_employment) == "AVG_EMPLOYEE_CNT"] = "avg_employee_cnt_qtr"
 names(quarterly_employment)[names(quarterly_employment) == "COAL_PRODUCTION"] = "coal_prod_qtr"
 
-# format variables in open-source quarterly employment/production data
+# format variables in open source quarterly employment/production data
 quarterly_employment$mineid = str_pad(quarterly_employment$mineid, 7, pad = "0")
 quarterly_employment$mineid = withr::with_options(c(scipen = 999), str_pad(quarterly_employment$mineid, 7, pad = "0"))
 
@@ -85,18 +88,18 @@ quarterly_employment = quarterly_employment[, c(-grep("COAL_METAL_IND", names(qu
                                                 -match("SUBUNIT", names(quarterly_employment)), 
                                                 -match("SUBUNIT_CD", names(quarterly_employment)))]
 
-# output clean open-source quarterly employment/production data
+# output clean open source quarterly employment/production data
 saveRDS(quarterly_employment, file = quarterly_employment.out.file.name)
 
 ######################################################################################################
 
 # READ AND CLEAN OPEN SOURCE ANNUAL EMPLOYMENT/PRODUCTION DATA, THEN OUTPUT
 
-# read open-source annual employment/production data
+# read open source annual employment/production data
   # dataset downloaded on 4/20/16 from http://arlweb.msha.gov/OpenGovernmentData/OGIMSHA.asp 
 yearly_employment = read.table(yearly_employment.in.file.name, header = T, sep = "|")
 
-# re-name variables in open-source annual employment/production data
+# re-name variables in open source annual employment/production data
 names(yearly_employment)[names(yearly_employment) == "CAL_YR"] = "year"
 names(yearly_employment)[names(yearly_employment) == "MINE_ID"] = "mineid"
 names(yearly_employment)[names(yearly_employment) == "MINE_NAME"] = "minename"
@@ -106,7 +109,7 @@ names(yearly_employment)[names(yearly_employment) == "ANNUAL_COAL_PRODUCTION"] =
 names(yearly_employment)[names(yearly_employment) == "AVG_EMPLOYEE_HOURS"] = "employee_hours_yr"
 names(yearly_employment)[names(yearly_employment) == "ANNUAL_HOURS"] = "hours_yr"
 
-# format variables in open-source annual employment/production data
+# format variables in open source annual employment/production data
 yearly_employment$mineid = str_pad(yearly_employment$mineid, 7, pad = "0")
 yearly_employment$mineid = withr::with_options(c(scipen = 999), str_pad(yearly_employment$mineid, 7, pad = "0"))
 
@@ -117,32 +120,21 @@ yearly_employment = yearly_employment[, c(-grep("COAL_METAL_IND", names(yearly_e
                                           -match("SUBUNIT", names(yearly_employment)), 
                                           -match("SUBUNIT_CD", names(yearly_employment)))]
 
-# output clean open-source quarterly employment/production data
+# output clean open source annual employment/production data
 saveRDS(yearly_employment, file = yearly_employment.out.file.name)
 
 ######################################################################################################
 
+# READ AND CLEAN OPEN SOURCE MINES DATA, OUTPUT MINE TYPE DATA
 
+# data from Carolyn Stasik's old data pull - very messy and turns out being unecessary (only 25 mines added and all are non-coal)
+# early_mines = read.csv("X:/Projects/Mining/NIOSH/analysis/data/1_converted/MSHA/mines_fromText.csv")
 
+# read open source mines data
+  # dataset downloaded on 4/20/16 from http://arlweb.msha.gov/OpenGovernmentData/OGIMSHA.asp
+open_data_mines = read.table(open_data_mines.file.name, header = T, sep = "|")
 
-
-
-
-
-
-
-
-
-
-
-
-######################################################################################################
-# This code brings in the mines data and cleans it. Commented out code brings in data fro Carolyn Stasik's old data
-# pull - is very messy and turns out being unecessary.
-
-#early_mines = read.csv("X:/Projects/Mining/NIOSH/analysis/data/1_converted/MSHA/mines_fromText.csv") #only 25 mines added and all are non-coal
-open_data_mines = read.table("X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA/open_data/Mines.txt", header = T, sep = "|")
-
+# re-name variables in open source mines data
 names(open_data_mines)[names(open_data_mines) == "MINE_ID"] = "mineid"
 names(open_data_mines)[names(open_data_mines) == "MINE_NAME"] = "minename"
 names(open_data_mines)[names(open_data_mines) == "MINE_TYPE"] = "minetype"
@@ -194,19 +186,30 @@ names(open_data_mines)[names(open_data_mines) == "MILES_FROM_OFFICE"] = "milesfr
 names(open_data_mines)[names(open_data_mines) == "DIRECTIONS_TO_MINE"] = "directionstominemodified"
 names(open_data_mines)[names(open_data_mines) == "NEAREST_TOWN"] = "nearesttown"
 names(open_data_mines) = tolower(names(open_data_mines))
+
+# create new variable to track data source
 open_data_mines$datasource = "mines data"
 
-######################################################################################################
-
-# format mineid as a 7 digit number 
+# format variables in open source mines data
 open_data_mines$mineid = str_pad(open_data_mines$mineid, 7, pad = "0")
 open_data_mines$mineid = withr::with_options(c(scipen = 999), str_pad(open_data_mines$mineid, 7, pad = "0"))
+
+
+
+
 
 # save just mine and minetype info
 mine_types = open_data_mines[, c(match("mineid", names(open_data_mines)), 
                                      match("minetype", names(open_data_mines)),
                                      match("coalcormetalmmine", names(open_data_mines)))]
 saveRDS(mine_types, file = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/mine_types.rds") 
+
+
+
+
+
+
+
 
 # MERGE IN ALL EMPLOYMENT/PRODUCTION/HOURS DATATSETS
 # observations that are missing for coalcormetalmmine need to be dropped anyway
