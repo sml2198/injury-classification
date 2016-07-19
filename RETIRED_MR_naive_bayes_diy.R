@@ -1,3 +1,15 @@
+# NIOSH Project 2014-N-15776
+
+# RETIRED - MR Naive Bayes
+    # THIS CODE IS RETIRED.
+
+# Last edit 7/19/16
+
+# This was going was used to experiment with anive bayes for classifying MR injuries, but was no found
+# to perform better than other ML algorithms, and so the code has been retired. 
+
+######################################################################################################
+
 library(pastecs)
 options(scipen=100)
 options(digits=2)
