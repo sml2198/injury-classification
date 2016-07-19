@@ -1,19 +1,15 @@
-##NIOSH STUDY##
-##Professor Alison Morantz##
-##Stanford Law School##
+# NIOSH Project 2014-N-15776
 
-#Coded by Nikhil Saifullah
+# 10 - Prepare CFR Key
+    # In this file we code all violations as either "relevant" or "maybe relevant" to the cause of
+    # pinning and striking (PS) and maintenance and repair (MR) injuries, respectively. Violation
+    # codes not flagged as "relevant" or "maybe relevant" can be regarded as irrelevant. These codings
+    # came from a meeting between Alison Morantz, Nikhil Saifullah, and Sarah Levine at NIOSH in
+    # Pittsburgh in February of 2016.
 
-#Description
+# Last edit 7/19/16
 
-#Coded by Nikhil Saifullah
-
-#In this file we code all violations as either "relevant" or "maybe relevant" to the cause of
-#pinning and striking (PS) and maintenance and repair (MR) injuries, respectively. Violation
-#codes not flagged as "relevant" or "maybe relevant" can be regarded as irrelevant. These codings
-#came from a meeting between Alison Morantz, Nikhil Saifullah, and Sarah Levine at NIOSH in
-#Pittsburgh in February of 2016.
-
+######################################################################################################
 
 library(stringr)
 
