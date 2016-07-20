@@ -11,9 +11,11 @@
 # define file names
   # input: raw assessments data from MSHA open data platform (Assessed Violations): http://arlweb.msha.gov/OpenGovernmentData/OGIMSHA.asp
   # downloaded on 4/21/2016 @ 9:37 AM
-open_data_assessments = read.table("X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA/open_data/AssessedViolations.txt", header = T, sep = "|")
+open_data_assessments.in.file.name = "X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA/open_data/AssessedViolations.txt"
+  # output: clean assessments data, uniquely identified by eventno (inspection number) * violationno (violation number)
+open_data_assessments.out.file.name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_assessments.rds"
   # input: cleaned mine-types key produced in produced in 1_clean_mines.R
-mine_types = readRDS("X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/mine_types.rds")
+mine_types.file.name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/mine_types.rds"
 
 ######################################################################################################
 
@@ -27,6 +29,9 @@ mine_types = readRDS("X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/mine_type
 #names(early_assessments)[names(early_assessments) == "Ã.Ã.violationno"] = "violationno"
 
 ######################################################################################################
+
+open_data_assessments = read.table(open_data_assessments.in.file.name, header = T, sep = "|")
+mine_types = readRDS(mine_types.file.name)
 
 # Rename variables (we did this originally so var names would be consistent with our existing data pull - this is mostly cosmetic)
 names(open_data_assessments)[names(open_data_assessments) == "VIOLATION_NO"] = "violationno"
@@ -87,10 +92,7 @@ open_data_assessments = open_data_assessments[!is.na(open_data_assessments$event
 open_data_assessments = open_data_assessments[open_data_assessments$minetype == "Underground",]
 open_data_assessments = open_data_assessments[, c(-match("coalcormetalmmine", names(open_data_assessments)))]
 
-clean_assessments = open_data_assessments
-rm(open_data_assessments)
-
-saveRDS(clean_assessments, file = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_assessments.rds")
+saveRDS(open_data_assessments, file = open_data_assessments.out.file.name)
 
 ######################################################################################################
 
