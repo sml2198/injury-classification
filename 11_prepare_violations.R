@@ -18,9 +18,15 @@ library(psych)
 
 # define file names
   # input: merged violations data produced in 9_merge_violations.R
-merged_violations = readRDS("X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_violations.rds")
+merged_violations.in.file.name = "X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_violations.rds"
   # input: merged cfr key data produced in 10_prepare_cfr_key.R
-merged_cfr_key = readRDS("X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_cfr_key.rds")
+merged_cfr_key.file.name = "X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_cfr_key.rds"
+ # input: coded accidents data (contains MR indicator - no PS indicator yet) produced in 5_analyze_MR.R
+mines_accidents_coded.file.name = "X:/Projects/Mining/NIOSH/analysis/data/4_coded/accidents_with_predictions.csv"
+  # input: cleaned mine-quarters as produced in 1_clean_mines.R
+mines_quarters.file.name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_mines.rds"
+  # input: cleaned mine-types key produced in produced in 1_clean_mines.R
+mine.types.file.name = "X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_mines_accidents.rds"
 
 # When relevant-only option is set to "on" (not commented out) only CFR subsections marked as "relevant" will be used for creating
 # vars. Otherwise, "relevant" and "maybe relevant subsections" will be used.
@@ -30,6 +36,10 @@ relevant.only.option = "off"
 ######################################################################################################################################
 
 # MERGE CFR CODES ONTO VIOLATIONS AND MAKE VARIABLES FOR COLLAPSING ON
+
+# Read data files
+merged_violations = readRDS(merged_violations.in.file.name)
+merged_cfr_key = readRDS(merged_cfr_key.file.name)
 
 # Format cfr code
 merged_violations$cfrstandardcode = gsub("(\\(([0-9]|[a-z]|-|[A-Z])+\\))+", "", merged_violations$cfrstandardcode)
@@ -540,8 +550,9 @@ gc()
 
 # COLLAPSE ACCIDENTS DATA
 
-mine_types = readRDS("X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/mine_types.rds")
-mines_accidents_coded = read.csv("X:/Projects/Mining/NIOSH/analysis/data/4_coded/accidents_with_predictions.csv")
+# Read in data
+mine_types = readRDS(mine.types.file.name)
+mines_accidents_coded = read.csv(mines_accidents_coded.file.name)
 
 # Format mineid (for merges), date and quarter vars for merges
 mines_accidents_coded$mineid = str_pad(mines_accidents_coded$mineid, 7, pad = "0")
@@ -598,7 +609,8 @@ summed_coded_accidents$row_id = seq.int(nrow(summed_coded_accidents))
 ######################################################################################################################################
 # MERGE VIOLATIONS DATA ONTO MINES
 
-mines_quarters = readRDS("X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_mines.rds")
+# Read in data
+mines_quarters = readRDS(mines_quarters.file.name)
 
 # Merge mine-specific contractor info onto mine quarters
 merged_mines_violations = merge(mines_quarters, contractor_vars, by = c("mineid", "quarter"), all = T)
