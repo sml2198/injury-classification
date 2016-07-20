@@ -21,7 +21,7 @@ merged_cfr_key = readRDS("X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged
 
 # When relevant-only option is set to "on" (not commented out) only CFR subsections marked as "relevant" will be used for creating
 # vars. Otherwise, "relevant" and "maybe subsections" will be used.
-relevant.only.option = on
+relevant.only.option = "on"
 
 ######################################################################################################################################
 # MERGE CFR CODES ONTO VIOLATIONS AND MAKE VARIABLES FOR COLLAPSING ON
@@ -319,7 +319,7 @@ for (i in 1:length(cfr_codes)) {
 }
 
 # THIS LOOP BELOW WILL PERFORM THE SAME PROCESS AS ABOVE, BUT FOR ALL SUBSECTIONS OF THE SPECIFIED PART. 
-cfr_codes = MR_relevant_subsectcodes_75
+cfr_codes = MR_relevant_subsectcodes
 for (i in 1:length(cfr_codes)) {
   merged_violations[, cfr_codes[i]] = ifelse(merged_violations$subsection_code == cfr_codes[i], 1, 0)
   merged_violations[, paste(cfr_codes[i], "penaltypoints", sep = ".")] = apply(cbind(merged_violations[, "penaltypoints"], merged_violations[, cfr_codes[i]]), 1, prod)
