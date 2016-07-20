@@ -16,7 +16,10 @@ library(stringr)
 library(withr)
 library(psych)
 
+# define file names
+  # input: merged violations data produced in 9_merge_violations.R
 merged_violations = readRDS("X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_violations.rds")
+  # input: merged cfr key data produced in 10_prepare_cfr_key.R
 merged_cfr_key = readRDS("X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_cfr_key.rds")
 
 # When relevant-only option is set to "on" (not commented out) only CFR subsections marked as "relevant" will be used for creating
@@ -25,6 +28,7 @@ merged_cfr_key = readRDS("X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged
 relevant.only.option = "off"
 
 ######################################################################################################################################
+
 # MERGE CFR CODES ONTO VIOLATIONS AND MAKE VARIABLES FOR COLLAPSING ON
 
 # Format cfr code
@@ -85,6 +89,7 @@ merged_violations$operator_repeated_viol_pInspDay = ifelse(merged_violations$vio
 merged_violations = merged_violations[, c(-grep("merge", names(merged_violations)))]
 
 ######################################################################################################################################
+
 # DUMMY-OUT FACTOR VARIABLES
 
 # Clean up the field that reports the type of inspection (some of this is unnecessary now that we merge codes but oh well)
@@ -137,6 +142,7 @@ merged_violations$negligence = as.character(merged_violations$negligence)
 merged_violations[, "negligence"] = ifelse(is.na(merged_violations$negligence), "Unknown", merged_violations[, "negligence"])
 
 ######################################################################################################################################
+
 # Here we've tabbed our categorical vars, so we know which value will become which dummy.
 
 table(merged_violations$inspacty)
@@ -167,6 +173,7 @@ table(merged_violations$negligence)
 #36421          97549         711082           1221            959          18980 
 
 ######################################################################################################################################
+
 # FINISH DUMMYING-OUT CATEGORICAL VARIABLES 
 
 # This is the function that will dummy out the categorical vars.
@@ -198,6 +205,7 @@ merged_violations = cbind(merged_violations, test.data1, test.data2, test.data3,
 rm(test.data1, test.data2, test.data3, test.data4, test.data5, test.data6, datdum)
 
 ######################################################################################################################################
+
 # PREPARE TO GENERATE PART AND SUBSECTION SPECIFIC VARIABLES
 
 # Dummy out CFR codes (at the subpart and subsection levels) only for *relevant types and mark all non-relevant CFR codes
@@ -284,6 +292,7 @@ assessmenttypecodes = seq(1, 4)
 inspactycodes = seq(1, 6)
 
 ######################################################################################################################################
+
 # LOOPS TO GENERATE PART AND SUBSECTION SPECIFIC VARIABLES
 
 # For CFR part-specific variable creation
@@ -379,6 +388,7 @@ rm(MR_relevant_subsectcodes, MR_relevant_subsectcodes_47, MR_relevant_subsectcod
    MR_relevant_subsectcodes_75e, MR_relevant_subsectcodes_75, MR_relevant_subsectcodes_77) 
 
 ######################################################################################################################################
+
 # COLLAPSE VIOLATIONS DATA TO THE MINE-QUARTER LEVEL
 
 # Aggregation to mine-quarter level - create variables to sum for violation counts, and for if terminated (all violations should be terminated)
@@ -425,6 +435,7 @@ rm(violations_to_sum)
 # both contractor and operator violations. - April Ramirez @ DOL, 6/6/16
 
 ######################################################################################################################################
+
 # GRAB CONTRACTOR VARS AND COLLAPSE TO MINE-QUARTER LEVEL
 
 contractor_vars = merged_violations[, c(match("mineid", names(merged_violations)),
@@ -450,6 +461,7 @@ contractor_vars = ddply(contractor_vars[, c(grep("mineid", names(contractor_vars
                                                        grep("con_coal_prod_qtr", names(x)))], na.rm = T))
 
 ######################################################################################################################################
+
 # COUNT TOTAL NUMBER OF QUARTERS PER INSPECTION AND TOTAL NUMBER OF INSPECTIONS PER QUARTER 
 
 # While in theory inspections are quarterly, they do not always happen once per quarter or even four times per year. Some inspections run
@@ -525,6 +537,7 @@ rm(merged_violations, num_inspecs_per_qtr, num_qtrs_per_inspec)
 gc()
 
 ######################################################################################################################################
+
 # COLLAPSE ACCIDENTS DATA
 
 mine_types = readRDS("X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/mine_types.rds")
@@ -566,6 +579,7 @@ rm(mines_accidents_coded)
 gc()
 
 ######################################################################################################################################
+
 # FINISH MERGING VIOLATIONS
 
 # Merge the summed and averaged components of violations (both now at the mine-quarter level)
@@ -600,6 +614,7 @@ rm(contractor_vars, collapsed_violations)
 gc()
 
 ######################################################################################################################################
+
 # MERGE ACCIDENTS DATA ONTO VIOLATIONS/PER QUARTER
 
 # Merge violations (now with contractor and mine info) and accidents
@@ -625,6 +640,7 @@ rm(merged_mines_violations, summed_coded_accidents)
 gc()
 
 ######################################################################################################################################
+
 # MERGE ON FINAL INSPECTION CHARACTERISTICS AND CLEAN UP FINAL PREDICTION DATASET
 
 # Merge violations & accidents with remaining inspections data
@@ -656,6 +672,7 @@ if (relevant.only.option != "on") {
 }
 
 ######################################################################################################################################
+
 # Part 75 is enormous. If we want one dataset with all subsections included, we have to drop a number of variables first.
 # This code will take the various part-75 datasets, keep only those vars that we use for our preliminary prediction algorithm,
 # and merges them together.
