@@ -17,6 +17,7 @@ open_data_viols.out.file.name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleane
 
 ######################################################################################################
 
+# read data files
 open_data_viols = read.table(open_data_viols.in.file.name, header = T, sep = "|")
 #early_viols = read.csv("X:/Projects/Mining/NIOSH/analysis/data/1_converted/MSHA/violations_fromText.csv")
 
