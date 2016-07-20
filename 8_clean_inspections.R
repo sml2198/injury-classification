@@ -8,9 +8,16 @@
 
 ######################################################################################################
 
+# define file names
+  # input: raw inspections data from MSHA open data platform (Inspections): http://arlweb.msha.gov/OpenGovernmentData/OGIMSHA.asp
+  # downloaded on 4/20/2016 @ 4:35 PM
 open_data_inspecs = read.table("X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA/open_data/Inspections.txt", header = T, sep = "|")
+  # input: converted inspection hours file from MSHA data download on 5/15/2015 @ 4:17 PM
 early_inspecs_hours = read.csv("X:/Projects/Mining/NIOSH/analysis/data/1_converted/MSHA/inspection_hours_fromText.csv")
+  # input: cleaned mine-types key produced in produced in 1_clean_mines.R
 mine_types = readRDS("X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/mine_types.rds")
+
+######################################################################################################
 
 # Rename variables (we did this originally so var names would be consistent with our existing data pull - this is mostly cosmetic)
 names(open_data_inspecs)[names(open_data_inspecs) == "EVENT_NO"] = "eventno"
