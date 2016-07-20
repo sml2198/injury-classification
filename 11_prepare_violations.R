@@ -19,6 +19,10 @@ library(psych)
 merged_violations = readRDS("X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_violations.rds")
 merged_cfr_key = readRDS("X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_cfr_key.rds")
 
+# When relevant-only option is set to "on" (not commented out) only CFR subsections marked as "relevant" will be used for creating
+# vars. Otherwise, "relevant" and "maybe subsections" will be used.
+relevant.only.option = on
+
 ######################################################################################################################################
 # MERGE CFR CODES ONTO VIOLATIONS AND MAKE VARIABLES FOR COLLAPSING ON
 
@@ -172,47 +176,85 @@ rm(test.data1, test.data2, test.data3, test.data4, test.data5, test.data6, datdu
 ######################################################################################################################################
 # CLEAN & COLLAPSE ASSESSMENTS/VIOLATIONS
 
-#Dummy out CFR codes (at the subpart and subsection levels) only for *relevant types and mark all non-relevant CFR codes
-MR_relevant_subsectcodes = levels(factor(merged_violations[merged_violations$MR_relevant == 1 | merged_violations$MR_maybe_relevant == 1,]$subsection_code))
-#For preliminary testing only. Comment out when done. 6/3/2016
+# Dummy out CFR codes (at the subpart and subsection levels) only for *relevant types and mark all non-relevant CFR codes
+if (relevant.only.option == "on") {
+    MR_relevant_subsectcodes = levels(factor(merged_violations[merged_violations$MR_relevant == 1 ,]$subsection_code))
+}
+if (relevant.only.option != "on") {
+    MR_relevant_subsectcodes = levels(factor(merged_violations[merged_violations$MR_relevant == 1 | merged_violations$MR_maybe_relevant == 1,]$subsection_code))
+}
 
-#  eventually we can create loop to go through each part (of cfr codes) and create lists of relevent/maybe relevant subsections within that part (instead of this) 
-MR_relevant_subsectcodes_47 = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 | 
-            merged_violations$MR_maybe_relevant == 1) & (grepl("47\\.", merged_violations[,"subsection_code"])),]$subsection_code))
-MR_relevant_subsectcodes_48 = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 | 
-            merged_violations$MR_maybe_relevant == 1) & (grepl("48\\.", merged_violations[,"subsection_code"])),]$subsection_code))
-MR_relevant_subsectcodes_71 = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 | 
-            merged_violations$MR_maybe_relevant == 1) & (grepl("71\\.", merged_violations[,"subsection_code"])),]$subsection_code))
-MR_relevant_subsectcodes_72 = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 | 
-            merged_violations$MR_maybe_relevant == 1) & (grepl("72\\.", merged_violations[,"subsection_code"])),]$subsection_code))
-MR_relevant_subsectcodes_75a = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 | 
-            merged_violations$MR_maybe_relevant == 1) & (grepl("75\\.1[0-3]", merged_violations[,"subsection_code"])),]$subsection_code))
-MR_relevant_subsectcodes_75b = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 | 
-            merged_violations$MR_maybe_relevant == 1) & (grepl("75\\.14", merged_violations[,"subsection_code"])),]$subsection_code))
-MR_relevant_subsectcodes_75c = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 | 
-            merged_violations$MR_maybe_relevant == 1) & (grepl("75\\.1[5-9]", merged_violations[,"subsection_code"])),]$subsection_code))
-MR_relevant_subsectcodes_75d = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 | 
-            merged_violations$MR_maybe_relevant == 1) & (grepl("75\\.[2-4]", merged_violations[,"subsection_code"])),]$subsection_code))
-MR_relevant_subsectcodes_75e = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 | 
-            merged_violations$MR_maybe_relevant == 1) & (grepl("75\\.5", merged_violations[,"subsection_code"])),]$subsection_code))
-MR_relevant_subsectcodes_75f = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 | 
-            merged_violations$MR_maybe_relevant == 1) & (grepl("75\\.[6-7]", merged_violations[,"subsection_code"])),]$subsection_code))
-MR_relevant_subsectcodes_75g = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 | 
-            merged_violations$MR_maybe_relevant == 1) & (grepl("75\\.8", merged_violations[,"subsection_code"])),]$subsection_code))
-MR_relevant_subsectcodes_75h = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 | 
-            merged_violations$MR_maybe_relevant == 1) & (grepl("75\\.9", merged_violations[,"subsection_code"])),]$subsection_code))
-MR_relevant_subsectcodes_75 = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 | 
-            merged_violations$MR_maybe_relevant == 1) & (grepl("75\\.", merged_violations[,"subsection_code"])),]$subsection_code))
-MR_relevant_subsectcodes_77 = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 | 
-            merged_violations$MR_maybe_relevant == 1) & (grepl("77\\.", merged_violations[,"subsection_code"])),]$subsection_code))
+#  Eventually we can create loop to go through each part (of cfr codes) and create lists of relevent/maybe relevant 
+# subsections within that part (instead of this mess) 
+if (relevant.only.option != "on") {
+    MR_relevant_subsectcodes_47 = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 | 
+                merged_violations$MR_maybe_relevant == 1) & (grepl("47\\.", merged_violations[,"subsection_code"])),]$subsection_code))
+    MR_relevant_subsectcodes_48 = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 | 
+                merged_violations$MR_maybe_relevant == 1) & (grepl("48\\.", merged_violations[,"subsection_code"])),]$subsection_code))
+    MR_relevant_subsectcodes_71 = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 | 
+                merged_violations$MR_maybe_relevant == 1) & (grepl("71\\.", merged_violations[,"subsection_code"])),]$subsection_code))
+    MR_relevant_subsectcodes_72 = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 | 
+                merged_violations$MR_maybe_relevant == 1) & (grepl("72\\.", merged_violations[,"subsection_code"])),]$subsection_code))
+    MR_relevant_subsectcodes_75a = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 | 
+                merged_violations$MR_maybe_relevant == 1) & (grepl("75\\.1[0-3]", merged_violations[,"subsection_code"])),]$subsection_code))
+    MR_relevant_subsectcodes_75b = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 | 
+                merged_violations$MR_maybe_relevant == 1) & (grepl("75\\.14", merged_violations[,"subsection_code"])),]$subsection_code))
+    MR_relevant_subsectcodes_75c = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 | 
+                merged_violations$MR_maybe_relevant == 1) & (grepl("75\\.1[5-9]", merged_violations[,"subsection_code"])),]$subsection_code))
+    MR_relevant_subsectcodes_75d = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 | 
+                merged_violations$MR_maybe_relevant == 1) & (grepl("75\\.[2-4]", merged_violations[,"subsection_code"])),]$subsection_code))
+    MR_relevant_subsectcodes_75e = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 | 
+                merged_violations$MR_maybe_relevant == 1) & (grepl("75\\.5", merged_violations[,"subsection_code"])),]$subsection_code))
+    MR_relevant_subsectcodes_75f = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 | 
+                merged_violations$MR_maybe_relevant == 1) & (grepl("75\\.[6-7]", merged_violations[,"subsection_code"])),]$subsection_code))
+    MR_relevant_subsectcodes_75g = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 | 
+                merged_violations$MR_maybe_relevant == 1) & (grepl("75\\.8", merged_violations[,"subsection_code"])),]$subsection_code))
+    MR_relevant_subsectcodes_75h = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 | 
+                merged_violations$MR_maybe_relevant == 1) & (grepl("75\\.9", merged_violations[,"subsection_code"])),]$subsection_code))
+    MR_relevant_subsectcodes_75 = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 | 
+                merged_violations$MR_maybe_relevant == 1) & (grepl("75\\.", merged_violations[,"subsection_code"])),]$subsection_code))
+    MR_relevant_subsectcodes_77 = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 | 
+                merged_violations$MR_maybe_relevant == 1) & (grepl("77\\.", merged_violations[,"subsection_code"])),]$subsection_code))
+}
+if (relevant.only.option == "on") {
+    MR_relevant_subsectcodes_47 = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 ) 
+            & (grepl("47\\.", merged_violations[,"subsection_code"])),]$subsection_code))
+    MR_relevant_subsectcodes_48 = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 ) 
+            & (grepl("48\\.", merged_violations[,"subsection_code"])),]$subsection_code))
+    MR_relevant_subsectcodes_71 = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 ) 
+            & (grepl("71\\.", merged_violations[,"subsection_code"])),]$subsection_code))
+    MR_relevant_subsectcodes_72 = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 ) 
+            & (grepl("72\\.", merged_violations[,"subsection_code"])),]$subsection_code))
+    MR_relevant_subsectcodes_75a = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 ) 
+            & (grepl("75\\.1[0-3]", merged_violations[,"subsection_code"])),]$subsection_code))
+    MR_relevant_subsectcodes_75b = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 ) 
+            & (grepl("75\\.14", merged_violations[,"subsection_code"])),]$subsection_code))
+    MR_relevant_subsectcodes_75c = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 ) 
+            & (grepl("75\\.1[5-9]", merged_violations[,"subsection_code"])),]$subsection_code))
+    MR_relevant_subsectcodes_75d = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 ) 
+            & (grepl("75\\.[2-4]", merged_violations[,"subsection_code"])),]$subsection_code))
+    MR_relevant_subsectcodes_75e = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 )
+            & (grepl("75\\.5", merged_violations[,"subsection_code"])),]$subsection_code))
+    MR_relevant_subsectcodes_75f = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 ) 
+            & (grepl("75\\.[6-7]", merged_violations[,"subsection_code"])),]$subsection_code))
+    MR_relevant_subsectcodes_75g = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 ) 
+            & (grepl("75\\.8", merged_violations[,"subsection_code"])),]$subsection_code))
+    MR_relevant_subsectcodes_75h = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 ) 
+            & (grepl("75\\.9", merged_violations[,"subsection_code"])),]$subsection_code))
+    MR_relevant_subsectcodes_75 = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 ) 
+            & (grepl("75\\.", merged_violations[,"subsection_code"])),]$subsection_code))
+    MR_relevant_subsectcodes_77 = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 ) 
+            & (grepl("77\\.", merged_violations[,"subsection_code"])),]$subsection_code))
+}
 
-# ADDED BY SARAH 7/5/2016 - THESE VIOLATIONS HAVE SO FEW OBSERVATIONS (< 15)THEY ARE NOT WORTH ANALYZING.
+# ADDED BY SARAH 7/5/2016 - THESE VIOLATIONS HAVE SO FEW OBSERVATIONS (< 15) THEY ARE NOT WORTH ANALYZING.
+# REMOVING THEM SAVES MEMORY.
 remove_subcodes = c("75.1431", "75.1436", "75.1438", "75.151", "75.153", "75.155", "75.156", "75.160", "75.1721", "75.1727", "75.1728", 
-                    "75.341", "75.402-2", "75.500-1", "75.502", "75.503-1", "75.505", "75.508-1", "75.510", "75.510-1", "75.511-1", "75.512-1", "75.516-1", "75.517-1", 
-                    "75.517-2", "75.519", "75.522", "75.524", 
-                    "75.600", "75.601-2", "75.601-3","75.700-1", "75.701-4", "75.702", "75.702-1", "75.703-1", "75.703-2", "75.703-4", "75.704", "75.705", "75.705-1",
-                    "75.705-2", "75.705-3", "75.705-8", "75.800-2", "75.801", "75.803-2", "75.805", "75.806", "75.812", "75.812-2", "75.814", "75.815", "75.817", 
-                    "75.818", "75.819", "75.820", "75.825", "75.827", "75.830", "75.831", "75.832", "75.833", "75.834", "75.900-2", "75.902-1", "75.905", "75.906")
+                    "75.341", "75.402-2", "75.500-1", "75.502", "75.503-1", "75.505", "75.508-1", "75.510", "75.510-1", "75.511-1", "75.512-1", 
+                    "75.516-1", "75.517-1", "75.517-2", "75.519", "75.522", "75.524", "75.600", "75.601-2", "75.601-3","75.700-1", "75.701-4", 
+                    "75.702", "75.702-1", "75.703-1", "75.703-2", "75.703-4", "75.704", "75.705", "75.705-1", "75.705-2", "75.705-3", "75.705-8", 
+                    "75.800-2", "75.801", "75.803-2", "75.805", "75.806", "75.812", "75.812-2", "75.814", "75.815", "75.817", "75.818", "75.819", 
+                    "75.820", "75.825", "75.827", "75.830", "75.831", "75.832", "75.833", "75.834", "75.900-2", "75.902-1", "75.905", "75.906")
 MR_relevant_subsectcodes_75a = setdiff(MR_relevant_subsectcodes_75a, remove_subcodes)
 MR_relevant_subsectcodes_75b = setdiff(MR_relevant_subsectcodes_75b, remove_subcodes)
 MR_relevant_subsectcodes_75c = setdiff(MR_relevant_subsectcodes_75c, remove_subcodes)
@@ -223,7 +265,7 @@ MR_relevant_subsectcodes_75g = setdiff(MR_relevant_subsectcodes_75g, remove_subc
 MR_relevant_subsectcodes_75h = setdiff(MR_relevant_subsectcodes_75h, remove_subcodes)
 MR_relevant_subsectcodes_75 = setdiff(MR_relevant_subsectcodes_75, remove_subcodes)
 
-# create lists of number of dummies for violation, assessment, and inspection types 
+# Create lists of number of dummies for violation, assessment, and inspection types 
 likelihoodcodes = seq(1, 6)
 injuryillnesscodes = seq(1, 5)
 negligencecodes = seq(1, 6)
@@ -231,9 +273,14 @@ violationtypecodes = seq(1, 3)
 assessmenttypecodes = seq(1, 4)
 inspactycodes = seq(1, 6)
 
-#For CFR part-specific variable creation
-MR_relevant_partcodes = levels(factor(merged_violations[merged_violations$MR_relevant == 1 | merged_violations$MR_maybe_relevant == 1,]$cfr_part_code))
-#Sets the level of CFR code for which to create code-specific variables
+# For CFR part-specific variable creation
+if (relevant.only.option != "on") {
+    MR_relevant_partcodes = levels(factor(merged_violations[merged_violations$MR_relevant == 1 | merged_violations$MR_maybe_relevant == 1,]$cfr_part_code))
+}
+if (relevant.only.option == "on") {
+    MR_relevant_partcodes = levels(factor(merged_violations[merged_violations$MR_relevant == 1,]$cfr_part_code))
+}
+# Sets the level of CFR code for which to create code-specific variables
 cfr_codes = MR_relevant_partcodes
 
 for (i in 1:length(cfr_codes)) {
@@ -272,7 +319,7 @@ for (i in 1:length(cfr_codes)) {
 }
 
 # THIS LOOP BELOW WILL PERFORM THE SAME PROCESS AS ABOVE, BUT FOR ALL SUBSECTIONS OF THE SPECIFIED PART. 
-cfr_codes = MR_relevant_subsectcodes_75h
+cfr_codes = MR_relevant_subsectcodes_75
 for (i in 1:length(cfr_codes)) {
   merged_violations[, cfr_codes[i]] = ifelse(merged_violations$subsection_code == cfr_codes[i], 1, 0)
   merged_violations[, paste(cfr_codes[i], "penaltypoints", sep = ".")] = apply(cbind(merged_violations[, "penaltypoints"], merged_violations[, cfr_codes[i]]), 1, prod)
@@ -308,32 +355,24 @@ for (i in 1:length(cfr_codes)) {
   }
 }
 
-# merged_violations = merged_violations[, c(-grep("^47", names(merged_violations)),
-#                                           -grep("^48", names(merged_violations)),
-#                                           -grep("^71", names(merged_violations)),
-#                                           -grep("^72", names(merged_violations)),
-#                                           -grep("^77", names(merged_violations)),
-#                                           -grep("^[b-z].+[0-9]$", names(merged_violations)))]
-
+# REMOVE THINGS WE WON'T USE AGAIN.
 rm(MR_relevant_subsectcodes, MR_relevant_subsectcodes_47, MR_relevant_subsectcodes_48,
    MR_relevant_subsectcodes_71, MR_relevant_subsectcodes_72, MR_relevant_subsectcodes_75a,
    MR_relevant_subsectcodes_75b, MR_relevant_subsectcodes_75c, MR_relevant_subsectcodes_75d,
    MR_relevant_subsectcodes_75e, MR_relevant_subsectcodes_75, MR_relevant_subsectcodes_77) 
 
 ######################################################################################################################################
-#Create CFR-code (only for *relevant) specific for penalty variables:
-#penalty pts, good faith, gravity and its components as well & sig. and sub., negligence, # of repeat violations for operators and ind. contractors,
-## of overall violations for operators and ind. contractors, create our own previous violations var and compare to the given version for verification,
-#(NOT by *relevant CFR-code) appropriateness: size of mine in tonnage, size of controlling entity in tonnage, size of indep. contractor in annual hrs. worked
+# Create CFR-code (only for *relevant) specific for penalty variables:
+# penalty pts, good faith, gravity and its components as well & sig. and sub., negligence, # of repeat violations for operators and ind. contractors,
+# number of overall violations for operators and ind. contractors, create our own previous violations var and compare to the given version for verification,
+# (NOT by *relevant CFR-code) appropriateness: size of mine in tonnage, size of controlling entity in tonnage, size of indep. contractor in annual hrs. worked
 
-#Aggregation to mine-quarter level - create variable to sum for violation #, and for if terminated
+# Aggregation to mine-quarter level - create variables to sum for violation counts, and for if terminated (all violations should be terminated)
 merged_violations$total_violations = 1
 merged_violations$terminated = ifelse(merged_violations$typeoftermination == "Terminated", 1, 0)
 
-#saveRDS(merged_violations, "X:/Projects/Mining/NIOSH/analysis/data/4_collapsed/merged_violations.rds")
-
-# select all variables to sum when we collapse to the mine-quarter lever (the first regex will grab all vars created above)
-# add indicator for if a mine q was terminated because of a violation (sum this for now - maybe we'll just make it an indicator later)
+# Select all variables to sum when we collapse to the mine-quarter lever (the first regex will grab all vars created above)
+# Add indicator for if a mine q was terminated because of a violation (sum this for now - maybe we'll just make it an indicator later)
 violations_to_sum = merged_violations[, c(grep("^[0-9][0-9]", names(merged_violations)), 
                                           match("total_violations", names(merged_violations)),
                                           match("excessive_history_ind", names(merged_violations)), 
@@ -341,14 +380,15 @@ violations_to_sum = merged_violations[, c(grep("^[0-9][0-9]", names(merged_viola
                                           match("terminated", names(merged_violations)),
                                           match("mineid", names(merged_violations)), match("quarter", names(merged_violations)))]
 
-# these were grabbed by the regular expression above, but we want to average (not sum) these, so we remove them  
+# These were grabbed by the regular expression above, but we want to average (not sum) these, so we remove them  
 violations_to_sum = violations_to_sum[, c(-grep("operator_repeated_viol_pInspDay", names(violations_to_sum)), -grep("contractor_repeated_viol_cnt", names(violations_to_sum)))]
+# Collapse the variables that we need to sum.
 summed_violations = ddply(violations_to_sum, c("mineid", "quarter"), function(x) colSums(x[, c(grep("^[0-9][0-9]", names(x)), 
                                                                                                match("total_violations", names(x)),
                                                                                                match("excessive_history_ind", names(merged_violations)), 
                                                                                                match("goodfaithind", names(merged_violations)), 
                                                                                                match("terminated", names(x)))], na.rm = T))
-
+# Collapse the variables that we need to average.
 averaged_violations = ddply(merged_violations[, c(grep("operator_repeated_viol_pInspDay", names(merged_violations)), grep("minesizepoints", names(merged_violations)), grep("controllersizepoints", names(merged_violations)),
                                                   grep("contractorsizepoints", names(merged_violations)), grep("contractor_repeated_viol_cnt", names(merged_violations)),
                                                   match("exlate_interest_amt", names(merged_violations)), match("mineid", names(merged_violations)), match("quarter", names(merged_violations)))], c("mineid", "quarter"), 
@@ -357,8 +397,8 @@ averaged_violations = ddply(merged_violations[, c(grep("operator_repeated_viol_p
                                                                match("exlate_interest_amt", names(x)))], na.rm = T))
 
 rm(violations_to_sum)
-#Question: Check if operator variables vary by mine? Are indep. contractors the only operators @ a mine or are they only a part of the operation? A: Inspections generate
-#both contractor and operator violations. 6/6/16
+# Question: Check if operator variables vary by mine? Are indep. contractors the only operators @ a mine or are they only a part of the operation? A: Inspections generate
+# both contractor and operator violations. - April Ramirez @ DOL, 6/6/16
 
 ######################################################################################################################################
 # GRAB CONTRACTOR VARS
@@ -368,12 +408,12 @@ contractor_vars = merged_violations[, c(match("mineid", names(merged_violations)
                                         match("con_avg_employee_cnt_qtr", names(merged_violations)),
                                         match("con_employee_hours_qtr", names(merged_violations)),
                                         match("con_coal_prod_qtr", names(merged_violations)))]
-#remove obs without contractor ID
+# Remove obs without contractor ID
 contractor_vars = contractor_vars[!is.na(contractor_vars$contractorid),]
-#remove obs that never merged with production/employment info
+# Remove obs that never merged with production/employment info
 contractor_vars = contractor_vars[!is.na(contractor_vars$con_avg_employee_cnt_qtr),]
 
-#collapse to mine quarter level 
+# Collapse contractor vars to mine quarter level 
 contractor_vars = ddply(contractor_vars[, c(grep("mineid", names(contractor_vars)), grep("quarter", names(contractor_vars)), grep("contractorid", names(contractor_vars)),
                                                   grep("con_avg_employee_cnt_qtr", names(contractor_vars)), grep("con_employee_hours_qtr", names(contractor_vars)),
                                                   match("con_coal_prod_qtr", names(contractor_vars)))], c("mineid", "quarter"),
@@ -396,7 +436,7 @@ num_inspecs_per_qtr = ddply(num_inspecs_per_qtr[, c(match("num_insp", names(num_
                                                     match("mineid", names(num_inspecs_per_qtr)), 
                                               match("quarter", names(num_inspecs_per_qtr)))], c("mineid", "quarter"), 
                       function(x) colSums(x[, c(match("num_insp", names(x)), match("sumtotal_insp_hours", names(x)))], na.rm = T))
-# just get rid of it for now so it doesn't confuse us
+# Just get rid of it so it doesn't confuse us
 num_inspecs_per_qtr = num_inspecs_per_qtr[, c(-grep("sumtotal_insp_hours", names(num_inspecs_per_qtr)))]
 
 # COLLAPSE TO MINE-INSPECTION-QUARTER LEVEL TO FLAG EACH QUARTER PER INSPECTION WITH A "1"
@@ -410,7 +450,7 @@ num_qtrs_per_inspec$num_qtrs = 1
 num_qtrs_per_inspec = ddply(num_qtrs_per_inspec[, c(match("num_qtrs", names(num_qtrs_per_inspec)), match("sumtotal_insp_hours", names(num_qtrs_per_inspec)), match("mineid", names(num_qtrs_per_inspec)), 
                                                     match("eventno", names(num_qtrs_per_inspec)))], c("mineid", "eventno"), 
                             function(x) colSums(x[, c(match("num_qtrs", names(x)), match("sumtotal_insp_hours", names(x)))], na.rm = T))
-# same - just get rid of it for now so it doesn't confuse us
+# Same as above - just get rid of it so it doesn't confuse us
 num_qtrs_per_inspec = num_qtrs_per_inspec[, c(-grep("sumtotal_insp_hours", names(num_qtrs_per_inspec)))]
 num_qtrs_per_inspec = num_qtrs_per_inspec[complete.cases(num_qtrs_per_inspec$mineid),]
 num_qtrs_per_inspec = num_qtrs_per_inspec[complete.cases(num_qtrs_per_inspec$eventno),]
@@ -438,30 +478,31 @@ gc()
 mine_types = readRDS("X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/mine_types.rds")
 mines_accidents_coded = read.csv("X:/Projects/Mining/NIOSH/analysis/data/4_coded/accidents_with_predictions.csv")
 
-# format mineid (for merges), date and quarter vars for merges
+# Format mineid (for merges), date and quarter vars for merges
 mines_accidents_coded$mineid = str_pad(mines_accidents_coded$mineid, 7, pad = "0")
+# Format mine ID and pads it with zeroes to make it 7 digits, so we have a clean merge.
 mines_accidents_coded$mineid = withr::with_options(c(scipen = 999), str_pad(mines_accidents_coded$mineid, 7, pad = "0"))
 mines_accidents_coded$accidentdate = as.Date(as.character(mines_accidents_coded$accidentdate), "%m/%d/%Y")
 mines_accidents_coded$quarter = as.yearqtr(mines_accidents_coded$accidentdate)
 
-# drop observations before our study period
+# Drop observations before our study period
 mines_accidents_coded = mines_accidents_coded[(mines_accidents_coded$quarter > "1999 Q4"),]
 
-# merge on minetypes to drop non-coal and non-underground observations before saving
+# Merge on minetypes to drop non-coal and non-underground observations before saving
 mines_accidents_coded = merge(mines_accidents_coded, mine_types, by = c("mineid"), all = T)
-# drop non-merging observations
+# Drop non-merging observations
 mines_accidents_coded = mines_accidents_coded[!is.na(mines_accidents_coded$MR),]
 rm(mine_types)
 
-# only keep observations from environment we care about
+# Only keep observations from environment we care about
 mines_accidents_coded = mines_accidents_coded[mines_accidents_coded$minetype == "Underground",]
 mines_accidents_coded = mines_accidents_coded[mines_accidents_coded$subunit == "UNDERGROUND",]
 mines_accidents_coded = mines_accidents_coded[mines_accidents_coded$coalcormetalmmine.x == "C",]
 
-# create injury indicator so that we can collapse & sum total injuries per mine quarter
+# Create injury indicator so that we can collapse & sum total injuries per mine quarter
 mines_accidents_coded$totalinjuries = 1
 
-# collapse mines_accidents data here.
+# Collapse mines_accidents data here.
 summed_coded_accidents = ddply(mines_accidents_coded[, c(grep("totalinjuries", names(mines_accidents_coded)), grep("MR", names(mines_accidents_coded)),
                                                                 match("mineid", names(mines_accidents_coded)), match("quarter", names(mines_accidents_coded)))], c("mineid", "quarter"), 
                                   function(x) colSums(x[, c(grep("totalinjuries", names(x)), grep("MR", names(x)))], na.rm = T))
@@ -469,18 +510,15 @@ rm(mines_accidents_coded)
 gc()
 
 ######################################################################################################################################
-# FINISH COLLAPSING AND CLEANING VIOLATIONS
+# FINISH MERGING VIOLATIONS
 
 summed_violations$row_id = seq.int(nrow(summed_violations))
 averaged_violations$row_id = seq.int(nrow(averaged_violations))
 collapsed_violations = merge(summed_violations, averaged_violations, by = c("mineid", "quarter"), all = T)
+# Flag observations that do and don't merge - this was used to tab the merge & compare to Stata as a sanity check
 collapsed_violations[, "merge1"] = ifelse(!is.na(collapsed_violations$row_id.y) & !is.na(collapsed_violations$row_id.x), 3, 0)
 collapsed_violations[, "merge1"] = ifelse(is.na(collapsed_violations$row_id.x) & !is.na(collapsed_violations$row_id.y), 2, collapsed_violations[, "merge1"])
 collapsed_violations[, "merge1"] = ifelse(is.na(collapsed_violations$row_id.y) & !is.na(collapsed_violations$row_id.x), 1, collapsed_violations[, "merge1"])
-table(collapsed_violations$merge1)
-#Open Data only:
-#3 
-#46539 
 
 collapsed_violations = collapsed_violations[, -grep("row_id", names(collapsed_violations))]
 collapsed_violations$row_id = seq.int(nrow(collapsed_violations))
@@ -491,14 +529,13 @@ summed_coded_accidents$row_id = seq.int(nrow(summed_coded_accidents))
 
 mines_quarters = readRDS("X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_mines.rds")
 
-#merge mine-specific contractor info onto mine quarters
+# Merge mine-specific contractor info onto mine quarters
 merged_mines_violations = merge(mines_quarters, contractor_vars, by = c("mineid", "quarter"), all = T)
 
 merged_mines_violations = merge(mines_quarters, collapsed_violations, by = c("mineid", "quarter"), all = T)
 #To save time we save/load all constituent datasets in the prediction data after each of the following merges
 merged_mines_violations = merged_mines_violations[, -grep("row_id", names(merged_mines_violations))]
 merged_mines_violations$row_id = seq.int(nrow(merged_mines_violations))
-#saveRDS(collapsed_violations, file = "X:/Projects/Mining/NIOSH/analysis/data/4_collapsed/collapsed_violations.rds")
 
 rm(contractor_vars, collapsed_violations)
 gc()
@@ -506,16 +543,14 @@ gc()
 ######################################################################################################################################
 # MERGE ACCIDENTS DATA ONTO VIOLATIONS/PER QUARTER
 
+# Merge violations and accidents
 merged_mines_violations_accidents = merge(merged_mines_violations, summed_coded_accidents, by = c("mineid", "quarter"), all = T)
-
+# Same as above - flag observations by merge status so we can compare to Stata output and make sure nothing weird happened in the merge 
 merged_mines_violations_accidents[, "merge2"] = ifelse(!is.na(merged_mines_violations_accidents$row_id.y) & !is.na(merged_mines_violations_accidents$row_id.x), 3, 0)
 merged_mines_violations_accidents[, "merge2"] = ifelse(is.na(merged_mines_violations_accidents$row_id.x) & !is.na(merged_mines_violations_accidents$row_id.y), 2, merged_mines_violations_accidents[, "merge2"])
 merged_mines_violations_accidents[, "merge2"] = ifelse(is.na(merged_mines_violations_accidents$row_id.y) & !is.na(merged_mines_violations_accidents$row_id.x), 1, merged_mines_violations_accidents[, "merge2"])
-table(merged_mines_violations_accidents$merge2) 
-#Open Data Only:
-#1     2     3 
-#43353  3568  9274
 
+# Replace missings (mine quarters without violations or accidents data) with zeroes
 merged_mines_violations_accidents$totalinjuries = ifelse(is.na(merged_mines_violations_accidents$totalinjuries), 0, merged_mines_violations_accidents$totalinjuries)
 merged_mines_violations_accidents$total_violations = ifelse(is.na(merged_mines_violations_accidents$total_violations), 0, merged_mines_violations_accidents$total_violations)
 
@@ -529,30 +564,38 @@ gc()
 ######################################################################################################################################
 # MERGE ON FINAL INSPECTION CHARACTERISTICS AND CLEAN UP FINAL PREDICTION DATASET
 
+# Merge violations & accidents with inspections data
 prediction_data = merge(merged_mines_violations_accidents, summed_inspcs, by = c("mineid", "quarter"), all = T)
+# Same drill here - just a sanity check 
 prediction_data[, "merge3"] = ifelse(!is.na(prediction_data$row_id.y) & !is.na(prediction_data$row_id.x), 3, 0)
 prediction_data[, "merge3"] = ifelse(is.na(prediction_data$row_id.x) & !is.na(prediction_data$row_id.y), 2, prediction_data[, "merge3"])
 prediction_data[, "merge3"] = ifelse(is.na(prediction_data$row_id.y) & !is.na(prediction_data$row_id.x), 1, prediction_data[, "merge3"])
-table(prediction_data$merge3)
-#Open Data Only:
-#1     3 
-#24634 31561
 
-#remove observations that are missing key variables or are from the wrong environment
+# Remove observations that are missing key variables or are from the wrong environment
 prediction_data = prediction_data[complete.cases(prediction_data$quarter),]
 prediction_data = prediction_data[complete.cases(prediction_data$minetype),]
 prediction_data = prediction_data[prediction_data$minetype == "Underground",]
 prediction_data = prediction_data[prediction_data$coalcormetalmmine == "C",]
-
 prediction_data = prediction_data[prediction_data$coal_prod_qtr != 0,]
 
+# Drop unnecessary vars
 prediction_data = prediction_data[, c(-grep("merge", names(prediction_data)), -grep("row_id", names(prediction_data)), 
                                       -grep("coalcormetalmmine", names(prediction_data)), -grep("minetype", names(prediction_data)))]
 
-#saveRDS(prediction_data, file = "X:/Projects/Mining/NIOSH/analysis/data/4_collapsed/prediction_data.rds")
-saveRDS(prediction_data, file = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75h.rds")
+# Set the file name (if part specific).
+if (relevant.only.option == "on") {
+    saveRDS(prediction_data, file = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_relevant.rds")
+}
+if (relevant.only.option != "on") {
+    #saveRDS(prediction_data, file = "X:/Projects/Mining/NIOSH/analysis/data/4_collapsed/prediction_data.rds")
+    saveRDS(prediction_data, file = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75h.rds")
+}
 
 ######################################################################################################################################
+# Part 75 is enormous. If we want one dataset with all subsections included, we have to drop a number of variables first.
+# This code will take the various part-75 datasets, keep only those vars that we use for our preliminary prediction algorithm,
+# and merges them together.
+
 rm(list=ls())
 gc()
 #part 75 csv
