@@ -30,6 +30,7 @@ mine_types.file.name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/mine_ty
 
 ######################################################################################################
 
+# read data files
 open_data_assessments = read.table(open_data_assessments.in.file.name, header = T, sep = "|")
 mine_types = readRDS(mine_types.file.name)
 
