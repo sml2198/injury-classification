@@ -11,7 +11,7 @@
 #early_viols = read.csv("X:/Projects/Mining/NIOSH/analysis/data/1_converted/MSHA/violations_fromText.csv")
 open_data_viols = read.table("X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA/open_data/Violations.txt", header = T, sep = "|")
 
-#Renaming for MSHA Open Data
+# Rename variables (we did this originally so var names would be consistent with our existing data pull - this is mostly cosmetic)
 names(open_data_viols)[names(open_data_viols) == "VIOLATION_NO"] = "violationno"
 names(open_data_viols)[names(open_data_viols) == "VIOLATION_ID"] = "violationid"
 names(open_data_viols)[names(open_data_viols) == "EVENT_NO"] = "eventno"
@@ -44,24 +44,26 @@ names(open_data_viols)[names(open_data_viols) == "VIOLATION_ISSUE_DT"] = "dateis
 names(open_data_viols)[names(open_data_viols) == "CONTESTED_IND"] = "contestedindicator"
 names(open_data_viols)[names(open_data_viols) == "MINE_NAME"] = "minename"
 names(open_data_viols)[names(open_data_viols) == "MINE_TYPE"] = "minetype"
+
+# Make all varnames lowercase because Sarah hates capitalization
 names(open_data_viols) = tolower(names(open_data_viols))
 
-#Flag and drop duplicates on violation number
+# Flag and drop duplicates on violation number
 open_data_viols[, "dup"] = duplicated(open_data_viols$violationno)
-table(open_data_viols$dup) #Same duplicates as in the STATA version of the code so no testing here.
-#FALSE    TRUE 
-#2161636      51 
+table(open_data_viols$dup) #Same duplicates as in the STATA version of the code so no testing here. - Nikhil
 open_data_viols = open_data_viols[open_data_viols$dup == F,]
 
+# Format violationo and eventno
 open_data_viols[, "violationno"] = as.character(open_data_viols[, "violationno"])
 open_data_viols[, "eventno"] = as.character(open_data_viols[, "eventno"])
 
-# only keep observations from environment we care about
+# Only keep observations from environment we care about
 open_data_viols = open_data_viols[open_data_viols$coalcormetalm == "C",]
 open_data_viols = open_data_viols[!is.na(open_data_viols$coalcormetalm),]
-# (facility means a mill/processing location, always above ground, according to April Ramirez @ DOL on 6/6/16)
+# (Facility means a mill/processing location, always above ground, according to April Ramirez @ DOL on 6/6/16)
 open_data_viols = open_data_viols[open_data_viols$minetype == "Underground",]
 
+# Format mineid, violationo and eventno as 7 digit numbers padded with zeroes
 open_data_viols$mineid = str_pad(open_data_viols$mineid, 7, pad = "0")
 open_data_viols$mineid = withr::with_options(c(scipen = 999), str_pad(open_data_viols$mineid, 7, pad = "0"))
 open_data_viols$eventno = str_pad(open_data_viols$eventno, 7, pad = "0")
