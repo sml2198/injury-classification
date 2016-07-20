@@ -11,16 +11,24 @@ library(stringr)
 
 # define file names
   # input: cleaned violations produced in 6_clean_violations.R
-clean_violations = readRDS("X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_violations.rds")
+clean_violations.in.file.name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_violations.rds"
+  # output: violations with assessment and inspection data merged on
+clean_violations.out.file.name = "X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_violations.rds"
   # input: cleaned assessments produced in 7_clean_assessments.R
-clean_assessments = readRDS("X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_assessments.rds") #Note: Carolyn data doesn't have eventno!
+clean_assessments.file.name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_assessments.rds" 
   # input: cleaned inspections produced in 8_clean_inspections.R
-clean_inspections = readRDS("X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_inspections.rds")
+clean_inspections.file.name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_inspections.rds"
 
 ######################################################################################################
 
 # MERGE VIOLATIONS AND ASSESSMENTS
 
+# Read data files
+clean_violations = readRDS(clean_violations.in.file.name)
+clean_assessments = readRDS(clean_assessments.file.name) 
+clean_inspections = readRDS(clean_inspections.file.name)
+
+# Merge assessments and violations data 
 assessments_violations = merge(clean_assessments, clean_violations, by = c("mineid","violationno"), all = T)
 
 # Pipe in eventno where it might be missing from either dataset
@@ -31,7 +39,7 @@ common_varstbs = sub(".x", "", names(assessments_violations)[grep(".x", names(as
 assessments_violations = assessments_violations[, -grep(".y", names(assessments_violations), fixed = T)]
 names(assessments_violations)[grep(".x", names(assessments_violations), fixed = T)] = common_varstbs
 
-# Clean up violator name fields
+# Clean up violatorname fields
 assessments_violations[, "violatorname"] = tolower(str_trim(assessments_violations[, "violatorname"], side = c("both")))
 assessments_violations[, "violator_name"] = tolower(str_trim(assessments_violations[, "violator_name"], side = c("both")))
 violnames = c(grep("violatorname", names(assessments_violations)), grep("violator_name", names(assessments_violations)))
@@ -222,7 +230,7 @@ merged_violations = merged_violations[, c(-grep("datevacated", names(merged_viol
                                           -match("buildingconstinspected", names(merged_violations)), -match("writtennotice", names(merged_violations)),
                                           -match("draglineconstinspected", names(merged_violations)), -match("miscellaneous", names(merged_violations)))]
 
-saveRDS(merged_violations, file = "X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_violations.rds")
+saveRDS(merged_violations, file = clean_violations.out.file.name)
 rm(assessments_violations, clean_inspections, common_varstbs, violnames, i)
 
 ######################################################################################################
