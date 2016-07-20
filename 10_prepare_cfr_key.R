@@ -17,13 +17,16 @@ library(stringr)
 
 cfr_key = read.csv("X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA/cfr_key/cfr_key.csv")
 
+# Format cfr subsection code description var
 cfr_key$cfr_section_code_desc = as.character(cfr_key$cfr_section_code_desc)
+
+# Makes the subsection codes var
 subsection_code_length = attr(regexpr("[0-9]+\\.[0-9]+(-)*[0-9]*", cfr_key$cfr_section_code_desc), "match.length")
 cfr_key$subsection_code = substr(cfr_key$cfr_section_code_desc, 2, 1+subsection_code_length)
 
 ######################################################################################################
 
-# PINNING & STRIKING
+# PINNING & STRIKING SUBSECTIONS
 
 cfr_key$PS_relevant = ifelse(cfr_key$cfr_part_code == "48" & (cfr_key$cfr_subpart_code %in% c("Subpart A", "Subpart B")) & 
                                !(cfr_key$subsection_code %in% c("48.10", "48.3", "48.9", "48.23", "48.29", "48.30", "48.31", "48.32")), 1, 0)
@@ -71,7 +74,7 @@ cfr_key$PS_maybe_relevant = ifelse(cfr_key$cfr_part_code == "75" & (cfr_key$cfr_
                                      
 ######################################################################################################
 
-# MAINTENANCE & REPAIR
+# MAINTENANCE & REPAIR SUBSECTIONS
 
 cfr_key$MR_relevant = ifelse(cfr_key$cfr_part_code == "48" & (cfr_key$cfr_subpart_code %in% c("Subpart A", "Subpart B")) & 
                                !(cfr_key$subsection_code %in% c("48.10", "48.3", "48.9", "48.23", "48.29", "48.30", "48.31", "48.32")), 1, 0)
@@ -168,7 +171,11 @@ cfr_key$MR_maybe_relevant = ifelse(cfr_key$cfr_part_code == "75" & (cfr_key$cfr_
 cfr_key$MR_maybe_relevant = ifelse(cfr_key$cfr_part_code == "77" & (cfr_key$cfr_subpart_code %in% c("Subpart L")) &
                                      (cfr_key$subsection_code %in% c("77.1106")), 1, cfr_key$MR_maybe_relevant)
 
+######################################################################################################
+
 #cfr_key = cfr_key[, c(grep("relevant", names(cfr_key)), grep("subsection_code", names(cfr_key)))]
 
 saveRDS(cfr_key, file = "X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_cfr_key.rds")
 rm(subsection_code_length, cfr_key)
+
+######################################################################################################
