@@ -2,14 +2,13 @@
 
 # 7 - Clean Assessments
     # This file cleans the assessments data we downloaded from MSHA's open data portal. The portions 
-    # commented out are to load and clean data from Carolyn Stasik's (MSHA) data pull from March 3rd, 2015
+    # commented out are to load and clean data from Carolyn Stasik's (MSHA) data pull from March 3rd, 2015.
 
 # Last edit 7/19/16
 
 ######################################################################################################
 
-# RETIRED CODE.
-
+# THIS CODE IS RETIRED.
 #early_assessments = read.csv("X:/Projects/Mining/NIOSH/analysis/data/1_converted/MSHA/assessments_fromText.csv")
 #early_assessments[, "dup"] = duplicated(early_assessments) #Checks out with total number of duplicates implied by STATA's "duplicates" command
 #table(early_assessments$dup)
@@ -23,6 +22,7 @@
 open_data_assessments = read.table("X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA/open_data/AssessedViolations.txt", header = T, sep = "|")
 mine_types = readRDS("X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/mine_types.rds")
 
+# Rename variables (we did this originally so var names would be consistent with our existing data pull - this is mostly cosmetic)
 names(open_data_assessments)[names(open_data_assessments) == "VIOLATION_NO"] = "violationno"
 names(open_data_assessments)[names(open_data_assessments) == "VIOLATION_ID"] = "violationid"
 names(open_data_assessments)[names(open_data_assessments) == "VIOLATOR_NAME"] = "violatorname"
@@ -56,12 +56,16 @@ names(open_data_assessments)[names(open_data_assessments) == "GOOD_FAITH_POINTS"
 names(open_data_assessments)[names(open_data_assessments) == "SIZE_OF_MINE"] = "minesize"
 names(open_data_assessments)[names(open_data_assessments) == "MINE_SIZE_POINTS"] = "minesizepoints"
 names(open_data_assessments)[names(open_data_assessments) == "CONTROLLER_SIZE_POINTS"] = "controllersizepoints"
-names(open_data_assessments) = tolower(names(open_data_assessments))
-open_data_assessments[, "violationno"] = as.character(open_data_assessments[, "violationno"])
 
+# Make all varnames lowercase because Sarah hates capitalization
+names(open_data_assessments) = tolower(names(open_data_assessments))
+
+# Drop non-coal observations
 open_data_assessments = open_data_assessments[open_data_assessments$coalcormetalm == "C",]
 open_data_assessments = open_data_assessments[!is.na(open_data_assessments$coalcormetalm),]
 
+# Format mineid, eventno, and violationno as 7 digit stringvars padded with zeroes
+open_data_assessments[, "violationno"] = as.character(open_data_assessments[, "violationno"])
 open_data_assessments$mineid = str_pad(open_data_assessments$mineid, 7, pad = "0")
 open_data_assessments$mineid = withr::with_options(c(scipen = 999), str_pad(open_data_assessments$mineid, 7, pad = "0"))
 open_data_assessments$eventno = str_pad(open_data_assessments$eventno, 7, pad = "0")
@@ -69,14 +73,12 @@ open_data_assessments$eventno = withr::with_options(c(scipen = 999), str_pad(ope
 open_data_assessments$violationno = str_pad(open_data_assessments$violationno, 7, pad = "0")
 open_data_assessments$violationno = withr::with_options(c(scipen = 999), str_pad(open_data_assessments$violationno, 7, pad = "0"))
 
-# merge on minetypes to drop non-coal and non-underground observations before saving
+# Only keep observations from environment we care about
+# Merge on minetypes to drop non-coal and non-underground observations before saving
 open_data_assessments = merge(open_data_assessments, mine_types, by = c("mineid"), all = T)
 open_data_assessments = open_data_assessments[!is.na(open_data_assessments$eventno),]
-
-# only keep observations from environment we care about
-# (facility means a mill/processing location, always above ground, according to April Ramirez @ DOL on 6/6/16)
+# (Facility means a mill/processing location, always above ground, according to April Ramirez @ DOL on 6/6/16)
 open_data_assessments = open_data_assessments[open_data_assessments$minetype == "Underground",]
-
 open_data_assessments = open_data_assessments[, c(-match("coalcormetalmmine", names(open_data_assessments)))]
 
 clean_assessments = open_data_assessments
@@ -86,6 +88,7 @@ saveRDS(clean_assessments, file = "X:/Projects/Mining/NIOSH/analysis/data/2_clea
 
 ######################################################################################################
 
+# THIS CODE IS RETIRED.
 #early_assessments$src = "early"
 #open_data_assessments$src = "open_data"
 
