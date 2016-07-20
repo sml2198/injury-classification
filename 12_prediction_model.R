@@ -20,10 +20,15 @@ library(randomForest)
 library(MASS)
 library(data.table)
 
-#prediction_data = readRDS("X:/Projects/Mining/NIOSH/analysis/data/4_collapsed/prediction_data.rds")
+# define file names
+  # input: prediction data produced in 11_prepare_violations.R
 prediction_data = readRDS("X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75.rds")
+#prediction_data = readRDS("X:/Projects/Mining/NIOSH/analysis/data/4_collapsed/prediction_data.rds")
 
 ######################################################################################################
+
+# FINAL VARIABLE CLEANING AND PREP
+
 # Make categorical variables with numeric levels
 prediction_data$year = factor(prediction_data$year)
 prediction_data$minestatus = ifelse(prediction_data$minestatus == "Abandoned", 1, ifelse(prediction_data$minestatus == "Abandoned and Sealed", 2, 
@@ -106,6 +111,7 @@ for (i in 1:length(num_vars)) {
 }
 
 #####################################################################################################################################
+
 # FINAL VARIABLE CLEANING AND PREP
 
 # Add variables for binary and proportional dependent vars, and reshape a few vars of interest
@@ -121,7 +127,8 @@ prediction_data$no_terminations = ifelse(prediction_data$terminated < prediction
 prediction_data$num_no_terminations = ifelse(prediction_data$terminated < prediction_data$total_violations, prediction_data$total_violations-prediction_data$terminated, 0)
 
 #####################################################################################################################################
-# LAGGED VARS
+
+# CREATE LAGGED VARS
 
 # Create lagged variables of the various orders (currently code exists for 6 orders)
 # Currently we're doing this for part 75 only (the biggest part) and for vars that we believe to be strong predictors, based on model
@@ -159,7 +166,8 @@ mine_penpoints = c("contractorsizepoints", "controllersizepoints")
 apply(is.na(prediction_data),2,sum)
 
 ######################################################################################################################################
-# Save prediction data to run models in Stata
+
+# SAVE DATA TO RUN IN STATA
 
 # Create compound lagged vars: in this formulation, order 6 will be the sum of all violations (or other lagged var) over the last 6 quarters
 # instead of simply the value of that var 6 quarters ago.
@@ -186,6 +194,7 @@ names(prediction_data) = varnames
 write.csv(prediction_data, "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75.csv")
 
 ######################################################################################################################################
+
 # MODEL SELECTION TECHNIQUES (PCA, LASSO, Random Forest)
 
 # Principle Components Analysis (PCA)
@@ -230,14 +239,16 @@ sort(rf_results$importance[,1], decreasing = T)
 ######################################################################################################################################
 
 # THIS CODE IS RETIRED.
+
 # Exploring MCA - NOT USED
 #mca_results = MCA(as.data.frame(sapply(prediction_data[, c(match("minestatus", names(prediction_data)), grep("idesc", names(prediction_data)))], FUN = factor)))
 #summary.MCA(mca_results)
 
-#EXPLORING MFA - There is an obscure error thrown with this code. NOT USED
+# EXPLORING MFA - There is an obscure error thrown with this code. NOT USED
 #mfa_results = MFA(data, group = c(81, 2, 13), type = c("c", "n", "c"), name.group = c("quant1", "quali1", "quant2"))
 
 ######################################################################################################################################
+
 # EVERYTHING BELOW THIS LINE IS FOR THE PREDICTION ALGORITHMS (AT THIS POINT ALL FREQUENTIST METHODS)
 
 # Here are the mine-level vars we believe we want to include in the algorithm:
@@ -257,6 +268,7 @@ prediction_data$rand = runif(nrow(prediction_data))
 prediction_data = prediction_data[order(prediction_data$rand),]
 
 ######################################################################################################################################
+
 # NAIVE OLS: Used as a check on variable selection
 
 test_pred_naive = lm(formula = MR ~ ., data = prediction_data[1:21965, c(match("MR", names(prediction_data)),
@@ -311,6 +323,7 @@ ols_fit = summary.lm(test_pred_naive)
 test_df = test_pred_naive$model
 
 ######################################################################################################################################
+
 # TEST FOR SERIAL-CORRELATION
 
 #Breusch-Godfrey test commented out since strong tendency to reject time-independence due to our large N
@@ -325,6 +338,7 @@ test_df = as.data.frame(test_df)
 serialcorr_test = lm(formula = residuals ~ ., data = test_df)
 
 ######################################################################################################################################
+
 # POISSON
 
 #Divergent estimates of theta assuming a NegBi(r, p) distribution on MR suggest failure of NB assumptions. We turn to Poisson regression
@@ -355,6 +369,7 @@ test_pred_0 = glm(formula = MR ~ ., family = "poisson", data = prediction_data[1
 poisson_fit = summary.glm(test_pred_0)
 
 ######################################################################################################################################
+
 # LOGIT
 
 # Create training set data for logit
@@ -392,7 +407,8 @@ logit = glm(MR_indicator ~ . , family = "binomial", data = logit_data[1:21965,])
 logit_prediction = predict(logit, newdata = logit_data[21965:27456,])
 
 ######################################################################################################################################
-# REPORT PREDICTIONS
+
+# REPORT VARIOUS MODEL PREDICTIONS
 
 # Create OLS predictions
 ols_prediction = predict(test_pred_naive, newdata = prediction_data[21965:27456,c(match("MR", names(prediction_data)),
