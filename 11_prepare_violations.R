@@ -21,34 +21,34 @@ merged_cfr_key = readRDS("X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged
 
 # When relevant-only option is set to "on" (not commented out) only CFR subsections marked as "relevant" will be used for creating
 # vars. Otherwise, "relevant" and "maybe subsections" will be used.
-relevant.only.option = "on"
+#relevant.only.option = "on"
+relevant.only.option = "off"
 
 ######################################################################################################################################
 # MERGE CFR CODES ONTO VIOLATIONS AND MAKE VARIABLES FOR COLLAPSING ON
 
+# Format cfr code
 merged_violations$cfrstandardcode = gsub("(\\(([0-9]|[a-z]|-|[A-Z])+\\))+", "", merged_violations$cfrstandardcode)
 merged_violations$cfrstandardcode = gsub("(-([a-z]+)\\))+(\\([0-9])*", "", merged_violations$cfrstandardcode)
 names(merged_violations)[names(merged_violations) == "cfrstandardcode"] = "subsection_code"
-
 merged_violations$subsection_code_marker = paste("S", merged_violations$subsection_code, sep = "")
 merged_cfr_key$subsection_code_marker = paste("S", merged_cfr_key$subsection_code, sep = "")
 
-# in some cases where subsection is missing, part_section is not and can be subbed in.
+# In some cases where subsection is missing, part_section is not and can be subbed in.
 merged_violations$part_section2 = merged_violations$part_section
 merged_violations$part_section2 = gsub("\\([a-z]+\\)", "", merged_violations$part_section2)
 merged_violations$part_section2 = gsub("\\([0-9]+\\)", "", merged_violations$part_section2)
 merged_violations$subsection_code = ifelse((is.na(merged_violations$subsection_code) & !is.na(merged_violations$part_section2)), merged_violations$part_section2, merged_violations$subsection_code)
 
+# Merge violations and cfr key
 merged_violations = merge(merged_violations, merged_cfr_key, by = "subsection_code", all = T)
 
+# Flag which observations merged from each dataset - this is only useful for comparing the merge to Stata output
 merged_violations[, "merge"] = ifelse(!is.na(merged_violations$subsection_code_marker.y) & !is.na(merged_violations$subsection_code_marker.x), 3, 0)
 merged_violations[, "merge"] = ifelse(is.na(merged_violations$subsection_code_marker.x) & !is.na(merged_violations$subsection_code_marker.y), 2, merged_violations[, "merge"])
 merged_violations[, "merge"] = ifelse(is.na(merged_violations$subsection_code_marker.y) & !is.na(merged_violations$subsection_code_marker.x), 1, merged_violations[, "merge"])
-table(merged_violations$merge) 
-#Open Data Only:
-#1       2       3 
-#41047    1188 1139387 
 
+# Clean up redundant varnames from the merge
 common_varstbs = sub(".x", "", names(merged_violations)[grep(".x", names(merged_violations), fixed = T)], fixed = T)
 for (i in 1:length(common_varstbs)) {
   merged_violations[, paste(common_varstbs[i], ".x", sep = "")] = ifelse(merged_violations[, "merge"] == 2, merged_violations[, paste(common_varstbs[i], ".y", sep = "")], merged_violations[, paste(common_varstbs[i], ".x", sep = "")])
@@ -57,12 +57,13 @@ merged_violations = merged_violations[, -grep(".y", names(merged_violations), fi
 names(merged_violations)[grep(".x", names(merged_violations), fixed = T)] = common_varstbs
 rm(merged_cfr_key, common_varstbs, i)
 
+# Format date vars
 datevars = names(merged_violations)[grep("date", names(merged_violations))]
 for (i in 1:length(datevars)) {
   merged_violations[, datevars[i]] = as.Date(as.character(merged_violations[, datevars[i]]), "%m/%d/%Y")
 }
 
-# remove observations from cfr data that didn't merge onto our violations data 
+# Remove observations from cfr data that didn't merge onto our violations data 
 merged_violations = merged_violations[complete.cases(merged_violations$violationno),]
 
 # Condition the per-day vars on positive denominator. (There are 256 cases of zero inspection days and positive violation counts). 6/6/16
@@ -71,6 +72,7 @@ merged_violations$operator_violation_pInspDay = ifelse(merged_violations$violato
 merged_violations$contractor_repeated_viol_cnt = ifelse(merged_violations$violatortypecode == "Contractor", merged_violations$violator_repeated_viol_cnt, NA)
 merged_violations$operator_repeated_viol_pInspDay = ifelse(merged_violations$violatortypecode == "Operator" & merged_violations$violator_inspection_day_cnt > 0, merged_violations$violator_repeated_viol_cnt/merged_violations$violator_inspection_day_cnt, NA)
 
+# Remove unnecessary vars
 merged_violations = merged_violations[, c(-grep("merge", names(merged_violations)))]
 
 ######################################################################################################################################
@@ -86,10 +88,10 @@ merged_violations[, "inspacty"] = ifelse(merged_violations[, "inspacty"] == "sha
 merged_violations[, "inspacty"] = ifelse(merged_violations[, "inspacty"] == "103(g)(1) spot umwa inspection", "103(g)(1) spot inspection", merged_violations[, "inspacty"])
 merged_violations[, "inspacty"] = ifelse(merged_violations[, "inspacty"] == "103(i) spot (ign or expl) insp", "103(i) spot inspections", merged_violations[, "inspacty"])
 merged_violations[, "inspacty"] = ifelse(merged_violations[, "inspacty"] == "103(i) spot (hazard) inspection", "103(i) spot inspections", merged_violations[, "inspacty"])
-# can't have any missing values or our dummy method won't work
+# We can't have any missing values or our dummy method won't work
 merged_violations[, "inspacty"] = ifelse(is.na(merged_violations$inspacty), "unknown", merged_violations[, "inspacty"])
 
-# deal with too many categories here (so we don't have hundreds of vars later)
+# Deal with too many categories here (so we don't have hundreds of vars later - group inspections into categories)
 merged_violations[, "inspacty"] = ifelse((merged_violations[, "inspacty"] == "regular inspection" |
                                             merged_violations[, "inspacty"] == "regular safety and health inspection"), "regular inspection", merged_violations[, "inspacty"])
 merged_violations[, "inspacty"] = ifelse(grepl("complaint", merged_violations[,"inspacty"]), "complaint inspection", merged_violations[, "inspacty"])
@@ -97,29 +99,35 @@ merged_violations[, "inspacty"] = ifelse(merged_violations[, "inspacty"] == "fat
 merged_violations[, "inspacty"] = ifelse(grepl("103", merged_violations[,"inspacty"]), "103", merged_violations[, "inspacty"])
 merged_violations[, "inspacty"] = ifelse(grepl("(103|fatality|unknown|regular|complaint)", merged_violations[,"inspacty"]), merged_violations[, "inspacty"], "other")
 
-# can't have any missing values or our dummy method won't work
+# Can't have any missing values or our dummy method won't work
 merged_violations$violationtypecode = as.character(merged_violations$violationtypecode)
 merged_violations[, "violationtypecode"] = ifelse(is.na(merged_violations$violationtypecode), "Unknown", merged_violations[, "violationtypecode"])
-# these make up a grand total of 4 in our observations - not worth making dummies for 4 violation types
+
+# These make up a grand total of 4 in our observations - not worth making dummies for 4 violation types
 merged_violations = merged_violations[(merged_violations$violationtypecode != "Notice" & merged_violations$violationtypecode != "Safeguard"),]
 merged_violations$assessmenttypecode = as.character(merged_violations$assessmenttypecode)
 merged_violations[, "assessmenttypecode"] = ifelse(is.na(merged_violations$assessmenttypecode), "Unknown", merged_violations[, "assessmenttypecode"])
 
-# for each of the categorical vars we replace missings with NA, format as character vars, and name all NA "unknown"
-is.na(merged_violations$likelihood) = merged_violations$likelihood==""
+# For each of the categorical vars we replace missings with NA, format as character vars, and name all NA "unknown"
+is.na(merged_violations$likelihood) = merged_violations$likelihood == ""
 levels(merged_violations$likelihood) = c("Unknown", "Highly", "NoLikelihood", "Occurred", "Reasonably", "Unlikely")
 merged_violations$likelihood = as.character(merged_violations$likelihood)
 merged_violations[, "likelihood"] = ifelse(is.na(merged_violations$likelihood), "Unknown", merged_violations[, "likelihood"])
 
+# For each of the categorical vars we replace missings with NA, format as character vars, and name all NA "unknown"
 merged_violations$injuryillness = as.character(merged_violations$injuryillness)
 is.na(merged_violations$injuryillness) = merged_violations$injuryillness==""
 levels(merged_violations$injuryillness) = c("Unknown", "Fatal", "LostDays", "NoLostDays", "Permanent")
 merged_violations[, "injuryillness"] = ifelse(is.na(merged_violations$injuryillness), "Unknown", merged_violations[, "injuryillness"])
 
+# For each of the categorical vars we replace missings with NA, format as character vars, and name all NA "unknown"
 is.na(merged_violations$negligence) = merged_violations$negligence==""
 levels(merged_violations$injuryillness) = c("Unknown", "HighNegligence", "LowNegligence", "ModNegligence", "NoNegligence", "Reckless")
 merged_violations$negligence = as.character(merged_violations$negligence)
 merged_violations[, "negligence"] = ifelse(is.na(merged_violations$negligence), "Unknown", merged_violations[, "negligence"])
+
+######################################################################################################################################
+# Here we've tabbed our categorical vars, so we know which value will become which dummy.
 
 table(merged_violations$inspacty)
 #inspacty.n variables are numbered from left to right over these values
@@ -148,6 +156,9 @@ table(merged_violations$negligence)
 #HighNegligence  LowNegligence  ModNegligence   NoNegligence       Reckless        Unknown 
 #36421          97549         711082           1221            959          18980 
 
+######################################################################################################################################
+
+# This is the function that will dummy out the categorical vars.
 datdum <- function(x, data, name){
   data$rv <- rnorm(dim(data)[1],1,1)
   mm <- data.frame(model.matrix(lm(data$rv~-1+factor(data[,x]))))
@@ -157,6 +168,7 @@ datdum <- function(x, data, name){
   return(data)
 }
 
+# Apply the dummy fnction to each cat var
 test.data1 <- datdum(x="inspacty",data=merged_violations,name="inspacty")
 test.data1 <- test.data1 [, c(grep("inspacty", names(test.data1)))]
 test.data2 <- datdum(x="assessmenttypecode",data=merged_violations,name="assessmenttypecode")
@@ -170,6 +182,7 @@ test.data5 <- test.data5 [, c(grep("injuryillness", names(test.data5)))]
 test.data6 <- datdum(x="negligence",data=merged_violations,name="negligence")
 test.data6 <- test.data6 [, c(grep("negligence", names(test.data6)))]
 
+# Merge all dummied datasets and remove them when done
 merged_violations = cbind(merged_violations, test.data1, test.data2, test.data3, test.data4, test.data5, test.data6)
 rm(test.data1, test.data2, test.data3, test.data4, test.data5, test.data6, datdum)
 
@@ -225,27 +238,13 @@ if (relevant.only.option == "on") {
             & (grepl("71\\.", merged_violations[,"subsection_code"])),]$subsection_code))
     MR_relevant_subsectcodes_72 = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 ) 
             & (grepl("72\\.", merged_violations[,"subsection_code"])),]$subsection_code))
-    MR_relevant_subsectcodes_75a = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 ) 
-            & (grepl("75\\.1[0-3]", merged_violations[,"subsection_code"])),]$subsection_code))
-    MR_relevant_subsectcodes_75b = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 ) 
-            & (grepl("75\\.14", merged_violations[,"subsection_code"])),]$subsection_code))
-    MR_relevant_subsectcodes_75c = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 ) 
-            & (grepl("75\\.1[5-9]", merged_violations[,"subsection_code"])),]$subsection_code))
-    MR_relevant_subsectcodes_75d = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 ) 
-            & (grepl("75\\.[2-4]", merged_violations[,"subsection_code"])),]$subsection_code))
-    MR_relevant_subsectcodes_75e = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 )
-            & (grepl("75\\.5", merged_violations[,"subsection_code"])),]$subsection_code))
-    MR_relevant_subsectcodes_75f = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 ) 
-            & (grepl("75\\.[6-7]", merged_violations[,"subsection_code"])),]$subsection_code))
-    MR_relevant_subsectcodes_75g = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 ) 
-            & (grepl("75\\.8", merged_violations[,"subsection_code"])),]$subsection_code))
-    MR_relevant_subsectcodes_75h = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 ) 
-            & (grepl("75\\.9", merged_violations[,"subsection_code"])),]$subsection_code))
     MR_relevant_subsectcodes_75 = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 ) 
             & (grepl("75\\.", merged_violations[,"subsection_code"])),]$subsection_code))
     MR_relevant_subsectcodes_77 = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 ) 
             & (grepl("77\\.", merged_violations[,"subsection_code"])),]$subsection_code))
 }
+
+######################################################################################################################################
 
 # ADDED BY SARAH 7/5/2016 - THESE VIOLATIONS HAVE SO FEW OBSERVATIONS (< 15) THEY ARE NOT WORTH ANALYZING.
 # REMOVING THEM SAVES MEMORY.
@@ -255,14 +254,16 @@ remove_subcodes = c("75.1431", "75.1436", "75.1438", "75.151", "75.153", "75.155
                     "75.702", "75.702-1", "75.703-1", "75.703-2", "75.703-4", "75.704", "75.705", "75.705-1", "75.705-2", "75.705-3", "75.705-8", 
                     "75.800-2", "75.801", "75.803-2", "75.805", "75.806", "75.812", "75.812-2", "75.814", "75.815", "75.817", "75.818", "75.819", 
                     "75.820", "75.825", "75.827", "75.830", "75.831", "75.832", "75.833", "75.834", "75.900-2", "75.902-1", "75.905", "75.906")
-MR_relevant_subsectcodes_75a = setdiff(MR_relevant_subsectcodes_75a, remove_subcodes)
-MR_relevant_subsectcodes_75b = setdiff(MR_relevant_subsectcodes_75b, remove_subcodes)
-MR_relevant_subsectcodes_75c = setdiff(MR_relevant_subsectcodes_75c, remove_subcodes)
-MR_relevant_subsectcodes_75d = setdiff(MR_relevant_subsectcodes_75d, remove_subcodes)
-MR_relevant_subsectcodes_75e = setdiff(MR_relevant_subsectcodes_75e, remove_subcodes)
-MR_relevant_subsectcodes_75f = setdiff(MR_relevant_subsectcodes_75f, remove_subcodes)
-MR_relevant_subsectcodes_75g = setdiff(MR_relevant_subsectcodes_75g, remove_subcodes)
-MR_relevant_subsectcodes_75h = setdiff(MR_relevant_subsectcodes_75h, remove_subcodes)
+if (relevant.only.option == "on") {
+  MR_relevant_subsectcodes_75a = setdiff(MR_relevant_subsectcodes_75a, remove_subcodes)
+  MR_relevant_subsectcodes_75b = setdiff(MR_relevant_subsectcodes_75b, remove_subcodes)
+  MR_relevant_subsectcodes_75c = setdiff(MR_relevant_subsectcodes_75c, remove_subcodes)
+  MR_relevant_subsectcodes_75d = setdiff(MR_relevant_subsectcodes_75d, remove_subcodes)
+  MR_relevant_subsectcodes_75e = setdiff(MR_relevant_subsectcodes_75e, remove_subcodes)
+  MR_relevant_subsectcodes_75f = setdiff(MR_relevant_subsectcodes_75f, remove_subcodes)
+  MR_relevant_subsectcodes_75g = setdiff(MR_relevant_subsectcodes_75g, remove_subcodes)
+  MR_relevant_subsectcodes_75h = setdiff(MR_relevant_subsectcodes_75h, remove_subcodes)
+}
 MR_relevant_subsectcodes_75 = setdiff(MR_relevant_subsectcodes_75, remove_subcodes)
 
 # Create lists of number of dummies for violation, assessment, and inspection types 
@@ -272,6 +273,8 @@ negligencecodes = seq(1, 6)
 violationtypecodes = seq(1, 3)
 assessmenttypecodes = seq(1, 4)
 inspactycodes = seq(1, 6)
+
+######################################################################################################################################
 
 # For CFR part-specific variable creation
 if (relevant.only.option != "on") {
@@ -283,21 +286,22 @@ if (relevant.only.option == "on") {
 # Sets the level of CFR code for which to create code-specific variables
 cfr_codes = MR_relevant_partcodes
 
+# This loop creates the part-specific variable-specific dummies (which will later be collapsed to the mine-quarter level).
 for (i in 1:length(cfr_codes)) {
   merged_violations[, cfr_codes[i]] = ifelse(merged_violations$cfr_part_code == cfr_codes[i], 1, 0)
   merged_violations[, paste(cfr_codes[i], "penaltypoints", sep = ".")] = apply(cbind(merged_violations[, "penaltypoints"], merged_violations[, cfr_codes[i]]), 1, prod)
-  #There is also a factor var likelihood which marks the severity of negligence e.g., reasonably, unlikely, ...
+    # There is also a factor var likelihood which marks the severity of negligence e.g., reasonably, unlikely, ...
   merged_violations[, paste(cfr_codes[i], "gravitylikelihoodpoints", sep = ".")] = apply(cbind(merged_violations[, "gravitylikelihoodpoints"], merged_violations[, cfr_codes[i]]), 1, prod)
   merged_violations[, paste(cfr_codes[i], "gravityinjurypoints", sep = ".")] = apply(cbind(merged_violations[, "gravityinjurypoints"], merged_violations[, cfr_codes[i]]), 1, prod)
   merged_violations[, paste(cfr_codes[i], "gravitypersonspoints", sep = ".")] = apply(cbind(merged_violations[, "gravitypersonspoints"], merged_violations[, cfr_codes[i]]), 1, prod)
-  #There is also a factor var negligence which marks the severity of negligence e.g., low, high, ...
+    # There is also a factor var negligence which marks the severity of negligence e.g., low, high, ...
   merged_violations[, paste(cfr_codes[i], "negligencepoints", sep = ".")] = apply(cbind(merged_violations[, "negligencepoints"], merged_violations[, cfr_codes[i]]), 1, prod)
   merged_violations[, paste(cfr_codes[i], "sigandsubdesignation", sep = ".")] = ifelse(merged_violations[, cfr_codes[i]] == 1, merged_violations[, "sigandsubdesignation"], 0)
   merged_violations[, paste(cfr_codes[i], "contractor_violation_cnt", sep = ".")] = apply(cbind(merged_violations[, "contractor_violation_cnt"], merged_violations[, cfr_codes[i]]), 1, prod)
   merged_violations[, paste(cfr_codes[i], "operator_violation_pInspDay", sep = ".")] = apply(cbind(merged_violations[, "operator_violation_pInspDay"], merged_violations[, cfr_codes[i]]), 1, prod)
   merged_violations[, paste(cfr_codes[i], "contractor_repeated_viol_cnt", sep = ".")] = apply(cbind(merged_violations[, "contractor_repeated_viol_cnt"], merged_violations[, cfr_codes[i]]), 1, prod)
   merged_violations[, paste(cfr_codes[i], "operator_repeated_viol_pInspDay", sep = ".")] = apply(cbind(merged_violations[, "operator_repeated_viol_pInspDay"], merged_violations[, cfr_codes[i]]), 1, prod)
-  # dummied out categorical vars
+    # Dummied out categorical vars:
   for (j in 1:length(inspactycodes)) {
     merged_violations[, paste(cfr_codes[i], "inspacty", inspactycodes[j], sep = ".")] = ifelse(merged_violations[, cfr_codes[i]] == 1 & merged_violations[, paste("inspacty", inspactycodes[j], sep = ".")] == 1, 1, 0)
   }
@@ -318,23 +322,24 @@ for (i in 1:length(cfr_codes)) {
   }
 }
 
-# THIS LOOP BELOW WILL PERFORM THE SAME PROCESS AS ABOVE, BUT FOR ALL SUBSECTIONS OF THE SPECIFIED PART. 
-cfr_codes = MR_relevant_subsectcodes
+# This loop creates the subsection-specific variable-specific dummies (which will later be collapsed to the mine-quarter level).
+# Set this line below to be the subsecion code group you want. Cannot do all at once because of memory issues.
+cfr_codes = MR_relevant_subsectcodes_75
 for (i in 1:length(cfr_codes)) {
   merged_violations[, cfr_codes[i]] = ifelse(merged_violations$subsection_code == cfr_codes[i], 1, 0)
   merged_violations[, paste(cfr_codes[i], "penaltypoints", sep = ".")] = apply(cbind(merged_violations[, "penaltypoints"], merged_violations[, cfr_codes[i]]), 1, prod)
-  #There is also a factor var likelihood which marks the severity of likelihood e.g., reasonably, unlikely, ...
+    # There is also a factor var likelihood which marks the severity of likelihood e.g., reasonably, unlikely, ...
   merged_violations[, paste(cfr_codes[i], "gravitylikelihoodpoints", sep = ".")] = apply(cbind(merged_violations[, "gravitylikelihoodpoints"], merged_violations[, cfr_codes[i]]), 1, prod)
   merged_violations[, paste(cfr_codes[i], "gravityinjurypoints", sep = ".")] = apply(cbind(merged_violations[, "gravityinjurypoints"], merged_violations[, cfr_codes[i]]), 1, prod)
   merged_violations[, paste(cfr_codes[i], "gravitypersonspoints", sep = ".")] = apply(cbind(merged_violations[, "gravitypersonspoints"], merged_violations[, cfr_codes[i]]), 1, prod)
-  #There is also a factor var negligence which marks the severity of negligence e.g., low, high, ...
+    # There is also a factor var negligence which marks the severity of negligence e.g., low, high, ...
   merged_violations[, paste(cfr_codes[i], "negligencepoints", sep = ".")] = apply(cbind(merged_violations[, "negligencepoints"], merged_violations[, cfr_codes[i]]), 1, prod)
   merged_violations[, paste(cfr_codes[i], "sigandsubdesignation", sep = ".")] = ifelse(merged_violations[, cfr_codes[i]] == 1, merged_violations[, "sigandsubdesignation"], 0)
   merged_violations[, paste(cfr_codes[i], "contractor_violation_cnt", sep = ".")] = apply(cbind(merged_violations[, "contractor_violation_cnt"], merged_violations[, cfr_codes[i]]), 1, prod)
   merged_violations[, paste(cfr_codes[i], "operator_violation_pInspDay", sep = ".")] = apply(cbind(merged_violations[, "operator_violation_pInspDay"], merged_violations[, cfr_codes[i]]), 1, prod)
   merged_violations[, paste(cfr_codes[i], "contractor_repeated_viol_cnt", sep = ".")] = apply(cbind(merged_violations[, "contractor_repeated_viol_cnt"], merged_violations[, cfr_codes[i]]), 1, prod)
   merged_violations[, paste(cfr_codes[i], "operator_repeated_viol_pInspDay", sep = ".")] = apply(cbind(merged_violations[, "operator_repeated_viol_pInspDay"], merged_violations[, cfr_codes[i]]), 1, prod)
-    # dummied out categorical vars
+    # Dummied out categorical vars
   for (j in 1:length(inspactycodes)) {
     merged_violations[, paste(cfr_codes[i], "inspacty", inspactycodes[j], sep = ".")] = ifelse(merged_violations[, cfr_codes[i]] == 1 & merged_violations[, paste("inspacty", inspactycodes[j], sep = ".")] == 1, 1, 0)
   }
@@ -582,7 +587,7 @@ prediction_data = prediction_data[prediction_data$coal_prod_qtr != 0,]
 prediction_data = prediction_data[, c(-grep("merge", names(prediction_data)), -grep("row_id", names(prediction_data)), 
                                       -grep("coalcormetalmmine", names(prediction_data)), -grep("minetype", names(prediction_data)))]
 
-# Set the file name (if part specific).
+# Set the file name (if part-specific).
 if (relevant.only.option == "on") {
     saveRDS(prediction_data, file = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_relevant.rds")
 }
