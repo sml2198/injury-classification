@@ -11,13 +11,20 @@
 # define file names
   # input: raw inspections data from MSHA open data platform (Inspections): http://arlweb.msha.gov/OpenGovernmentData/OGIMSHA.asp
   # downloaded on 4/20/2016 @ 4:35 PM
-open_data_inspecs = read.table("X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA/open_data/Inspections.txt", header = T, sep = "|")
-  # input: converted inspection hours file from MSHA data download on 5/15/2015 @ 4:17 PM
-early_inspecs_hours = read.csv("X:/Projects/Mining/NIOSH/analysis/data/1_converted/MSHA/inspection_hours_fromText.csv")
+open_data_inspecs.in.file.name = "X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA/open_data/Inspections.txt"
+  # output: cleaned inspections data, uniquely identified by mineid *eventno
+open_data_inspecs.out.file.name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_Inspections.rds"
+# input: converted inspection hours file from MSHA data download on 5/15/2015 @ 4:17 PM
+early_inspecs_hours.file.name = "X:/Projects/Mining/NIOSH/analysis/data/1_converted/MSHA/inspection_hours_fromText.csv"
   # input: cleaned mine-types key produced in produced in 1_clean_mines.R
-mine_types = readRDS("X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/mine_types.rds")
+mine.types.file.name = "X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_mines_accidents.rds"
 
 ######################################################################################################
+
+# Read data files
+open_data_inspecs = read.table(open_data_inspecs.in.file.name, header = T, sep = "|")
+early_inspecs_hours.file.name = read.csv(early_inspecs_hours.file.name)
+mine_types = readRDS(mine.types.file.name)
 
 # Rename variables (we did this originally so var names would be consistent with our existing data pull - this is mostly cosmetic)
 names(open_data_inspecs)[names(open_data_inspecs) == "EVENT_NO"] = "eventno"
@@ -178,7 +185,7 @@ names(clean_inspecs)[grep(".x", names(clean_inspecs), fixed = T)] = common_varst
 
 clean_inspecs = clean_inspecs[!(((!is.na(clean_inspecs$controllerid) & clean_inspecs$controllerid == "C11088") | is.na(clean_inspecs$controllerid)) & clean_inspecs$eventno == "4165469"),c(-grep("coal_metal_ind", names(clean_inspecs)), -grep("merge", names(clean_inspecs)))]
 
-saveRDS(clean_inspecs, file = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_Inspections.rds")
+saveRDS(clean_inspecs, file = open_data_inspecs.out.file.name)
 
 ######################################################################################################
 
