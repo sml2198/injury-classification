@@ -15,7 +15,13 @@
 
 library(stringr)
 
+# define file names
+  # input: raw cfr key created by Katie Choi on 2/16/2015 from the e-CFR (current as of 2/12/2015) from: 
+  # http://www.ecfr.gov/cgi-bin/text-idx?SID=95a3589813c4b48d6daa8f8df80f0ead&c=ecfr&tpl=/ecfrbrowse/Title30/30cfrv1_02.tpl
+  # See X:\Projects\Mining\NIOSH\analysis\data\0_originals\MSHA\cfr_key\Notes.txt for more.
 cfr_key = read.csv("X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA/cfr_key/cfr_key.csv")
+
+######################################################################################################
 
 # Format cfr subsection code description var
 cfr_key$cfr_section_code_desc = as.character(cfr_key$cfr_section_code_desc)
