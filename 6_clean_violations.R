@@ -8,8 +8,13 @@
 
 ######################################################################################################
 
-#early_viols = read.csv("X:/Projects/Mining/NIOSH/analysis/data/1_converted/MSHA/violations_fromText.csv")
+# define file names
+  # input: raw violations data from MSHA open data platform (Violations): http://arlweb.msha.gov/OpenGovernmentData/OGIMSHA.asp
+  # downloaded on 4/20/2016 @ 3:37 PM
 open_data_viols = read.table("X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA/open_data/Violations.txt", header = T, sep = "|")
+#early_viols = read.csv("X:/Projects/Mining/NIOSH/analysis/data/1_converted/MSHA/violations_fromText.csv")
+
+######################################################################################################
 
 # Rename variables (we did this originally so var names would be consistent with our existing data pull - this is mostly cosmetic)
 names(open_data_viols)[names(open_data_viols) == "VIOLATION_NO"] = "violationno"
