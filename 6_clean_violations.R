@@ -80,10 +80,7 @@ open_data_viols$eventno = withr::with_options(c(scipen = 999), str_pad(open_data
 open_data_viols$violationno = str_pad(open_data_viols$violationno, 7, pad = "0")
 open_data_viols$violationno = withr::with_options(c(scipen = 999), str_pad(open_data_viols$violationno, 7, pad = "0"))
 
-clean_violations = open_data_viols
-rm(open_data_viols)
-
-saveRDS(clean_violations, file = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_violations.rds")
+saveRDS(open_data_viols, file = open_data_viols.out.file.name)
 
 ######################################################################################################
 # THIS CODE IS RETIRED.
