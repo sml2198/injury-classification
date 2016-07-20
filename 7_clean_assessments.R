@@ -10,6 +10,7 @@
 
 # define file names
   # input: raw assessments data from MSHA open data platform (Assessed Violations): http://arlweb.msha.gov/OpenGovernmentData/OGIMSHA.asp
+  # downloaded on 4/21/2016 @ 9:37 AM
 open_data_assessments = read.table("X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA/open_data/AssessedViolations.txt", header = T, sep = "|")
   # input: cleaned mine-types key produced in produced in 1_clean_mines.R
 mine_types = readRDS("X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/mine_types.rds")
