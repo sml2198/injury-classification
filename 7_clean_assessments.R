@@ -8,6 +8,14 @@
 
 ######################################################################################################
 
+# define file names
+  # input: raw assessments data from MSHA open data platform (Assessed Violations): http://arlweb.msha.gov/OpenGovernmentData/OGIMSHA.asp
+open_data_assessments = read.table("X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA/open_data/AssessedViolations.txt", header = T, sep = "|")
+  # input: cleaned mine-types key produced in produced in 1_clean_mines.R
+mine_types = readRDS("X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/mine_types.rds")
+
+######################################################################################################
+
 # THIS CODE IS RETIRED.
 #early_assessments = read.csv("X:/Projects/Mining/NIOSH/analysis/data/1_converted/MSHA/assessments_fromText.csv")
 #early_assessments[, "dup"] = duplicated(early_assessments) #Checks out with total number of duplicates implied by STATA's "duplicates" command
@@ -18,9 +26,6 @@
 #names(early_assessments)[names(early_assessments) == "Ã.Ã.violationno"] = "violationno"
 
 ######################################################################################################
-
-open_data_assessments = read.table("X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA/open_data/AssessedViolations.txt", header = T, sep = "|")
-mine_types = readRDS("X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/mine_types.rds")
 
 # Rename variables (we did this originally so var names would be consistent with our existing data pull - this is mostly cosmetic)
 names(open_data_assessments)[names(open_data_assessments) == "VIOLATION_NO"] = "violationno"
