@@ -8,7 +8,6 @@
   # Merges mines and employment/production data on mineid, year, and quarter
   # Collapse data to the mine-quarter level
 
-
 # Last edit 7/20/16
 
 # THIS FILE BRINGS IN AND CLEANS UP EMPLOYMENT/PRODUCTION DATA, TO BE MERGED ONTO FINAL VIOLATIONS/ACCIDENTS/MINES DATASET.
@@ -242,21 +241,19 @@ mines_quarters$final_employment_qtr = ifelse(mines_quarters$under_avg_employee_c
                                                !is.na(mines_quarters$under_avg_employee_cnt_qtr) &
                                                is.na(mines_quarters$avg_employee_cnt_qtr), mines_quarters$under_avg_employee_cnt_qtr, mines_quarters$final_employment_qtr)
 
-# if no quarterly data is available, use annual average employment
+  # if no quarterly data is available, use annual average employment
 mines_quarters$final_employment_qtr = ifelse(mines_quarters$avg_employee_cnt_yr != 0 & 
                                              is.na(mines_quarters$final_employment_qtr) &
                                              !is.na(mines_quarters$avg_employee_cnt_yr), mines_quarters$avg_employee_cnt_yr, mines_quarters$final_employment_qtr)
 
-# last resort: use # of employees from the mines dataset (this is # employees as of minestatus date (not relevant to quarters))
+  # last resort: use # of employees from the mines dataset (this is # employees as of minestatus date (not relevant to quarters))
 mines_quarters$final_employment_qtr = ifelse(is.na(mines_quarters$final_employment_qtr), mines_quarters$numberofemployees, mines_quarters$final_employment_qtr)
 
-
-######################################################################################################
-
-# QUARTERLY COAL PRODUCTION
-# get rid of other prod vars - coal_prod_qtr is definitely the most reliable (spot-checked against MSHA mine retrieval system)
+# drop production variables that are not quarterly coal production
+  # coal_prod_qtr is most reliable (spot-checked against MSHA mine retrieval system)
 mines_quarters = mines_quarters[, c(-match("coal_prod_yr", names(mines_quarters)), 
                                     -match("under_coal_prod_qtr", names(mines_quarters)))]
+
 
 ######################################################################################################
 
