@@ -1,10 +1,13 @@
 # NIOSH Project 2014-N-15776
 
 # 12 - Prediction Model
-    # This file performs the model selection stage for our prediction data from prepared_violations_mines.R 
-    # and runs some preliminary models
+    # Imports prediction data produced in prepare_violations_mines.R 
+    # Produces lagged dependent and independent variables 
+    # Saves a Stata-friendly prediction-ready dataset
+    # Performs various model selection methods (Principle Components Analysis, LASSO, Random Forest) 
+    # Performs various frequentist prediction models (OLS, Logit, Poisson)
 
-# Last edit 7/20/16
+# Last edit 7/21/16
 
 ######################################################################################################
 
@@ -22,8 +25,9 @@ library(data.table)
 
 # define file names
   # input: prediction data produced in 11_prepare_violations.R
-prediction_data.file.name = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75.rds"
-# prediction_data.file.name = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data.rds"
+prediction_data.in.file.name = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75.rds"
+  # output: Stata-friendly prediction-ready datatset
+prediction_data.out.file.name = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75.csv"
 
 ######################################################################################################
 
@@ -168,8 +172,8 @@ prediction_data = as.data.frame(prediction_data)
 
 # CREATE COMPOUND LAGGED VARS
 
-# Create compound lagged vars: in this formulation, order 6 will be the sum of all violations (or other lagged var) over the last 6 quarters
-# instead of simply the value of that var 6 quarters ago.
+# Create compound lagged vars: in this formulation, order 6 will be the sum of all violations (or other lagged var) over 
+# the last 6 quarters, instead of simply the value of that var 6 quarters ago.
 prediction_data$sum_75_1_2 = rowSums(prediction_data[,c("75_l1", "75_l2")])
 prediction_data$sum_75_1_3 = rowSums(prediction_data[,c("75_l1", "75_l2", "75_l3")])
 prediction_data$sum_75_1_4 = rowSums(prediction_data[,c("75_l1", "75_l2", "75_l3", "75_l4")])
@@ -213,8 +217,9 @@ apply(is.na(prediction_data),2,sum)
 # HEY NIKHIL, WHAT DOES THIS DO? - SARAH
 
 # Run variable selection over CFR subsection codes
-# "terminated" is a count of all citations that have been terminated by MSHA for a mine. This reflects a mine's past citations but also its ability to
-# improve its safety conditions. We may form terminated/total_violations by mine-qtr in the future but will remain agnostic as of now.
+# "terminated" is a count of all citations that have been terminated by MSHA for a mine. This reflects a mine's past citations 
+# but also its ability to improve its safety conditions. We may form terminated/total_violations by mine-qtr in the future but 
+# will remain agnostic as of now.
 mine_faults = c("total_violations", "contractor_repeated_viol_cnt", "operator_repeated_viol_pInspDay", "terminated")
 inspec_exp = c("insp_hours_per_qtr", "onsite_insp_hours_per_qtr", "num_insp")
 inj_exp = c("productionshiftsperday", "coal_prod_qtr", "employment_qtr", "hours_qtr", "minesizepoints")
@@ -231,7 +236,7 @@ varnames = gsub("\\.", "_", varnames)
 varnames = gsub("-", "_", varnames)
 varnames = paste("_", varnames, sep ="")
 names(prediction_data) = varnames
-write.csv(prediction_data, "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75.csv")
+write.csv(prediction_data, prediction_data.out.file.name)
 
 ######################################################################################################################################
 
@@ -245,8 +250,9 @@ pca_mine_faults = PCA(prediction_data[,unlist(lapply(mine_faults, FUN = function
 pca_mine_penpoints = PCA(prediction_data[,unlist(lapply(mine_penpoints, FUN = function(x) match(x, names(prediction_data))))], graph = F)
 
 # Analyze PCA results
-# Now use pca_results$var$contrib[,j] j = 1, 2, ..., K to access the jth principal component for the ith CFR part code. Take absolute values before analyzing.
-# Use plot.PCA(pca_results, choix = "var"/"ind") to view correlation circle plot/individual factor map and summary.PCA(pca_results) for Kaiser-Guttman test.
+# Now use pca_results$var$contrib[,j] j = 1, 2, ..., K to access the jth principal component for the ith CFR part code. 
+# Take absolute values before analyzing. Use plot.PCA(pca_results, choix = "var"/"ind") to view correlation circle 
+# plot/individual factor map and summary.PCA(pca_results) for Kaiser-Guttman test.
 # UNDER CONSTRUCTION - Tool for extracting significant variables from PCA analysis - Nikhil
 imp_vars = list()
 a = list()
@@ -267,6 +273,7 @@ lasso_results = glmnet(as.matrix(prediction_data[, grep("^[0-9][0-9]\\.[0-9]+\\.
                        as.vector(prediction_data$MR), family = "gaussian")
 print(lasso_results)
 plot(lasso_results)
+
 # Argument passed to "coef" is the lambda value at which LASSO coefficients are obtained
 lasso_coefs = coef(lasso_results, s = 0.05)[,1]
 survng_vars = names(lasso_coefs)[lasso_coefs > 0]
@@ -368,10 +375,11 @@ test_df = test_pred_naive$model
 
 # TEST FOR SERIAL-CORRELATION
 
-#Breusch-Godfrey test commented out since strong tendency to reject time-independence due to our large N
+# Breusch-Godfrey test commented out since strong tendency to reject time-independence due to our large N
 #test_df = test_df[order(test_df$mineid, test_df$quarter, na.last = T),]
 #bgtest_results = bgtest(formula = MR ~ . -mineid -quarter, order = 1, type = "Chisq", data = test_df)
-#Manually assess degree and order of serial-correlation
+
+# Manually assess degree and order of serial-correlation
 test_df$residuals = test_pred_naive$residuals
 test_df = as.data.table(test_df[order(test_df$mineid, test_df$quarter, na.last = T),])
 test_df[, c("residualsl1", "residualsl2", "residualsl3", "residualsl4") := shift(.SD, 1:4), 
@@ -381,11 +389,16 @@ serialcorr_test = lm(formula = residuals ~ ., data = test_df)
 
 ######################################################################################################################################
 
-# POISSON
+# NEGATIVE BINOMIAL
 
 # Divergent estimates of theta assuming a NegBi(r, p) distribution on MR suggest failure of NB assumptions. 
+test_pred_0 = glm.nb(formula = MR ~ total_violations + insp_hours_per_qtr -mineid -quarter, data = prediction_data)
 # We turn to Poisson regression.
-#test_pred_0 = glm.nb(formula = MR ~ total_violations + insp_hours_per_qtr -mineid -quarter, data = prediction_data)
+
+######################################################################################################################################
+
+# POISSON
+
 test_pred_0 = glm(formula = MR ~ ., family = "poisson", data = prediction_data[1:21965, c(match("MR", names(prediction_data)),
                                                                                           grep("^[0-9][0-9]$", names(prediction_data)),
                                                                                           grep("mine\\.", names(prediction_data)),
@@ -435,11 +448,13 @@ logit_data = logit_data[!is.na(logit_data$`75.sigandsubdesignation_l3`),]
 logit_data = logit_data[!is.na(logit_data$`75_l3`),]
 
 # logit_train_data = logit_data[1:21965,]
-# #Pare away variables with zero variation before model selection and prediction stages
+
+# # Pare away variables with zero variation before model selection and prediction stages
 # var_stats = describe(logit_train_data[1:21965, c(-match("mineid", names(logit_train_data)), -match("quarter", names(logit_train_data)))])
 # nontriv_vars = rownames(var_stats[var_stats$sd > 0,])
 # triv_vars = setdiff(names(train_data), nontriv_vars)
-# #Warning: This excludes all non-numeric variables
+
+# # Warning: This excludes all non-numeric variables
 # logit_train_data = logit_train_data[, nontriv_vars]
 # logit_test_data = logit_data[21965:27456,nontriv_vars]
 
