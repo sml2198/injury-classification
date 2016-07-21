@@ -32,20 +32,24 @@ prediction_data.file.name = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction
 # Read data files
 prediction_data = readRDS(prediction_data.file.name)
 
-# Make categorical variables with numeric levels
+# Replace categorical variables with numeric levels
 prediction_data$year = factor(prediction_data$year)
-prediction_data$minestatus = ifelse(prediction_data$minestatus == "Abandoned", 1, ifelse(prediction_data$minestatus == "Abandoned and Sealed", 2, 
-                                                                                         ifelse(prediction_data$minestatus == "Active", 3, 
-                                                                                                ifelse(prediction_data$minestatus == "Intermittent", 4,
-                                                                                                       ifelse(prediction_data$minestatus == "New Mine", 5,
-                                                                                                              ifelse(prediction_data$minestatus == "NonProducing", 6, 
-                                                                                                                     ifelse(prediction_data$minestatus == "Temporarily Idled", 7, NA)))))))
-prediction_data$idesc = ifelse(prediction_data$idesc == "Hazard", 1, ifelse(prediction_data$idesc == "Ignition or Explosion", 2, 
-                                                                            ifelse(prediction_data$idesc == "Inspect Once Every 10-days", 3, 
-                                                                                   ifelse(prediction_data$idesc == "Inspect Once Every 15-days", 4,
-                                                                                          ifelse(prediction_data$idesc == "Inspect Once Every 5-days", 5,
-                                                                                                 ifelse(prediction_data$idesc == "Never Had 103I Status", 6, 
-                                                                                                        ifelse(prediction_data$idesc == "Removed From 103I Status", 7, NA)))))))
+prediction_data$minestatus = ifelse(prediction_data$minestatus == "Abandoned", 1, 
+    ifelse(prediction_data$minestatus == "Abandoned and Sealed", 2, 
+        ifelse(prediction_data$minestatus == "Active", 3, 
+            ifelse(prediction_data$minestatus == "Intermittent", 4,
+                ifelse(prediction_data$minestatus == "New Mine", 5,
+                    ifelse(prediction_data$minestatus == "NonProducing", 6, 
+                        ifelse(prediction_data$minestatus == "Temporarily Idled", 7, NA)))))))
+                        
+prediction_data$idesc = ifelse(prediction_data$idesc == "Hazard", 1, 
+    ifelse(prediction_data$idesc == "Ignition or Explosion", 2, 
+        ifelse(prediction_data$idesc == "Inspect Once Every 10-days", 3, 
+            ifelse(prediction_data$idesc == "Inspect Once Every 15-days", 4,
+                ifelse(prediction_data$idesc == "Inspect Once Every 5-days", 5,
+                    ifelse(prediction_data$idesc == "Never Had 103I Status", 6, 
+                        ifelse(prediction_data$idesc == "Removed From 103I Status", 7, NA)))))))
+
 # Create mine/quarter specific dummies: function
 datdum <- function(x, data, name){
   data$rv <- rnorm(dim(data)[1],1,1)
@@ -55,7 +59,7 @@ datdum <- function(x, data, name){
   data <- cbind(data,mm)
   return(data)
 }
-# Create mine/quarter specific dummies: apply function and merge
+# Create mine/quarter specific dummies: apply function and merge dummies datasets (then remove them)
 test.data1 <- datdum(x="mineid",data=prediction_data,name="mine")
 test.data1 <- test.data1[, c(grep("^mine\\.", names(test.data1)))]
 test.data2 <- datdum(x="quarter",data=prediction_data,name="quart")
@@ -64,13 +68,14 @@ prediction_data = cbind(prediction_data, test.data1, test.data2)
 rm(test.data1, test.data2)
 
 ######################################################################################################################################
+
 # FILL IN MISSING VALUES OF MINE CHARACTERISTICS BY MINE_ID/QUARTER GROUPS 
 
-# Group and order the data by mind quarter
+# Group and order the data by mine-quarter
 prediction_data = group_by(prediction_data, mineid, quarter)
 prediction_data = prediction_data[order(prediction_data$mineid, prediction_data$quarter, na.last = T),]
 
-# na.locf pipes in first non-missing into missing values by mine-quarter group
+# na.locf pipes the first non-missing value into NA's by mine-quarter group
 prediction_data$minename = na.locf(prediction_data$minename)
 prediction_data$minesizepoints = na.locf(prediction_data$minesizepoints)
 prediction_data$controllersizepoints = na.locf(prediction_data$controllersizepoints)
@@ -81,18 +86,28 @@ prediction_data$coal_prod_qtr = na.locf(prediction_data$coal_prod_qtr)
 prediction_data$productionshiftsperday = na.locf(prediction_data$productionshiftsperday)
 prediction_data$idesc = na.locf(prediction_data$idesc)
 
-# First pipe in zeroes to the missing part-specific variables (if nothing merged on a mine quarter then it should be a zero)
-number_to_zero = prediction_data[, c(grep("^[0-9][0-9]", names(prediction_data)), match("mineid", names(prediction_data)),
-                                  match("quarter", names(prediction_data)), match("terminated", names(prediction_data)),
-                                  match("total_violations", names(prediction_data)), match("contractor_repeated_viol_cnt", names(prediction_data)), 
-                                  match("totalinjuries", names(prediction_data)), match("MR", names(prediction_data)),
-                                  match("insp_hours_per_qtr", names(prediction_data)), match("onsite_insp_hours_per_qtr", names(prediction_data)),
-                                  match("num_insp", names(prediction_data)))]
-# Now remove these from the prediction dataset so we can apply another immputation method to the remaining vars.
-prediction_data = prediction_data[, c(-grep("^[0-9][0-9]", names(prediction_data)), -match("terminated", names(prediction_data)),
-                                      -match("total_violations", names(prediction_data)), -match("contractor_repeated_viol_cnt", names(prediction_data)), 
-                                      -match("totalinjuries", names(prediction_data)), -match("MR", names(prediction_data)),
-                                      -match("insp_hours_per_qtr", names(prediction_data)), -match("onsite_insp_hours_per_qtr", names(prediction_data)),
+# Pipe in zeroes to the missing part-specific variables (if nothing merged on a mine-quarter then it should be a zero)
+number_to_zero = prediction_data[, c(grep("^[0-9][0-9]", names(prediction_data)), 
+                                    match("mineid", names(prediction_data)),
+                                    match("quarter", names(prediction_data)), 
+                                    match("terminated", names(prediction_data)),
+                                    match("total_violations", names(prediction_data)), 
+                                    match("contractor_repeated_viol_cnt", names(prediction_data)), 
+                                    match("totalinjuries", names(prediction_data)), 
+                                    match("MR", names(prediction_data)),
+                                    match("insp_hours_per_qtr", names(prediction_data)), 
+                                    match("onsite_insp_hours_per_qtr", names(prediction_data)),
+                                    match("num_insp", names(prediction_data)))]
+
+# Remove these from the prediction dataset (they'll be merged back in soon once zeroes are inserted)
+prediction_data = prediction_data[, c(-grep("^[0-9][0-9]", names(prediction_data)), 
+                                      -match("terminated", names(prediction_data)),
+                                      -match("total_violations", names(prediction_data)), 
+                                      -match("contractor_repeated_viol_cnt", names(prediction_data)), 
+                                      -match("totalinjuries", names(prediction_data)), 
+                                      -match("MR", names(prediction_data)),
+                                      -match("insp_hours_per_qtr", names(prediction_data)), 
+                                      -match("onsite_insp_hours_per_qtr", names(prediction_data)),
                                       -match("num_insp", names(prediction_data)))]
 
 # Replace missings in the number-to-zero group with zeroes.
@@ -102,7 +117,7 @@ number_to_zero[is.na(number_to_zero)] = 0
 prediction_data = merge(prediction_data, number_to_zero, by = c("mineid", "quarter"), all = T)
 rm(number_to_zero)
 
-# Now replace any missings in other numeric vars by randomly sampling from the distribution
+# Now replace any NA's in remaining numeric vars by randomly sampling from the distribution of the column
 var_classes = sapply(prediction_data[,names(prediction_data)], class)
 num_vars = names(var_classes[c(grep("numeric", var_classes), grep("integer", var_classes))])
 for (i in 1:length(num_vars)) {
@@ -117,23 +132,25 @@ for (i in 1:length(num_vars)) {
 
 # FINAL VARIABLE CLEANING AND PREP
 
-# Add variables for binary and proportional dependent vars, and reshape a few vars of interest
+# Add variables for binary and proportional dependent vars
 prediction_data$MR_indicator = ifelse(prediction_data$MR > 0, 1, 0)
 prediction_data$MR_proportion = prediction_data$MR / prediction_data$totalinjuries
 
 # All violations should be terminated, meaning the issue has been abated by the violator. A violation that has not been terminated is
 # therefore an indication of mine/operator negligence. Rather than include the number of terminations as a variable in our models
-# (which would yield collineairty since the # of terminations closely tracks the # of violations), we create an indicator for mine
+# (which would yield collinearity because the # of terminations closely tracks the # of violations), we create an indicator for mine
 # quarters that have any non-terminated violations.  
 prediction_data$no_terminations = ifelse(prediction_data$terminated < prediction_data$total_violations, 1, 0)
+
 # This var is the number of non-terminated violations in a mine quarter. Probably can't be used due to collinearity, but not sure. 
-prediction_data$num_no_terminations = ifelse(prediction_data$terminated < prediction_data$total_violations, prediction_data$total_violations-prediction_data$terminated, 0)
+prediction_data$num_no_terminations = ifelse(prediction_data$terminated < prediction_data$total_violations, 
+    prediction_data$total_violations-prediction_data$terminated, 0)
 
 #####################################################################################################################################
 
 # CREATE LAGGED VARS
 
-# Create lagged variables of the various orders (currently code exists for 6 orders)
+# Create lagged variables of various orders (currently code exists for 6 orders)
 # Currently we're doing this for part 75 only (the biggest part) and for vars that we believe to be strong predictors, based on model
 # selection. This includes penalty points, sig and sub designation, violation counts, MR counts, and one subsection (just as a test - randomly selected)
 prediction_data = as.data.table(prediction_data[order(prediction_data$mineid, prediction_data$quarter, na.last = T),])
@@ -147,30 +164,9 @@ prediction_data[, c("75.penaltypoints_l1", "75.penaltypoints_l2", "75.penaltypoi
                  by = mineid, .SDcols = c("75.penaltypoints", "75.sigandsubdesignation", "75", "75.1405", "MR", "MR_indicator", "MR_proportion")]
 prediction_data = as.data.frame(prediction_data)
 
-# Pare away variables with zero variation before model selection and prediction stages
-var_stats = describe(prediction_data[, c(-match("mineid", names(prediction_data)), -match("quarter", names(prediction_data)), -match("year", names(prediction_data)),
-                                         -match("minename", names(prediction_data)), -match("minestatusdate", names(prediction_data)), -match("operatorid", names(prediction_data)),
-                                         -match("operatorname", names(prediction_data)), -match("stateabbreviation", names(prediction_data)), -match("idate", names(prediction_data)))])
-nontriv_vars = rownames(var_stats[var_stats$sd > 0,])
-triv_vars = setdiff(names(prediction_data), nontriv_vars)
-
-# Warning: This excludes all non-numeric variables
-prediction_data = prediction_data[, c(nontriv_vars, "mineid", "quarter")]
-
-# Run variable selection over CFR subsection codes
-# "terminated" is a count of all citations that have been terminated by MSHA for a mine. This reflects a mine's past citations but also its ability to
-# improve its safety conditions. We may form terminated/total_violations by mine-qtr in the future but will remain agnostic as of now.
-mine_faults = c("total_violations", "contractor_repeated_viol_cnt", "operator_repeated_viol_pInspDay", "terminated")
-inspec_exp = c("insp_hours_per_qtr", "onsite_insp_hours_per_qtr", "num_insp")
-inj_exp = c("productionshiftsperday", "coal_prod_qtr", "employment_qtr", "hours_qtr", "minesizepoints")
-mine_penpoints = c("contractorsizepoints", "controllersizepoints")
-
-# This line will report number of missings per var - should be zero (except lagged vars which will be missing for first quarter)!
-apply(is.na(prediction_data),2,sum)
-
 ######################################################################################################################################
 
-# SAVE DATA TO RUN IN STATA
+# CREATE COMPOUND LAGGED VARS
 
 # Create compound lagged vars: in this formulation, order 6 will be the sum of all violations (or other lagged var) over the last 6 quarters
 # instead of simply the value of that var 6 quarters ago.
@@ -187,6 +183,47 @@ prediction_data$sum_75.1405_1_4 = rowSums(prediction_data[,c("75.1405_l1", "75.1
 prediction_data$sum_75.1405_1_5 = rowSums(prediction_data[,c("75.1405_l1", "75.1405_l2", "75.1405_l3", "75.1405_l4", "75.1405_l5")])
 prediction_data$sum_75.1405_1_6 = rowSums(prediction_data[,c("75.1405_l1", "75.1405_l2", "75.1405_l3", "75.1405_l4", "75.1405_l5", "75.1405_l6")])
 
+######################################################################################################################################
+
+# PRUNE VARIABLE SET 
+
+# Pare away variables with zero variation before model selection and prediction stages
+var_stats = describe(prediction_data[, c(-match("mineid", names(prediction_data)), 
+                                         -match("quarter", names(prediction_data)), 
+                                         -match("year", names(prediction_data)),
+                                         -match("minename", names(prediction_data)), 
+                                         -match("minestatusdate", names(prediction_data)), 
+                                         -match("operatorid", names(prediction_data)),
+                                         -match("operatorname", names(prediction_data)), 
+                                         -match("stateabbreviation", names(prediction_data)), 
+                                         -match("idate", names(prediction_data)))])
+                                         
+# Variables are nontrivial (worth keeping) if their standard deviation is greater than zero 
+nontriv_vars = rownames(var_stats[var_stats$sd > 0,])
+triv_vars = setdiff(names(prediction_data), nontriv_vars)
+
+# Keeps only nontrivial vars. Warning: This excludes all non-numeric variables
+prediction_data = prediction_data[, c(nontriv_vars, "mineid", "quarter")]
+
+# This line will report number of missings per var - should be zero (except lagged vars which will be missing for first quarter)!
+apply(is.na(prediction_data),2,sum)
+
+######################################################################################################################################
+
+# HEY NIKHIL, WHAT DOES THIS DO? - SARAH
+
+# Run variable selection over CFR subsection codes
+# "terminated" is a count of all citations that have been terminated by MSHA for a mine. This reflects a mine's past citations but also its ability to
+# improve its safety conditions. We may form terminated/total_violations by mine-qtr in the future but will remain agnostic as of now.
+mine_faults = c("total_violations", "contractor_repeated_viol_cnt", "operator_repeated_viol_pInspDay", "terminated")
+inspec_exp = c("insp_hours_per_qtr", "onsite_insp_hours_per_qtr", "num_insp")
+inj_exp = c("productionshiftsperday", "coal_prod_qtr", "employment_qtr", "hours_qtr", "minesizepoints")
+mine_penpoints = c("contractorsizepoints", "controllersizepoints")
+
+######################################################################################################################################
+
+# SAVE DATA TO RUN IN STATA
+
 # This code renames the variables so they are compatible with Stata (cannot begin with a number) and saves a .csv, so we can run all the
 # same analyses in Stata to confirm our results
 varnames = names(prediction_data)
@@ -198,7 +235,7 @@ write.csv(prediction_data, "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-
 
 ######################################################################################################################################
 
-# MODEL SELECTION TECHNIQUES (PCA, LASSO, Random Forest)
+#  APPLY MODEL SELECTION TECHNIQUES (PCA, LASSO, Random Forest)
 
 # Principle Components Analysis (PCA)
 pca_results = PCA(prediction_data[, grep("^[0-9][0-9]\\.[0-9]+\\.penaltypoints", names(prediction_data))], graph = F)
@@ -262,7 +299,9 @@ sort(rf_results$importance[,1], decreasing = T)
 # WARNING: Fails to converge with these initial values
 N = nrow(prediction_data)
 K = ncol(prediction_data) - 3
-X = as.matrix(prediction_data[, c(-grep("MR", names(prediction_data)), -grep("mineid", names(prediction_data)), -grep("quarter", names(prediction_data)))])
+X = as.matrix(prediction_data[, c(-grep("MR", names(prediction_data)), 
+                                  -grep("mineid", names(prediction_data)), 
+                                  -grep("quarter", names(prediction_data)))])
 Y = as.vector(prediction_data$MR)
 
 # Training/Test Set Creation
@@ -344,7 +383,8 @@ serialcorr_test = lm(formula = residuals ~ ., data = test_df)
 
 # POISSON
 
-#Divergent estimates of theta assuming a NegBi(r, p) distribution on MR suggest failure of NB assumptions. We turn to Poisson regression
+# Divergent estimates of theta assuming a NegBi(r, p) distribution on MR suggest failure of NB assumptions. 
+# We turn to Poisson regression.
 #test_pred_0 = glm.nb(formula = MR ~ total_violations + insp_hours_per_qtr -mineid -quarter, data = prediction_data)
 test_pred_0 = glm(formula = MR ~ ., family = "poisson", data = prediction_data[1:21965, c(match("MR", names(prediction_data)),
                                                                                           grep("^[0-9][0-9]$", names(prediction_data)),
