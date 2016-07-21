@@ -22,12 +22,15 @@ library(data.table)
 
 # define file names
   # input: prediction data produced in 11_prepare_violations.R
-prediction_data = readRDS("X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75.rds")
-#prediction_data = readRDS("X:/Projects/Mining/NIOSH/analysis/data/4_collapsed/prediction_data.rds")
+prediction_data.file.name = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75.rds"
+# prediction_data.file.name = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data.rds"
 
 ######################################################################################################
 
 # FINAL VARIABLE CLEANING AND PREP
+
+# Read data files
+prediction_data = readRDS(prediction_data.file.name)
 
 # Make categorical variables with numeric levels
 prediction_data$year = factor(prediction_data$year)
