@@ -1,7 +1,8 @@
 # NIOSH Project 2014-N-15776
 
 # 10 - Prepare CFR Key
-    # This file marks all subsection codes as either relevent or maybe relevant to each subtype.
+    # Marks all subsection codes as either relevent or maybe relevant to each subtype
+    # Saves a CFR key to be merged onto violations data in 11_prepare_violations.R
 
 # Last edit 7/19/16
 
