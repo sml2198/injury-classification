@@ -1,9 +1,13 @@
 # NIOSH Project 2014-N-15776
 
 # 11 - Prepare Violations
-    # This file merges our merged violations data from "merge_violations_mines.R" with our prepared CFR 
-    # subsection codes from "prepare_cfr_key.R", accidents data, and employment/production data. We then 
-    # collapse the merged data to the mine-quarter level for use in the prediction stage and run some candidate models.
+    # Loads merged violations data from "9_merge_violations.R" 
+    # Merges violations with prepared CFR subsection codes from "prepare_cfr_key.R", 
+    # Creates subsection specific variables and lagged variables
+    # Collapses violations to the mine-quarter level
+    # Loads inspections data from "8_clean_inspections.R" and collapses to the mine-quarter
+    # Loads accidents data from 5_analyze_MR_R.R and collapses to the mine-quarter level
+    # Merges mine-quarter level violations with inspections and accidents
 
 # Last edit 7/20/16
 
