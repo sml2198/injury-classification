@@ -1,10 +1,15 @@
 # NIOSH Project 2014-N-15776
 
 # 8 - Clean Inspections
-    # This file cleans the inspections data we downloaded from MSHA's open data portal. The portions commented out 
-    # are to load and clean data from Carolyn Stasik's (MSHA) data pull from May 20th, 2015. 
+    # Bring in and clean up variables from MSHA open inspections data 
+    # Drop observations from the wrong environment
+    # Merge on inspections hours data
+    # Check merge and save
 
 # Last edit 7/19/16
+
+# This file cleans the inspections data we downloaded from MSHA's open data portal. The portions commented out 
+# are to load and clean data from Carolyn Stasik's (MSHA) data pull from May 20th, 2015. 
 
 ######################################################################################################
 
@@ -20,6 +25,8 @@ early_inspecs_hours.file.name = "X:/Projects/Mining/NIOSH/analysis/data/1_conver
 mine.types.file.name = "X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_mines_accidents.rds"
 
 ######################################################################################################
+
+# CLEAN UP VARS
 
 # Read data files
 open_data_inspecs = read.table(open_data_inspecs.in.file.name, header = T, sep = "|")
@@ -94,6 +101,8 @@ rm(open_data_inspecs)
 
 ######################################################################################################
 
+# DROP OBSERVATIONS FROM THE WRONG ENVIRONMENT
+
 # Format mineid and eventno as 7 digit numbers padded with zeroes
 clean_inspecs$mineid = str_pad(clean_inspecs$mineid, 7, pad = "0")
 clean_inspecs$mineid = withr::with_options(c(scipen = 999), str_pad(clean_inspecs$mineid, 7, pad = "0"))
@@ -108,6 +117,7 @@ clean_inspecs = clean_inspecs[!is.na(clean_inspecs$eventno),]
 ######################################################################################################
 
 # THIS CODE IS RETIRED.
+
 #clean_inspecs = merge(open_data_inspecs, early_inspecs, by = "eventno", all = T)
 #clean_inspecs[, "merge"] = ifelse(!is.na(clean_inspecs$beginningdate.y) & !is.na(clean_inspecs$beginningdate.x), 3, 0)
 #clean_inspecs[, "merge"] = ifelse(is.na(clean_inspecs$beginningdate.x) & !is.na(clean_inspecs$beginningdate.y), 2, clean_inspecs[, "merge"])
@@ -124,6 +134,8 @@ clean_inspecs = clean_inspecs[!is.na(clean_inspecs$eventno),]
 #names(clean_inspecs)[grep(".x", names(clean_inspecs), fixed = T)] = common_varstbs
 
 ######################################################################################################
+
+# MERGE ON HOURS DATA
 
 # Format mineid and eventno from the hours data, clean up other hours vars
 early_inspecs_hours$mineid = str_pad(early_inspecs_hours$mineid, 7, pad = "0")
@@ -147,6 +159,7 @@ clean_inspecs = clean_inspecs[!is.na(clean_inspecs$mergecheck.hrs) & !is.na(clea
 ######################################################################################################
 
 # THIS CODE IS RETIRED.
+
 # code from before we merged on mineid AND eventno
 #clean_inspecs[, "mergehrs"] = ifelse(!is.na(clean_inspecs$mineid.y) & !is.na(clean_inspecs$mineid.x), 3, 0)
 #clean_inspecs[, "mergehrs"] = ifelse(is.na(clean_inspecs$mineid.x) & !is.na(clean_inspecs$mineid.y), 2, clean_inspecs[, "mergehrs"])
@@ -173,6 +186,8 @@ clean_inspecs = clean_inspecs[!is.na(clean_inspecs$mergecheck.hrs) & !is.na(clea
 # names(clean_inspecs)[grep(".x", names(clean_inspecs), fixed = T)] = common_varstbs
 
 ######################################################################################################
+
+# FINAL CHECK AND SAVE 
 
 # Check for conflicts in the inspections merge
 insp_conflcts = sum(!is.na(clean_inspecs[, "sumtotal_insp_hours.x"]) & (clean_inspecs[, "sumtotal_insp_hours.x"] != clean_inspecs[, "sumtotal_insp_hours.y"])) #There are 6 of these
