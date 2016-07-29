@@ -1,6 +1,6 @@
 # NIOSH Project 2014-N-15776
 
-# 12 - Prediction Model
+# 13 - Prediction Model
     # Imports prediction data produced in prepare_violations_mines.R 
     # Produces lagged dependent and independent variables 
     # Saves a Stata-friendly prediction-ready dataset
