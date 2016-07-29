@@ -25,17 +25,17 @@ mine.types.file.name = "X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_m
 mine_types = readRDS(mine.types.file.name)
 mines_accidents_coded = read.csv(mines_accidents_coded.in.file.name)
 
-# Format mineid (for merges), date and quarter vars for merges
+# Format mineid by padding it with zeroes to make it 7 digits, so we have a clean merge
 mines_accidents_coded$mineid = str_pad(mines_accidents_coded$mineid, 7, pad = "0")
-
-# Format mineid and pad it with zeroes to make it 7 digits, so we have a clean merge
 mines_accidents_coded$mineid = withr::with_options(c(scipen = 999), str_pad(mines_accidents_coded$mineid, 7, pad = "0"))
+
+# Format date vars
 mines_accidents_coded$accidentdate = as.Date(as.character(mines_accidents_coded$accidentdate), "%m/%d/%Y")
 mines_accidents_coded$quarter = as.yearqtr(mines_accidents_coded$accidentdate)
 
 ######################################################################################################################################
 
-# READ MINE TYPE DATA, MERGE ONTO ACCIDENTS, DROP OBSERVATIONS NOT RELEVANT TO THE STUDY ENVIRONMENT
+# READ MINE-TYPES DATA, MERGE ONTO ACCIDENTS, DROP OBSERVATIONS NOT RELEVANT TO THE STUDY ENVIRONMENT
 
 # Drop observations before our study period
 mines_accidents_coded = mines_accidents_coded[(mines_accidents_coded$quarter > "1999 Q4"),]
@@ -54,7 +54,7 @@ mines_accidents_coded = mines_accidents_coded[mines_accidents_coded$coalcormetal
 
 ######################################################################################################################################
 
-# COLLAPSE TO THE MINE-QUARTER LEVEL, THEN OUTPOUT
+# COLLAPSE TO THE MINE-QUARTER LEVEL, THEN OUTPUT
 
 # Create injury indicator so that we can collapse & sum total injuries per mine quarter
 mines_accidents_coded$totalinjuries = 1
