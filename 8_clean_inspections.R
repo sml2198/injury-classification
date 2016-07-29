@@ -6,7 +6,7 @@
     # Merge on inspections hours data
     # Check merge and save
 
-# Last edit 7/19/16
+# Last edit 7/29/16
 
 # This file cleans the inspections data we downloaded from MSHA's open data portal. The portions commented out 
 # are to load and clean data from Carolyn Stasik's (MSHA) data pull from May 20th, 2015. 
@@ -17,12 +17,12 @@
   # input: raw inspections data from MSHA open data platform (Inspections): http://arlweb.msha.gov/OpenGovernmentData/OGIMSHA.asp
   # downloaded on 4/20/2016 @ 4:35 PM
 open_data_inspecs.in.file.name = "X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA/open_data/Inspections.txt"
-  # output: cleaned inspections data, uniquely identified by mineid *eventno
-open_data_inspecs.out.file.name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_Inspections.rds"
 # input: converted inspection hours file from MSHA data download on 5/15/2015 @ 4:17 PM
 early_inspecs_hours.file.name = "X:/Projects/Mining/NIOSH/analysis/data/1_converted/MSHA/inspection_hours_fromText.csv"
-  # input: cleaned mine-types key produced in produced in 1_clean_mines.R
+  # input: cleaned mine type data
 mine.types.file.name = "X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_mines_accidents.rds"
+  # output: cleaned inspections data, uniquely identified by mineid *eventno
+open_data_inspecs.out.file.name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_Inspections.rds"
 
 ######################################################################################################
 
