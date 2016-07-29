@@ -1,9 +1,7 @@
 # NIOSH Project 2014-N-15776
 
 # 3 - Merge Accidents and Mines Data
-  # Reads cleaned mines and accidents data
-  # Merges mines and accidents data on mineid
-  # Outputs clean and merged mines and accidents data
+  # Reads, merges, then outputs cleaned mines and accidents data
 
 # Last edit 7/19/16
 
