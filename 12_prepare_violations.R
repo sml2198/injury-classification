@@ -6,7 +6,7 @@
     # Creates subsection specific variables and lagged variables
     # Collapses violations to the mine-quarter level
     # Loads inspections data from "8_clean_inspections.R" and collapses to the mine-quarter
-    # Loads accidents data from 5_analyze_MR_R.R and collapses to the mine-quarter level
+    # Loads accidents data from 6_collapse_accidents 
     # Merges mine-quarter level violations with inspections and accidents
 
 # Last edit 7/29/16
@@ -21,11 +21,11 @@ library(withr)
 library(psych)
 
 # define file names
-  # input: merged violations data produced in 9_merge_violations.R
+  # input: merged violations data produced in 11_merge_violations.R
 merged_violations.in.file.name = "X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_violations.rds"
-  # input: merged cfr key data produced in 10_prepare_cfr_key.R
+  # input: merged cfr key data produced in 10_clean_cfr_key.R
 merged_cfr_key.file.name = "X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_cfr_key.rds"
-  # input: collapsed coded accidents data (contains MR indicator - no PS indicator yet) produced in 5_analyze_MR.R
+  # input: collapsed coded accidents data (contains MR indicator - no PS indicator yet) produced in 6_collapse_accidents.R
 mines_accidents_coded.file.name = "X:/Projects/Mining/NIOSH/analysis/data/4_collapsed/collapsed_accidents.rds"
   # input: cleaned mine-quarters as produced in 1_clean_mines.R
 mines_quarters.file.name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_mines.rds"
