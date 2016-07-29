@@ -6,7 +6,7 @@
     # Creates subsection specific variables and lagged variables
     # Collapses violations to the mine-quarter level
     # Loads inspections data from "8_clean_inspections.R" and collapses to the mine-quarter
-    # Loads accidents data from 6_collapse_accidents 
+    # Loads accidents data from "6_collapse_accidents.R"
     # Merges mine-quarter level violations with inspections and accidents
 
 # Last edit 7/29/16
@@ -190,7 +190,7 @@ table(merged_violations$negligence)
 
 # FINISH DUMMYING-OUT CATEGORICAL VARIABLES 
 
-# This is the function that will dummy out the categorical vars.
+# This is the function that will dummy out the categorical variables
 datdum <- function(x, data, name){
   data$rv <- rnorm(dim(data)[1],1,1)
   mm <- data.frame(model.matrix(lm(data$rv~-1+factor(data[,x]))))
@@ -200,7 +200,7 @@ datdum <- function(x, data, name){
   return(data)
 }
 
-# Apply the dummy function to each cat var
+# Apply the dummy function to each categorical variable
 test.data1 <- datdum(x="inspacty",data=merged_violations,name="inspacty")
 test.data1 <- test.data1 [, c(grep("inspacty", names(test.data1)))]
 test.data2 <- datdum(x="assessmenttypecode",data=merged_violations,name="assessmenttypecode")
@@ -405,12 +405,14 @@ rm(MR_relevant_subsectcodes, MR_relevant_subsectcodes_47, MR_relevant_subsectcod
 
 # COLLAPSE VIOLATIONS DATA TO THE MINE-QUARTER LEVEL
 
-# Aggregation to mine-quarter level - create variables to sum for violation counts, and for if terminated (all violations should be terminated)
+# Aggregation to mine-quarter level - create variables to sum for violation counts, and for if terminated 
+# (all violations should be terminated)
 merged_violations$total_violations = 1
 merged_violations$terminated = ifelse(merged_violations$typeoftermination == "Terminated", 1, 0)
 
 # Select all variables to sum when we collapse to the mine-quarter lever (the first regex will grab all vars created above)
-# Add indicator for if a mine q was terminated because of a violation (sum this for now - maybe we'll just make it an indicator later)
+# Add indicator for if a mine-quarter was terminated because of a violation 
+# (and let's sum this for now - maybe we'll just make it an indicator later)
 violations_to_sum = merged_violations[, c(grep("^[0-9][0-9]", names(merged_violations)), 
                                           match("total_violations", names(merged_violations)),
                                           match("excessive_history_ind", names(merged_violations)), 
@@ -420,7 +422,8 @@ violations_to_sum = merged_violations[, c(grep("^[0-9][0-9]", names(merged_viola
                                           match("quarter", names(merged_violations)))]
 
 # These were grabbed by the regular expression above, but we want to average (not sum) these, so we remove them  
-violations_to_sum = violations_to_sum[, c(-grep("operator_repeated_viol_pInspDay", names(violations_to_sum)), -grep("contractor_repeated_viol_cnt", names(violations_to_sum)))]
+violations_to_sum = violations_to_sum[, c(-grep("operator_repeated_viol_pInspDay", names(violations_to_sum)), 
+                                          -grep("contractor_repeated_viol_cnt", names(violations_to_sum)))]
 
 # Collapse the variables that we need to sum.
 summed_violations = ddply(violations_to_sum, c("mineid", "quarter"), function(x) colSums(x[, c(grep("^[0-9][0-9]", names(x)), 
