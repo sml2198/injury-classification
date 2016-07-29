@@ -14,13 +14,13 @@
 
 # define file names
   # input: open source inspections data
-open_data_inspecs.in.file.name = "X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA/open_data/Inspections.txt"
+open_data_inspecs_in_file_name = "X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA/open_data/Inspections.txt"
   # input: open source inspection hours data
-early_inspecs_hours.file.name = "X:/Projects/Mining/NIOSH/analysis/data/1_converted/MSHA/inspection_hours_fromText.csv"
+early_inspecs_hours_file_name = "X:/Projects/Mining/NIOSH/analysis/data/1_converted/MSHA/inspection_hours_fromText.csv"
   # input: clean mine type data
-mine.types.file.name = "X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_mines_accidents.rds"
+mine_types_file_name = "X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_mines_accidents.rds"
   # output: clean and merged inspections data, uniquely identified by mineid *eventno
-open_data_inspecs.out.file.name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_Inspections.rds"
+open_data_inspecs_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_Inspections.rds"
 
 ######################################################################################################
 
@@ -28,7 +28,7 @@ open_data_inspecs.out.file.name = "X:/Projects/Mining/NIOSH/analysis/data/2_clea
 
 # read open source inspections data
   # dataset downloaded on 4/20/16 from http://arlweb.msha.gov/OpenGovernmentData/OGIMSHA.asp [Inspections]
-open_data_inspecs = read.table(open_data_inspecs.in.file.name, header = T, sep = "|")
+open_data_inspecs = read.table(open_data_inspecs_in_file_name, header = T, sep = "|")
 
 # rename variables
 names(open_data_inspecs)[names(open_data_inspecs) == "EVENT_NO"] = "eventno"
@@ -99,7 +99,7 @@ clean_inspecs = clean_inspecs[clean_inspecs$coal_metal_ind != "M", ]
 # READ CLEAN MINE TYPE DATA, MERGE WITH OPEN SOURCE INSPECTIONS DATA, THEN CLEAN RESULTING DATA
 
 # read clean mine type data
-mine_types = readRDS(mine.types.file.name)
+mine_types = readRDS(mine_types_file_name)
 
 # merge open source inspections data with mine type data to drop non-coal and non-underground observations
 clean_inspecs = merge(clean_inspecs, mine_types, by = c("mineid"), all = T)
@@ -118,7 +118,7 @@ clean_inspecs = clean_inspecs[!is.na(clean_inspecs$mergecheck.hrs) & !is.na(clea
 
 # read open source inspection hours data
   # dataset downloaded on 5/15/15 from http://arlweb.msha.gov/OpenGovernmentData/OGIMSHA.asp [Inspections]
-early_inspecs_hours = read.csv(early_inspecs_hours.file.name)
+early_inspecs_hours = read.csv(early_inspecs_hours_file_name)
 
 # rename variables
 names(early_inspecs_hours)[names(early_inspecs_hours) == "sumtotalminingareatime"] = "sumtotal_on_site_hours"
@@ -163,7 +163,7 @@ clean_inspecs = clean_inspecs[!(((!is.na(clean_inspecs$controllerid) & clean_ins
                               c(-grep("coal_metal_ind", names(clean_inspecs)), -grep("merge", names(clean_inspecs)))]
 
 # output merged and clean inspections data
-saveRDS(clean_inspecs, file = open_data_inspecs.out.file.name)
+saveRDS(clean_inspecs, file = open_data_inspecs_out_file_name)
 
 ######################################################################################################
 
