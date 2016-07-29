@@ -64,7 +64,7 @@ open_data_viols[, "dup"] = duplicated(open_data_viols$violationno)
 table(open_data_viols$dup) # same duplicates as in the STATA version of the code
 open_data_viols = open_data_viols[open_data_viols$dup == F, ]
 
-# drop data from  environments not of interest
+# drop data from environments not of interest
   # facility means a mill/processing location, always above ground, according to April Ramirez @ DOL on 6/6/16
 open_data_viols = open_data_viols[open_data_viols$coalcormetalm == "C", ]
 open_data_viols = open_data_viols[!is.na(open_data_viols$coalcormetalm), ]
