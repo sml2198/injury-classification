@@ -2,7 +2,7 @@
 
 # 10 - Clean CFR Key
     # Marks all subsection codes as either relevent or maybe relevant to each subtype
-    # Saves a CFR key to be merged onto violations data in 11_prepare_violations.R
+    # Saves a CFR key to be merged onto violations data in 12_prepare_violations.R
 
 # Last edit 7/29/16
 
