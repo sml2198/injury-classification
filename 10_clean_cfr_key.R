@@ -4,7 +4,7 @@
     # Marks all subsection codes as either relevent or maybe relevant to each subtype
     # Saves a CFR key to be merged onto violations data in 11_prepare_violations.R
 
-# Last edit 7/19/16
+# Last edit 7/29/16
 
 # In this file we code all violations as either "relevant" or "maybe relevant" to the cause of
 # pinning and striking (PS) and maintenance and repair (MR) injuries, respectively. Violation

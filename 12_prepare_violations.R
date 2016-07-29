@@ -9,7 +9,7 @@
     # Loads accidents data from 5_analyze_MR_R.R and collapses to the mine-quarter level
     # Merges mine-quarter level violations with inspections and accidents
 
-# Last edit 7/20/16
+# Last edit 7/29/16
 
 ######################################################################################################
 
