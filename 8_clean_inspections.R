@@ -1,36 +1,40 @@
 # NIOSH Project 2014-N-15776
 
 # 8 - Clean Inspections
-    # Bring in and clean up variables from MSHA open inspections data 
-    # Drop observations from the wrong environment
-    # Merge on inspections hours data
-    # Check merge and save
+  # Reads and cleans open source inspections data
+  # Reads and cleans open source inspection hours data
+  # Reads clean mine type data
+  # Merges and cleans open source inspections data,open source inspection hours, and mine type data
+  # Outputs clean inspections data
 
 # Last edit 7/29/16
 
-# This file cleans the inspections data we downloaded from MSHA's open data portal. The portions commented out 
-# are to load and clean data from Carolyn Stasik's (MSHA) data pull from May 20th, 2015. 
+# Retired code loads and cleans data from Carolyn Stasik's (MSHA) data pull from May 20th, 2015 
 
 ######################################################################################################
 
 # define file names
-  # input: raw inspections data from MSHA open data platform (Inspections): http://arlweb.msha.gov/OpenGovernmentData/OGIMSHA.asp
-  # downloaded on 4/20/2016 @ 4:35 PM
+  # input: open source inspections data
 open_data_inspecs.in.file.name = "X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA/open_data/Inspections.txt"
-# input: converted inspection hours file from MSHA data download on 5/15/2015 @ 4:17 PM
+  # input: open source inspection hours data
 early_inspecs_hours.file.name = "X:/Projects/Mining/NIOSH/analysis/data/1_converted/MSHA/inspection_hours_fromText.csv"
-  # input: cleaned mine type data
+  # input: clean mine type data
 mine.types.file.name = "X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_mines_accidents.rds"
-  # output: cleaned inspections data, uniquely identified by mineid *eventno
+  # output: clean and merged inspections data, uniquely identified by mineid *eventno
 open_data_inspecs.out.file.name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_Inspections.rds"
 
 ######################################################################################################
 
-# CLEAN UP VARS
+# READ AND CLEAN 
 
-# Read data files
+# read open source inspection data
+  # dataset downloaded on 4/20/16 from http://arlweb.msha.gov/OpenGovernmentData/OGIMSHA.asp [Inspections]
 open_data_inspecs = read.table(open_data_inspecs.in.file.name, header = T, sep = "|")
+
+
 early_inspecs_hours.file.name = read.csv(early_inspecs_hours.file.name)
+# input: converted inspection hours file from MSHA data download on 5/15/2015 @ 4:17 PM
+
 mine_types = readRDS(mine.types.file.name)
 
 # Rename variables (we did this originally so var names would be consistent with our existing data pull - this is mostly cosmetic)
