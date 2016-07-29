@@ -70,27 +70,28 @@ if (data.type == "real accidents data") {
 }
 
 ######################################################################################################
+
 # MAKE SURE TRAINING SET AND FATALITIES DATASETS HAVE ALL THE SAME VAR NAMES BEFORE APPENDING - IF USING TRAINING DATA
 
 mr.data$MR = as.factor(mr.data$M.R.)
 mr.data = mr.data[, c(-match("M.R.", names(mr.data)))]
 mr.data[, "death"] = ifelse(grepl("fatality", mr.data[,"degreeofinjury"]), 1, 0)
     
-# CLEAN UP FATALITIES VARIABLES - DROP VARIABLES NOT PRESENT IN TRAINING SET BEFORE APPENDING
+# Clean up fatalities variables - drop variables not present in training set before appending
 mr.fatalities$MR = as.factor(mr.fatalities$MR_fatality)
 mr.fatalities = mr.fatalities[, c(-grep("MR_fatality", names(mr.fatalities)), -grep("v56", names(mr.fatalities)),
                                       -grep("v57", names(mr.fatalities)), -grep("v58", names(mr.fatalities)), 
                                       -grep("v59", names(mr.fatalities)))]
     
-# THESE FOUR FATALGRAMS ARE CONSIDERED M&R AND WERE INCLUDED IN A STUDY BY JOHN H. FROM NIOSH AS M&R. 
-# HOWEVER, IT'S REALLY ONLY EVIDENT FROM THE FATALGRAMS (SEE OPEN DATA FOLDER) THAT THESE WERE SUSTAINED
-# DURING LARGER GROUP M&R ACTIVITIES. NOTHING FROM THE NARRATIVE FIELD/OCCUPATION INDICATES THAT M&R WAS THE
-# ACTIVITY AT THE TIME. ESSENTIALLY, TRAINING ON THESE OBSERVATIONS WILL STACK THE DECK AGAINST US.
-# LET'S DELETE THEM FOR NOW.
+# These four fatalgrams are considered m&r and were included in a study by John H. from NIOSH as M&R. 
+# However, it's really only evident from the fatalgrams (see open data folder) that these were sustained
+# during larger group m&r activities. Nothing from the narrative field/occupation indicates that M&R was the
+# activity at the time. Essentially, training on these observations will stack the deck against us.
+# Let's delete them for now.
 mr.fatalities = mr.fatalities[!(mr.fatalities$documentno=="220030290001") & !(mr.fatalities$documentno=="220030290002") &
                                   !(mr.fatalities$documentno=="220030290003") & !(mr.fatalities$documentno=="220030130149"),]
     
-# CLEAN NARRATIVE FIELDS: DROP REDUNDANT VARS AND KEEP LOWERCASE VERSION
+# Clean narrative fields: drop redundant vars and keep lowercase version
 drops <- c("narrativemodified", "degreeofinjury", "accidentclassification", "accidenttype", "natureofinjury", "mineractivity")
 mr.data = mr.data[, !(names(mr.data) %in% drops)]
 names(mr.data)[names(mr.data) == 'narrativemodified.1'] = 'narrative'
@@ -113,10 +114,10 @@ mr.data$equipmanufacturer = tolower(mr.data$equipmanufacturer)
 mr.data$immediatenotificationclass = tolower(mr.data$immediatenotificationclass)
 mr.data$uglocation = tolower(mr.data$uglocation)
     
-# APPEND DATASET OF ADDITIONAL FATALITY OBSERVATIONS FOR TRAINING SET
+# Append dataset of additional fatality observations for training set
 mr.data <- rbind(mr.data, mr.fatalities) 
     
-# MAKE MR A FACTOR VARIABLE
+# make MR a factor variable
 mr.data[, "MR"] = factor(ifelse(mr.data[, "MR"] == 1, "YES", "NO"))
 names(mr.data)[names(mr.data) == "MR"] = "MR"
     
@@ -126,7 +127,9 @@ names(mr.data)[names(mr.data) == "MR"] = "MR"
 mr.data$MR[mr.data$documentno=="219932950056"] = "NO"
 
 ######################################################################################################
+
 # DO THIS CODE IF YOU'RE RUNNING ON THE REAL ACCIDENTS DATA (NOT THE TRAINING SET)
+
 if (data.type == "real accidents data") {
     # FIRST MAKE A FLAG FOR TRAINING OBSERVATIONS
     mr.data[, "type"] = "training"  
