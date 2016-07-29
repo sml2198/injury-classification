@@ -1,11 +1,11 @@
 # NIOSH Project 2014-N-15776
 
 # 12 - Prepare Violations
-    # Loads merged violations data from "9_merge_violations.R" 
-    # Merges violations with prepared CFR subsection codes from "prepare_cfr_key.R", 
+    # Loads merged violations data from "11_merge_violations.R" 
+    # Merges violations with prepared CFR subsection codes from "10_clean_cfr_key.R", 
     # Creates subsection specific variables and lagged variables
     # Collapses violations to the mine-quarter level
-    # Loads inspections data from "8_clean_inspections.R" and collapses to the mine-quarter
+    # Loads inspections data from "8_clean_inspections.R" and collapses to the mine-quarter level
     # Loads accidents data from "6_collapse_accidents.R"
     # Merges mine-quarter level violations with inspections and accidents
 
@@ -154,37 +154,6 @@ is.na(merged_violations$negligence) = merged_violations$negligence==""
 levels(merged_violations$injuryillness) = c("Unknown", "HighNegligence", "LowNegligence", "ModNegligence", "NoNegligence", "Reckless")
 merged_violations$negligence = as.character(merged_violations$negligence)
 merged_violations[, "negligence"] = ifelse(is.na(merged_violations$negligence), "Unknown", merged_violations[, "negligence"])
-
-######################################################################################################################################
-
-# Here we've tabbed our categorical vars, so we know which value will become which dummy.
-
-table(merged_violations$inspacty)
-#inspacty.n variables are numbered from left to right over these values
-#103           complaint inspection  fatality inspection        other         regular inspection         unknown 
-#35583                 4519                  732                69825               657741                97816
-
-table(merged_violations$violationtypecode)
-#violationtypecode.n variables are numbered from left to right over these values
-#Citation    Order  Unknown 
-#830340    11155    24717 
-
-table(merged_violations$assessmenttypecode)
-#assessmenttypecode.n variables are numbered from left to right over these values
-#Regular  Single Special Unknown 
-#640735  187678   13082   24717 
-
-table(merged_violations$likelihood)
-#Highly NoLikelihood     Occurred   Reasonably      Unknown     Unlikely 
-#5472        23386         1475       271986        18984       544909 
-
-table(merged_violations$injuryillness)
-#Fatal   LostDays NoLostDays  Permanent    Unknown 
-#57634     584733     120395      84464      18986 
-
-table(merged_violations$negligence)
-#HighNegligence  LowNegligence  ModNegligence   NoNegligence       Reckless        Unknown 
-#36421          97549         711082           1221            959          18980 
 
 ######################################################################################################################################
 
@@ -356,7 +325,7 @@ for (i in 1:length(cfr_codes)) {
     }
 }
 
-# Set this line below to be the subsecion code group you want. Cannot do all at once because of memory issues.
+# Set this line below to be the subsection code group you want. Cannot do all at once because of memory issues.
 cfr_codes = MR_relevant_subsectcodes_75
 
 # This loop creates the subsection-specific variable-specific dummies (which will later be collapsed to the mine-quarter level).
@@ -395,7 +364,7 @@ for (i in 1:length(cfr_codes)) {
     }
 }
 
-# REMOVE THINGS WE WON'T USE AGAIN.
+# Remove things we won't use again.
 rm(MR_relevant_subsectcodes, MR_relevant_subsectcodes_47, MR_relevant_subsectcodes_48,
    MR_relevant_subsectcodes_71, MR_relevant_subsectcodes_72, MR_relevant_subsectcodes_75a,
    MR_relevant_subsectcodes_75b, MR_relevant_subsectcodes_75c, MR_relevant_subsectcodes_75d,
@@ -405,14 +374,11 @@ rm(MR_relevant_subsectcodes, MR_relevant_subsectcodes_47, MR_relevant_subsectcod
 
 # COLLAPSE VIOLATIONS DATA TO THE MINE-QUARTER LEVEL
 
-# Aggregation to mine-quarter level - create variables to sum for violation counts, and for if terminated 
-# (all violations should be terminated)
+# Create variables to sum for violation counts, and create indicator for if violation was terminated (all should be terminated)
 merged_violations$total_violations = 1
 merged_violations$terminated = ifelse(merged_violations$typeoftermination == "Terminated", 1, 0)
 
 # Select all variables to sum when we collapse to the mine-quarter lever (the first regex will grab all vars created above)
-# Add indicator for if a mine-quarter was terminated because of a violation 
-# (and let's sum this for now - maybe we'll just make it an indicator later)
 violations_to_sum = merged_violations[, c(grep("^[0-9][0-9]", names(merged_violations)), 
                                           match("total_violations", names(merged_violations)),
                                           match("excessive_history_ind", names(merged_violations)), 
@@ -448,8 +414,7 @@ averaged_violations = ddply(merged_violations[, c(grep("operator_repeated_viol_p
                                                                match("exlate_interest_amt", names(x)))], na.rm = T))
 
 rm(violations_to_sum)
-# Question: Check if operator variables vary by mine? Are indep. contractors the only operators @ a mine or are they only a part of the operation? A: Inspections generate
-# both contractor and operator violations. - April Ramirez @ DOL, 6/6/16
+# Fun fact! Inspections generate both contractor and operator violations. - April Ramirez @ DOL, 6/6/16
 
 ######################################################################################################################################
 
@@ -487,7 +452,7 @@ contractor_vars = ddply(contractor_vars[, c(grep("mineid", names(contractor_vars
 # that quarter would be foolish. Therefore we not only count the total number of inspections per quarter as a sort of exposure for
 # the opportunity for a violation to occur, but we also count the number of quarters for inspection (ie if an inspection last a year,
 # there will be four quarters for that inspection). This allows us to the take the total inspection hours variable and divide it by the 
-# number of quarters spanned by that inspection. This helps prevent doubt-counting inspection hours in several quarters, once we collapse
+# number of quarters spanned by that inspection. This helps prevent double-counting inspection hours in several quarters, once we collapse
 # to the mine-quarter level.
 
 # Collapse to mine-quarter-event level to flag each inspections per mine quarter with a "1"
@@ -571,6 +536,7 @@ collapsed_violations$row_id = seq.int(nrow(collapsed_violations))
 summed_coded_accidents$row_id = seq.int(nrow(summed_coded_accidents))
 
 ######################################################################################################################################
+
 # MERGE VIOLATIONS DATA ONTO MINES
 
 # Read in data
@@ -790,3 +756,33 @@ names(part75_select_vars) = varnames
 write.csv(part75_select_vars, "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75.csv")
   
 ######################################################################################################################################
+
+# REFERENCE INFO
+
+# Here we've tabbed our categorical vars, so we know which value will become which dummy.
+#table(merged_violations$inspacty)
+#103           complaint inspection  fatality inspection        other         regular inspection         unknown 
+#35583                 4519                  732                69825               657741                97816
+
+#table(merged_violations$violationtypecode)
+#Citation    Order  Unknown 
+#830340    11155    24717 
+
+#table(merged_violations$assessmenttypecode)
+#Regular  Single Special Unknown 
+#640735  187678   13082   24717 
+
+#table(merged_violations$likelihood)
+#Highly NoLikelihood     Occurred   Reasonably      Unknown     Unlikely 
+#5472        23386         1475       271986        18984       544909 
+
+#table(merged_violations$injuryillness)
+#Fatal   LostDays NoLostDays  Permanent    Unknown 
+#57634     584733     120395      84464      18986 
+
+#table(merged_violations$negligence)
+#HighNegligence  LowNegligence  ModNegligence   NoNegligence       Reckless        Unknown 
+#36421          97549         711082           1221            959          18980 
+
+######################################################################################################################################
+
