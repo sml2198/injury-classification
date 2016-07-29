@@ -14,11 +14,11 @@ setwd("X:/Projects/Mining/NIOSH/analysis/")
 
 # define file names
   # input: open source accidents data (post-2000)
-acc.2000.16.file.name = "data/0_originals/MSHA/open_data/Accidents.txt" 
+acc_2000_16_file_name = "data/0_originals/MSHA/open_data/Accidents.txt" 
   # input: non-open source accidents data (1983-2013)
-acc.83.13.file.name = "data/0_originals/MSHA/rec_2015_06_02/Accidents_1983_2013/Accidents_1983_2013.csv" 
+acc_83_13_file_name = "data/0_originals/MSHA/rec_2015_06_02/Accidents_1983_2013/Accidents_1983_2013.csv" 
   # output: clean and merged accidents data
-accidents.file.name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_accidents.rds" 
+accidents_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_accidents.rds" 
 
 ######################################################################################################
 
@@ -26,83 +26,83 @@ accidents.file.name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_ac
 
 # read open source accidents data (post-2000)
   # dataset downloaded on 4/20/16 from http://arlweb.msha.gov/OpenGovernmentData/OGIMSHA.asp 
-acc.2000.16 = read.table(acc.2000.16.file.name, header = TRUE, sep = "|")
+acc_2000_16 = read.table(acc_2000_16_file_name, header = TRUE, sep = "|")
 
-# re-name variables in open source data (post-2000)
-names(acc.2000.16)[names(acc.2000.16) == "MINE_ID"] = "mineid"
-names(acc.2000.16)[names(acc.2000.16) == "ACCIDENT_DT"] = "accidentdate"
-names(acc.2000.16)[names(acc.2000.16) == "ACCIDENT_TIME"] = "accidenttime"
-names(acc.2000.16)[names(acc.2000.16) == "ACCIDENT_TYPE"] = "accidenttype"
-names(acc.2000.16)[names(acc.2000.16) == "ACCIDENT_TYPE_CD"] = "accidenttypecode"
-names(acc.2000.16)[names(acc.2000.16) == "ACTIVITY"] = "mineractivity"
-names(acc.2000.16)[names(acc.2000.16) == "ACTIVITY_CD"] = "activitycode"
-names(acc.2000.16)[names(acc.2000.16) == "CAL_QTR"] = "calendarquarter"
-names(acc.2000.16)[names(acc.2000.16) == "CAL_YR"] = "calendaryear"
-names(acc.2000.16)[names(acc.2000.16) == "CLASSIFICATION"] = "accidentclassification"
-names(acc.2000.16)[names(acc.2000.16) == "CLASSIFICATION_CD"] = "classificationcode"
-names(acc.2000.16)[names(acc.2000.16) == "CLOSED_DOC_NO"] = "closeddocumentno"
-names(acc.2000.16)[names(acc.2000.16) == "COAL_METAL_IND"] = "coalcormetalm"
-names(acc.2000.16)[names(acc.2000.16) == "CONTRACTOR_ID"] = "contractorid"
-names(acc.2000.16)[names(acc.2000.16) == "CONTROLLER_ID"] = "controllerid"
-names(acc.2000.16)[names(acc.2000.16) == "CONTROLLER_NAME"] = "controllername"
-names(acc.2000.16)[names(acc.2000.16) == "DAYS_LOST"] = "dayslost"
-names(acc.2000.16)[names(acc.2000.16) == "DAYS_RESTRICT"] = "daysrestrictedduty"
-names(acc.2000.16)[names(acc.2000.16) == "DEGREE_INJURY"] = "degreeofinjury"
-names(acc.2000.16)[names(acc.2000.16) == "DEGREE_INJURY_CD"] = "degreeofinjurycode"
-names(acc.2000.16)[names(acc.2000.16) == "DOCUMENT_NO"] = "documentno"
-names(acc.2000.16)[names(acc.2000.16) == "EQUIP_MFR_CD"] = "equipmanufacturercode"
-names(acc.2000.16)[names(acc.2000.16) == "EQUIP_MFR_NAME"] = "equipmanufacturer"
-names(acc.2000.16)[names(acc.2000.16) == "EQUIP_MODEL_NO"] = "equipmentmodelno"
-names(acc.2000.16)[names(acc.2000.16) == "FISCAL_QTR"] = "fiscalquarter"
-names(acc.2000.16)[names(acc.2000.16) == "FISCAL_YR"] = "fiscalyear"
-names(acc.2000.16)[names(acc.2000.16) == "FIPS_STATE_CD"] = "fipsstatecode"
-names(acc.2000.16)[names(acc.2000.16) == "IMMED_NOTIFY"] = "immediatenotificationclass"
-names(acc.2000.16)[names(acc.2000.16) == "IMMED_NOTIFY_CD"] = "immediatenotificationcode"
-names(acc.2000.16)[names(acc.2000.16) == "INJ_BODY_PART"] = "bodypart"
-names(acc.2000.16)[names(acc.2000.16) == "INJ_BODY_PART_CD"] = "bodypartcode"
-names(acc.2000.16)[names(acc.2000.16) == "INJURY_SOURCE"] = "sourceofinjury"
-names(acc.2000.16)[names(acc.2000.16) == "INJURY_SOURCE_CD"] = "injurysourcecode"
-names(acc.2000.16)[names(acc.2000.16) == "INVEST_BEGIN_DT"] = "investigationbegindate"
-names(acc.2000.16)[names(acc.2000.16) == "JOB_EXPER"] = "jobexperience"
-names(acc.2000.16)[names(acc.2000.16) == "MINE_EXPER"] = "mineexperience"
-names(acc.2000.16)[names(acc.2000.16) == "MINING_EQUIP"] = "typeofequipment"
-names(acc.2000.16)[names(acc.2000.16) == "MINING_EQUIP_CD"] = "equiptypecode"
-names(acc.2000.16)[names(acc.2000.16) == "NARRATIVE"] = "narrativemodified"
-names(acc.2000.16)[names(acc.2000.16) == "NATURE_INJURY"] = "natureofinjury"
-names(acc.2000.16)[names(acc.2000.16) == "NATURE_INJURY_CD"] = "natureofinjurycode"
-names(acc.2000.16)[names(acc.2000.16) == "NO_INJURIES"] = "numberofinjuries"
-names(acc.2000.16)[names(acc.2000.16) == "OCCUPATION"] = "occupation"
-names(acc.2000.16)[names(acc.2000.16) == "OCCUPATION_CD"] = "occupcode3digit"
-names(acc.2000.16)[names(acc.2000.16) == "OPERATOR_ID"] = "operatorid"
-names(acc.2000.16)[names(acc.2000.16) == "OPERATOR_NAME"] = "operatorname"
-names(acc.2000.16)[names(acc.2000.16) == "RETURN_TO_WORK_DT"] = "returntoworkdate"
-names(acc.2000.16)[names(acc.2000.16) == "SCHEDULE_CHARGE"] = "schedulechargedays"
-names(acc.2000.16)[names(acc.2000.16) == "SHIFT_BEGIN_TIME"] = "shiftbeginningtime"
-names(acc.2000.16)[names(acc.2000.16) == "SUBUNIT"] = "subunit"
-names(acc.2000.16)[names(acc.2000.16) == "SUBUNIT_CD"] = "subunitcode"
-names(acc.2000.16)[names(acc.2000.16) == "TOT_EXPER"] = "totalexperience"
-names(acc.2000.16)[names(acc.2000.16) == "TRANS_TERM"] = "transferredorterminated"
-names(acc.2000.16)[names(acc.2000.16) == "UG_LOCATION"] = "uglocation"
-names(acc.2000.16)[names(acc.2000.16) == "UG_LOCATION_CD"] = "uglocationcode"
-names(acc.2000.16)[names(acc.2000.16) == "UG_MINING_METHOD"] = "ugminingmethod"
-names(acc.2000.16)[names(acc.2000.16) == "UG_MINING_METHOD_CD"] = "ugminingmethodcode"
+# re-name variables
+names(acc_2000_16)[names(acc_2000_16) == "MINE_ID"] = "mineid"
+names(acc_2000_16)[names(acc_2000_16) == "ACCIDENT_DT"] = "accidentdate"
+names(acc_2000_16)[names(acc_2000_16) == "ACCIDENT_TIME"] = "accidenttime"
+names(acc_2000_16)[names(acc_2000_16) == "ACCIDENT_TYPE"] = "accidenttype"
+names(acc_2000_16)[names(acc_2000_16) == "ACCIDENT_TYPE_CD"] = "accidenttypecode"
+names(acc_2000_16)[names(acc_2000_16) == "ACTIVITY"] = "mineractivity"
+names(acc_2000_16)[names(acc_2000_16) == "ACTIVITY_CD"] = "activitycode"
+names(acc_2000_16)[names(acc_2000_16) == "CAL_QTR"] = "calendarquarter"
+names(acc_2000_16)[names(acc_2000_16) == "CAL_YR"] = "calendaryear"
+names(acc_2000_16)[names(acc_2000_16) == "CLASSIFICATION"] = "accidentclassification"
+names(acc_2000_16)[names(acc_2000_16) == "CLASSIFICATION_CD"] = "classificationcode"
+names(acc_2000_16)[names(acc_2000_16) == "CLOSED_DOC_NO"] = "closeddocumentno"
+names(acc_2000_16)[names(acc_2000_16) == "COAL_METAL_IND"] = "coalcormetalm"
+names(acc_2000_16)[names(acc_2000_16) == "CONTRACTOR_ID"] = "contractorid"
+names(acc_2000_16)[names(acc_2000_16) == "CONTROLLER_ID"] = "controllerid"
+names(acc_2000_16)[names(acc_2000_16) == "CONTROLLER_NAME"] = "controllername"
+names(acc_2000_16)[names(acc_2000_16) == "DAYS_LOST"] = "dayslost"
+names(acc_2000_16)[names(acc_2000_16) == "DAYS_RESTRICT"] = "daysrestrictedduty"
+names(acc_2000_16)[names(acc_2000_16) == "DEGREE_INJURY"] = "degreeofinjury"
+names(acc_2000_16)[names(acc_2000_16) == "DEGREE_INJURY_CD"] = "degreeofinjurycode"
+names(acc_2000_16)[names(acc_2000_16) == "DOCUMENT_NO"] = "documentno"
+names(acc_2000_16)[names(acc_2000_16) == "EQUIP_MFR_CD"] = "equipmanufacturercode"
+names(acc_2000_16)[names(acc_2000_16) == "EQUIP_MFR_NAME"] = "equipmanufacturer"
+names(acc_2000_16)[names(acc_2000_16) == "EQUIP_MODEL_NO"] = "equipmentmodelno"
+names(acc_2000_16)[names(acc_2000_16) == "FISCAL_QTR"] = "fiscalquarter"
+names(acc_2000_16)[names(acc_2000_16) == "FISCAL_YR"] = "fiscalyear"
+names(acc_2000_16)[names(acc_2000_16) == "FIPS_STATE_CD"] = "fipsstatecode"
+names(acc_2000_16)[names(acc_2000_16) == "IMMED_NOTIFY"] = "immediatenotificationclass"
+names(acc_2000_16)[names(acc_2000_16) == "IMMED_NOTIFY_CD"] = "immediatenotificationcode"
+names(acc_2000_16)[names(acc_2000_16) == "INJ_BODY_PART"] = "bodypart"
+names(acc_2000_16)[names(acc_2000_16) == "INJ_BODY_PART_CD"] = "bodypartcode"
+names(acc_2000_16)[names(acc_2000_16) == "INJURY_SOURCE"] = "sourceofinjury"
+names(acc_2000_16)[names(acc_2000_16) == "INJURY_SOURCE_CD"] = "injurysourcecode"
+names(acc_2000_16)[names(acc_2000_16) == "INVEST_BEGIN_DT"] = "investigationbegindate"
+names(acc_2000_16)[names(acc_2000_16) == "JOB_EXPER"] = "jobexperience"
+names(acc_2000_16)[names(acc_2000_16) == "MINE_EXPER"] = "mineexperience"
+names(acc_2000_16)[names(acc_2000_16) == "MINING_EQUIP"] = "typeofequipment"
+names(acc_2000_16)[names(acc_2000_16) == "MINING_EQUIP_CD"] = "equiptypecode"
+names(acc_2000_16)[names(acc_2000_16) == "NARRATIVE"] = "narrativemodified"
+names(acc_2000_16)[names(acc_2000_16) == "NATURE_INJURY"] = "natureofinjury"
+names(acc_2000_16)[names(acc_2000_16) == "NATURE_INJURY_CD"] = "natureofinjurycode"
+names(acc_2000_16)[names(acc_2000_16) == "NO_INJURIES"] = "numberofinjuries"
+names(acc_2000_16)[names(acc_2000_16) == "OCCUPATION"] = "occupation"
+names(acc_2000_16)[names(acc_2000_16) == "OCCUPATION_CD"] = "occupcode3digit"
+names(acc_2000_16)[names(acc_2000_16) == "OPERATOR_ID"] = "operatorid"
+names(acc_2000_16)[names(acc_2000_16) == "OPERATOR_NAME"] = "operatorname"
+names(acc_2000_16)[names(acc_2000_16) == "RETURN_TO_WORK_DT"] = "returntoworkdate"
+names(acc_2000_16)[names(acc_2000_16) == "SCHEDULE_CHARGE"] = "schedulechargedays"
+names(acc_2000_16)[names(acc_2000_16) == "SHIFT_BEGIN_TIME"] = "shiftbeginningtime"
+names(acc_2000_16)[names(acc_2000_16) == "SUBUNIT"] = "subunit"
+names(acc_2000_16)[names(acc_2000_16) == "SUBUNIT_CD"] = "subunitcode"
+names(acc_2000_16)[names(acc_2000_16) == "TOT_EXPER"] = "totalexperience"
+names(acc_2000_16)[names(acc_2000_16) == "TRANS_TERM"] = "transferredorterminated"
+names(acc_2000_16)[names(acc_2000_16) == "UG_LOCATION"] = "uglocation"
+names(acc_2000_16)[names(acc_2000_16) == "UG_LOCATION_CD"] = "uglocationcode"
+names(acc_2000_16)[names(acc_2000_16) == "UG_MINING_METHOD"] = "ugminingmethod"
+names(acc_2000_16)[names(acc_2000_16) == "UG_MINING_METHOD_CD"] = "ugminingmethodcode"
 
 # create new variable to track data source
-acc.2000.16$datasource = "opendata" 
+acc_2000_16$datasource = "opendata" 
 
-# format variables in open source accidents data (post-2000) to match non-open source accidents data (1983-2013) to facilitate merging
-acc.2000.16$mineid = sprintf("%07s", acc.2000.16$mineid)
-acc.2000.16$documentno = sprintf("%12s", acc.2000.16$documentno)
-acc.2000.16$documentno = as.character(acc.2000.16$documentno)
-acc.2000.16$oldoccupationcode = ""
-acc.2000.16 = acc.2000.16[, c(-match("closeddocumentno", names(acc.2000.16)), -match("coalcormetalm", names(acc.2000.16)))]
+# format variables to facilitate merging
+acc_2000_16$mineid = sprintf("%07s", acc_2000_16$mineid)
+acc_2000_16$documentno = sprintf("%12s", acc_2000_16$documentno)
+acc_2000_16$documentno = as_character(acc_2000_16$documentno)
+acc_2000_16$oldoccupationcode = ""
+acc_2000_16 = acc_2000_16[, c(-match("closeddocumentno", names(acc_2000_16)), -match("coalcormetalm", names(acc_2000_16)))]
 
 # drop data from times and environments not of interest
-acc.2000.16 = acc.2000.16[acc.2000.16$calendaryear > 1999, ]
-acc.2000.16 = acc.2000.16[acc.2000.16$coalcormetalm == "C", ]
-acc.2000.16 = acc.2000.16[!is.na(acc.2000.16$coalcormetalm), ]
-acc.2000.16$subunit = tolower(acc.2000.16$subunit)
-acc.2000.16 = acc.2000.16[acc.2000.16$subunit == "underground", ]
+acc_2000_16 = acc_2000_16[acc_2000_16$calendaryear > 1999, ]
+acc_2000_16 = acc_2000_16[acc_2000_16$coalcormetalm == "C", ]
+acc_2000_16 = acc_2000_16[!is.na(acc_2000_16$coalcormetalm), ]
+acc_2000_16$subunit = tolower(acc_2000_16$subunit)
+acc_2000_16 = acc_2000_16[acc_2000_16$subunit == "underground", ]
 
 ######################################################################################################
 
@@ -110,31 +110,31 @@ acc.2000.16 = acc.2000.16[acc.2000.16$subunit == "underground", ]
 
 # read non-open source accidents data (1983-2013)
   # originally a .txt file, converted to .csv format in Stata
-acc.83.13 = read.csv(acc.83.13.file.name, header = TRUE, sep = ",",  stringsAsFactors = FALSE)
+acc_83_13 = read.csv(acc_83_13_file_name, header = TRUE, sep = ",",  stringsAsFactors = FALSE)
 
 # track data source
-acc.83.13$datasource = "msha"
+acc_83_13$datasource = "msha"
 
-# format variables in non-open source accidents data (1983-2013) to match open source accidents data (post-2000) to facilitate merging
-acc.83.13$mineid = sprintf("%07s", acc.83.13$mineid)
-acc.83.13$documentno = sprintf("%12s", acc.83.13$documentno)
-acc.83.13$documentno = as.character(acc.83.13$documentno)
-acc.83.13$controllername = ""
-acc.83.13$operatorname = ""
-acc.83.13$fiscalquarter = ""
-acc.83.13$fiscalyear = ""
-acc.83.13$investigationbegindate = ""
-acc.83.13$subunit = tolower(acc.83.13$subunit)
-acc.83.13 = acc.83.13[acc.83.13$subunit == "underground", ]
-acc.83.13 = acc.83.13[acc.83.13$calendaryear < 2000, ]
+# format variables to facilitate merging
+acc_83_13$mineid = sprintf("%07s", acc_83_13$mineid)
+acc_83_13$documentno = sprintf("%12s", acc_83_13$documentno)
+acc_83_13$documentno = as_character(acc_83_13$documentno)
+acc_83_13$controllername = ""
+acc_83_13$operatorname = ""
+acc_83_13$fiscalquarter = ""
+acc_83_13$fiscalyear = ""
+acc_83_13$investigationbegindate = ""
+acc_83_13$subunit = tolower(acc_83_13$subunit)
+acc_83_13 = acc_83_13[acc_83_13$subunit == "underground", ]
+acc_83_13 = acc_83_13[acc_83_13$calendaryear < 2000, ]
 
 ######################################################################################################
 
 # MERGE OPEN SOURCE ACCIDENTS DATA (post-2000) AND NON-OPEN SOURCE ACCIDENTS DATA (1983-2013), THEN OUTPUT
 
-accidents = rbind(acc.83.13, acc.2000.16) # should have 675902 observations
+accidents = rbind(acc_83_13, acc_2000_16) # should have 675902 observations
 
-# format variables to facilitate merging
+# format variables
 accidents$mineid = sprintf("%07s", accidents$mineid)
 accidents$documentno = sprintf("%12s", accidents$documentno)
 
@@ -159,7 +159,7 @@ accidents$problem = ifelse((accidents$documentno == "220052270088" | accidents$d
                             accidents$documentno == "220153080004" | accidents$documentno == "220160040025" |
                             accidents$documentno == "220160680001"), 1, 0)
 
-# formate variables in merged data
+# format variables
 names(accidents)[names(accidents) == "narrativemodified"] = "narrative"
 accidents$mineractivity = tolower(accidents$mineractivity)
 accidents$narrative = tolower(accidents$narrative)
@@ -175,58 +175,6 @@ accidents$accidentclassification = tolower(accidents$accidentclassification)
 accidents$occupation = tolower(accidents$occupation)
 
 # output clean and merged accidents data
-saveRDS(accidents, file = accidents.file.name)
-
-######################################################################################################
-
-
-### HELP! I AM A LOST DATA PUP... PLEASE MOVE ME IN A NEW FILE WHERE I BELONG! ### 
-### I HAVE COMMENTED THIS CODE, SO IT REALLY ONLY NEEDS TO BE MOVED, NO EDITS NECESSARY ###
-
-# NIOSH Project 2014-N-15776
-
-# 3 - Merge Accidents and Mines Data
-  # Merges complete accidents data and mines data on mineid
-  # Outputs clean and merged mines and accidents data
-
-# Last edit 7/19/16
-
-######################################################################################################
-
-setwd("X:/Projects/Mining/NIOSH/analysis/")
-
-# define file names
-  # input: clean and merged accidents data
-accidents.file.name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_accidents.rds" 
-  # input: clean and merged mines data
-mines.file.name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_mines.rds" 
-  # output: merged mines and accidents data
-mines.accidents.file.name = "X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_mines_accidents.rds"
-
-######################################################################################################
-
-# MERGE MINES AND ACCIDENTS DATA, THEN OUTPUT
-
-# read data files
-accidents = readRDS(accidents.file.name)
-mines_quarters = readRDS(mines.file.name)
-
-# merge mines and accidents data
-mines.accidents = merge(accidents, mines_quarters,by = "mineid", all = TRUE) # should have 675887 observations
-
-# keep mine-level information from mines data (.y)
-mines.accidents = mines.accidents[, c(-grep("\\.x", names(mines.accidents)))]
-names(mines.accidents) = gsub("\\.[x|y]", "", names(mines.accidents))
-
-# drop mines that don't merge with any accidents (from 739004 to 675902)
-mines.accidents = mines.accidents[!(is.na(mines.accidents$documentno) | mines.accidents$documentno == ""), ]
-mines.accidents = mines.accidents[!(is.na(mines.accidents$mineid) | mines.accidents$mineid == ""), ]
-
-# drop problematic observations
-mines.accidents = mines.accidents[mines.accidents$problem != 1, ]
-mines.accidents = mines.accidents[, c(-match("problem", names(mines.accidents)))]
-
-# output merged mines and accidents data
-saveRDS(mines.accidents, file = mines.accidents.file.name)
+saveRDS(accidents, file = accidents_file_name)
 
 ######################################################################################################
