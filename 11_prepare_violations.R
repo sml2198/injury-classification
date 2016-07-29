@@ -25,8 +25,8 @@ library(psych)
 merged_violations.in.file.name = "X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_violations.rds"
   # input: merged cfr key data produced in 10_prepare_cfr_key.R
 merged_cfr_key.file.name = "X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_cfr_key.rds"
- # input: coded accidents data (contains MR indicator - no PS indicator yet) produced in 5_analyze_MR.R
-mines_accidents_coded.file.name = "X:/Projects/Mining/NIOSH/analysis/data/4_coded/accidents_with_predictions.csv"
+  # input: collapsed coded accidents data (contains MR indicator - no PS indicator yet) produced in 5_analyze_MR.R
+mines_accidents_coded.file.name = "X:/Projects/Mining/NIOSH/analysis/data/4_collapsed/collapsed_accidents.rds"
   # input: cleaned mine-quarters as produced in 1_clean_mines.R
 mines_quarters.file.name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_mines.rds"
   # input: cleaned mine-types key produced in produced in 1_clean_mines.R
@@ -552,49 +552,6 @@ gc()
 
 ######################################################################################################################################
 
-# COLLAPSE ACCIDENTS DATA
-
-# Read in data
-mine_types = readRDS(mine.types.file.name)
-mines_accidents_coded = read.csv(mines_accidents_coded.file.name)
-
-# Format mineid (for merges), date and quarter vars for merges
-mines_accidents_coded$mineid = str_pad(mines_accidents_coded$mineid, 7, pad = "0")
-
-# Format mineid and pad it with zeroes to make it 7 digits, so we have a clean merge
-mines_accidents_coded$mineid = withr::with_options(c(scipen = 999), str_pad(mines_accidents_coded$mineid, 7, pad = "0"))
-mines_accidents_coded$accidentdate = as.Date(as.character(mines_accidents_coded$accidentdate), "%m/%d/%Y")
-mines_accidents_coded$quarter = as.yearqtr(mines_accidents_coded$accidentdate)
-
-# Drop observations before our study period
-mines_accidents_coded = mines_accidents_coded[(mines_accidents_coded$quarter > "1999 Q4"),]
-
-# Merge on minetypes to drop non-coal and non-underground observations before saving
-mines_accidents_coded = merge(mines_accidents_coded, mine_types, by = c("mineid"), all = T)
-
-# Drop non-merging observations
-mines_accidents_coded = mines_accidents_coded[!is.na(mines_accidents_coded$MR),]
-rm(mine_types)
-
-# Only keep observations from environment we care about
-mines_accidents_coded = mines_accidents_coded[mines_accidents_coded$minetype == "Underground",]
-mines_accidents_coded = mines_accidents_coded[mines_accidents_coded$subunit == "UNDERGROUND",]
-mines_accidents_coded = mines_accidents_coded[mines_accidents_coded$coalcormetalmmine.x == "C",]
-
-# Create injury indicator so that we can collapse & sum total injuries per mine quarter
-mines_accidents_coded$totalinjuries = 1
-
-# Collapse mines_accidents data here.
-summed_coded_accidents = ddply(mines_accidents_coded[, c(grep("totalinjuries", names(mines_accidents_coded)), 
-                                                         grep("MR", names(mines_accidents_coded)),
-                                                         match("mineid", names(mines_accidents_coded)), 
-                                                         match("quarter", names(mines_accidents_coded)))], c("mineid", "quarter"), 
-                                  function(x) colSums(x[, c(grep("totalinjuries", names(x)), grep("MR", names(x)))], na.rm = T))
-rm(mines_accidents_coded)
-gc()
-
-######################################################################################################################################
-
 # FINISH MERGING VIOLATIONS
 
 # Merge the summed and averaged components of violations (both now at the mine-quarter level)
@@ -632,6 +589,8 @@ gc()
 ######################################################################################################################################
 
 # MERGE ACCIDENTS DATA ONTO VIOLATIONS/PER QUARTER
+
+summed_coded_accidents = readRDS(mines_accidents_coded.file.name)
 
 # Merge violations (now with contractor and mine info) and accidents
 merged_mines_violations_accidents = merge(merged_mines_violations, summed_coded_accidents, by = c("mineid", "quarter"), all = T)
