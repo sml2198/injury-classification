@@ -1,7 +1,7 @@
 # NIOSH Project 2014-N-15776
 
 # 9 - Merge Violations
-    # Load violations, assessments, and inspections from 6_clean_violations.R, 7_clean_assessments.R and 8_clean_inspections.R
+    # Load violations, assessments, and inspections from 6_clean_violations.R, 7_clean_assessments.R, 8_clean_inspections.R, 9_clean_employment.R
     # Merge violations and assessments 
     # Clean up the merged violations
     # Merge violations and inspections
@@ -139,7 +139,6 @@ merged_violations = merged_violations[!is.na(merged_violations$violationno), c(-
                                                                                -grep("merge", names(merged_violations)), 
                                                                                -grep("coalcormetalmmine", names(merged_violations)), 
                                                                                -grep("coalcormetalm", names(merged_violations)))]
-
 
 ######################################################################################################
 
