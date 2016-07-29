@@ -1,24 +1,26 @@
 # NIOSH Project 2014-N-15776
 
 # 6 - Clean Violations
-    # This file cleans the violations data we downloaded from MSHA's open data portal. The portions commented out are to load 
-    # and clean data from Carolyn Stasik's (MSHA) data pull from May 20th, 2015
+  # Reads, cleans, then outputs open source violations data
 
-# Last edit 7/19/16
+# Last edit 7/29/16
 
 ######################################################################################################
 
 # define file names
-  # input: raw violations data from MSHA open data platform (Violations): http://arlweb.msha.gov/OpenGovernmentData/OGIMSHA.asp
-  # downloaded on 4/20/2016 @ 3:37 PM
-open_data_viols.in.file.name = "X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA/open_data/Violations.txt"
-  # output: clean violations data, uniquely identified by eventno (inspection number) * violationno (violation number)
-open_data_viols.out.file.name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_violations.rds"
+  # input: open source violations data
+open_data_viols_in_file_name = "X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA/open_data/Violations.txt"
+  # output: clean violations data
+    # uniquely identified by eventno (inspection number) * violationno (violation number)
+open_data_viols_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_violations.rds"
 
 ######################################################################################################
 
-# read data files
-open_data_viols = read.table(open_data_viols.in.file.name, header = T, sep = "|")
+# READ AND CLEAN OPEN SOURCE VIOLATIONS DATA, THEN OUTPUT
+
+# read open source violations data
+  # dataset downloaded on 4/20/16 from http://arlweb.msha.gov/OpenGovernmentData/OGIMSHA.asp [MSHA open data platform (Violations)]
+open_data_viols = read.table(open_data_viols_in_file_name, header = T, sep = "|")
 #early_viols = read.csv("X:/Projects/Mining/NIOSH/analysis/data/1_converted/MSHA/violations_fromText.csv")
 
 # Rename variables (we did this originally so var names would be consistent with our existing data pull - this is mostly cosmetic)
@@ -81,10 +83,12 @@ open_data_viols$eventno = withr::with_options(c(scipen = 999), str_pad(open_data
 open_data_viols$violationno = str_pad(open_data_viols$violationno, 7, pad = "0")
 open_data_viols$violationno = withr::with_options(c(scipen = 999), str_pad(open_data_viols$violationno, 7, pad = "0"))
 
-saveRDS(open_data_viols, file = open_data_viols.out.file.name)
+saveRDS(open_data_viols, file = open_data_viols_out_file_name)
 
 ######################################################################################################
-# THIS CODE IS RETIRED.
+# THIS CODE IS RETIRED
+# The portions commented out are to load and clean data from Carolyn Stasik's (MSHA) data pull from May 20th, 2015
+
 
 #Keep only observations from Carolyn Stasik's data in years prior to the Open Data's time range
 #early_viols = early_viols[early_viols$calendaryear <= 1999 & early_viols$calendaryear >= 1983,]
