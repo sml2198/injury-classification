@@ -176,7 +176,6 @@ ps_data[, "trap"] = ifelse(grepl("( )trap[a-z]*", ps_data[,"narrative"]), 1, 0)
 ps_data[, "collided"] = ifelse(grepl("col(l)*i(de|ded|sion|ssion)", ps_data[,"narrative"]), 1, 0)
 
 # Generate maybe likely keywords
-
 ps_data[, "ranover"] = ifelse(grepl("( |^)r(a|u)n( )*(over|into)", ps_data[,"narrative"]), 1, 0)
 ps_data[, "rolled"] = ifelse(grepl("rolled( )*(over|into|onto|on|down)", ps_data[,"narrative"]), 1, 0)
 ps_data[, "between"] = ifelse(grepl("between", ps_data[,"narrative"]) | grepl("btwn", ps_data[,"narrative"]), 1, 0)
@@ -185,7 +184,7 @@ ps_data[, "by"] = ifelse(grepl("by", ps_data[,"narrative"]), 1, 0)
 
 # Generate negative keywords
 
-#Commented out as per Miguel's 6/7/16 response to our questions
+# Commented out as per Miguel's 6/7/16 response to our questions
 #ps_data[, "brakes"] = ifelse(grepl("brakes.{1,10}(off|lost|not engage|did not|were not|fail)", ps_data[,"narrative"]) |
 #                             grepl("lost.{1,10}brakes", ps_data[,"narrative"]), 1, 0)
 # jarred, jolted, jostled
@@ -199,7 +198,7 @@ ps_data[, "derail"] = ifelse((grepl("(left|off|jumped).{1,15}track", ps_data[,"n
                               grepl("derai", ps_data[,"narrative"]), 1, 0)
 ps_data[, "steering"] = ifelse(grepl("ste(e|a)ring( )*wheel.{1,15}sp(u|i)n", ps_data[,"narrative"]), 1, 0)
 
-# GENERATE LESS GOOD NEGATIVE KEYWORDS
+# Generate less good negative keywords
 ps_data[, "passenger"] = ifelse(grepl("passenger", ps_data[,"narrative"]), 1, 0)
 ps_data[, "wrench"] = ifelse(grepl("wrench", ps_data[,"narrative"]), 1, 0)
 ps_data[, "controls"] = ifelse(grepl("(lever|stick)", ps_data[,"narrative"]), 1, 0)
@@ -652,6 +651,7 @@ ps_data$unlikely_body = ifelse((ps_data$bodypartcode == "200" | ps_data$bodypart
                                 ps_data$bodypartcode == "420"), 1, 0)
 
 ##################################################################################################
+
 # SUM UP LIKELY AND UNLIKELY INDICATORS
 
 ps_data$keyword_pts = rowSums(ps_data[,c('pin', 'strike', 'drillsteel', 'trap', 'collided', 'hit', 'dropped', 'ranover', 
