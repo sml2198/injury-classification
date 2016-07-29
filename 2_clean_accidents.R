@@ -6,7 +6,7 @@
   # Merges open source accidents data (post-2000) and non-open source accidents data (1983-2013)
   # Outputs clean and merged accidents data
 
-# Last edit 7/19/16
+# Last edit 7/29/16
 
 ######################################################################################################
 
