@@ -15,6 +15,7 @@
 library(plyr)
 library(devtools)
 library(stringr)
+library(zoo)
 
 # define file names
   # input: quarterly under-reporting employment/production data
@@ -34,7 +35,7 @@ open_data_mines_file_name = "X:/Projects/Mining/NIOSH/analysis/data/0_originals/
   # output: clean mine type data
 mine_types_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/mine_types.rds"
   # output: clean mine-quarter level data
-mines_quarters_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_mines_TEST.rds"
+mines_quarters_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_mines.rds"
 
 ######################################################################################################
 
@@ -225,56 +226,56 @@ mines_quarters = mines_quarters[!is.na(mines_quarters$coalcormetalmmine), ]
 mines_quarters = mines_quarters[mines_quarters$coalcormetalmmine == "C", ]
 mines_quarters = mines_quarters[mines_quarters$minetype == "Underground", ]
 
+# drop production variables that are not quarterly coal production
+  # coal_prod_qtr is most reliable (spot-checked against MSHA mine retrieval system)
+mines_quarters$coal_prod_yr = 
+  mines_quarters$under_coal_prod_qtr = NULL
+
 # track data source
 mines_quarters$datasource = ifelse(is.na(mines_quarters$datasource), "emp/prod data", mines_quarters$datasource)
 
 # create new variable: final quarterly employment
 mines_quarters$final_employment_qtr = ifelse((mines_quarters$avg_employee_cnt_qtr == mines_quarters$under_avg_employee_cnt_qtr &
-                                              mines_quarters$avg_employee_cnt_qtr != 0 & 
-                                             !is.na(mines_quarters$under_avg_employee_cnt_qtr) &
-                                             !is.na(mines_quarters$avg_employee_cnt_qtr)), mines_quarters$avg_employee_cnt_qt, NA)
+                                                mines_quarters$avg_employee_cnt_qtr != 0 & 
+                                                !is.na(mines_quarters$under_avg_employee_cnt_qtr) &
+                                                !is.na(mines_quarters$avg_employee_cnt_qtr)), mines_quarters$avg_employee_cnt_qt, NA)
 mines_quarters$final_employment_qtr = ifelse((mines_quarters$avg_employee_cnt_qtr != 0 & 
-                                              is.na(mines_quarters$under_avg_employee_cnt_qtr) &
-                                              !is.na(mines_quarters$avg_employee_cnt_qtr)), mines_quarters$avg_employee_cnt_qt, mines_quarters$final_employment_qtr)
+                                                is.na(mines_quarters$under_avg_employee_cnt_qtr) &
+                                                !is.na(mines_quarters$avg_employee_cnt_qtr)), mines_quarters$avg_employee_cnt_qt, mines_quarters$final_employment_qtr)
 mines_quarters$final_employment_qtr = ifelse((mines_quarters$under_avg_employee_cnt_qtr != 0 & 
-                                              !is.na(mines_quarters$under_avg_employee_cnt_qtr) &
-                                              is.na(mines_quarters$avg_employee_cnt_qtr)), mines_quarters$under_avg_employee_cnt_qtr, mines_quarters$final_employment_qtr)
+                                                !is.na(mines_quarters$under_avg_employee_cnt_qtr) &
+                                                is.na(mines_quarters$avg_employee_cnt_qtr)), mines_quarters$under_avg_employee_cnt_qtr, mines_quarters$final_employment_qtr)
 
   # if no quarterly data is available, use annual average employment
 mines_quarters$final_employment_qtr = ifelse((mines_quarters$avg_employee_cnt_yr != 0 & 
-                                              is.na(mines_quarters$final_employment_qtr) &
-                                              !is.na(mines_quarters$avg_employee_cnt_yr)), mines_quarters$avg_employee_cnt_yr, mines_quarters$final_employment_qtr)
+                                                is.na(mines_quarters$final_employment_qtr) &
+                                                !is.na(mines_quarters$avg_employee_cnt_yr)), mines_quarters$avg_employee_cnt_yr, mines_quarters$final_employment_qtr)
 
   # last resort: use # of employees from the mines dataset (this is # employees as of minestatus date (not relevant to quarters))
 mines_quarters$final_employment_qtr = ifelse(is.na(mines_quarters$final_employment_qtr), mines_quarters$numberofemployees, mines_quarters$final_employment_qtr)
 
-# drop production variables that are not quarterly coal production
-  # coal_prod_qtr is most reliable (spot-checked against MSHA mine retrieval system)
-mines_quarters = mines_quarters[, c(-match("coal_prod_yr", names(mines_quarters)), 
-                                    -match("under_coal_prod_qtr", names(mines_quarters)))]
-
 # create new variable: quarterly hours
 mines_quarters$final_hours_qtr = ifelse(!is.na(mines_quarters$hours_qtr), mines_quarters$hours_qtr, NA)
-mines_quarters$final_hours_qtr = ifelse(is.na(mines_quarters$hours_qtr) &
-                                       !is.na(mines_quarters$under_employee_hours_qtr), mines_quarters$under_employee_hours_qtr, mines_quarters$final_hours_qtr)
-mines_quarters$final_hours_qtr = ifelse(is.na(mines_quarters$final_hours_qtr) &
-                                       !is.na(mines_quarters$hours_yr), (mines_quarters$hours_yr / 4), mines_quarters$final_hours_qtr)
+mines_quarters$final_hours_qtr = ifelse((is.na(mines_quarters$hours_qtr) &
+                                           !is.na(mines_quarters$under_employee_hours_qtr)), mines_quarters$under_employee_hours_qtr, mines_quarters$final_hours_qtr)
+mines_quarters$final_hours_qtr = ifelse((is.na(mines_quarters$final_hours_qtr) &
+                                           !is.na(mines_quarters$hours_yr)), (mines_quarters$hours_yr / 4), mines_quarters$final_hours_qtr)
 
 # drop variables other than "final" count
-mines_quarters = mines_quarters[, c(-match("avg_employee_cnt_yr", names(mines_quarters)), 
-                                    -match("avg_employee_cnt_qtr", names(mines_quarters)), 
-                                    -match("numberofemployees", names(mines_quarters)),
-                                    -match("under_avg_employee_cnt_qtr", names(mines_quarters)),
-                                    -match("hours_qtr", names(mines_quarters)),
-                                    -match("under_employee_hours_qtr", names(mines_quarters)),
-                                    -match("hours_yr", names(mines_quarters)))]
+mines_quarters$avg_employee_cnt_yr =
+  mines_quarters$avg_employee_cnt_qtr =
+  mines_quarters$numberofemployees =
+  mines_quarters$under_avg_employee_cnt_qtr =
+  mines_quarters$hours_qtr =
+  mines_quarters$under_employee_hours_qtr =
+  mines_quarters$hours_yr = NULL
 
 # set employment/production/hours to NA for mine-observations for which there is no year/quarter data
-mines_quarters$final_hours_qtr = ifelse(is.na(mines_quarters$year) & is.na(mines_quarters$quarter), NA, mines_quarters$final_hours_qtr)
-mines_quarters$coal_prod_qtr = ifelse(is.na(mines_quarters$year) & is.na(mines_quarters$quarter), NA, mines_quarters$coal_prod_qtr)
-mines_quarters$final_employment_qtr = ifelse(is.na(mines_quarters$year) & is.na(mines_quarters$quarter), NA, mines_quarters$final_employment_qtr)
+mines_quarters$final_hours_qtr = ifelse((is.na(mines_quarters$year) & is.na(mines_quarters$quarter)), NA, mines_quarters$final_hours_qtr)
+mines_quarters$coal_prod_qtr = ifelse((is.na(mines_quarters$year) & is.na(mines_quarters$quarter)), NA, mines_quarters$coal_prod_qtr)
+mines_quarters$final_employment_qtr = ifelse((is.na(mines_quarters$year) & is.na(mines_quarters$quarter)), NA, mines_quarters$final_employment_qtr)
 
-# rename employment and hours variables (dropping "finals")
+# rename variables (dropping "finals")
 names(mines_quarters)[names(mines_quarters) == "final_hours_qtr"] = "hours_qtr"
 names(mines_quarters)[names(mines_quarters) == "final_employment_qtr"] = "employment_qtr"
 
@@ -323,48 +324,45 @@ mines_quarters = mines_quarters[(mines_quarters$minestatus != "Temporarily Idled
 mines_quarters = mines_quarters[(mines_quarters$minestatus != "Temporarily Idled" | mines_quarters$coal_prod_qtr != 0), ]
 
 # drop unnecessary variables
-mines_quarters = mines_quarters[, c(-grep("statusyear", names(mines_quarters)), 
-                                    -grep("statusquarter", names(mines_quarters)), 
-                                    -grep("drop", names(mines_quarters)),  
-                                    -grep("missing", names(mines_quarters)))]
+mines_quarters$statusyear = 
+  mines_quarters$statusquarter = 
+  mines_quarters$drop = 
+  mines_quarters$missing = NULL
 
 ######################################################################################################
 
 # COLLAPSE MERGED DATA TO THE MINE-QUARTER LEVEL, THEN OUTPUT
 
 # collapse data to mine-quarter level
-temp = mines_quarters[, c(match("mineid", names(mines_quarters)), 
-                          match("year", names(mines_quarters)), 
-                          match("quarter", names(mines_quarters)),
-                          match("minetype", names(mines_quarters)),
-                          match("minename", names(mines_quarters)),
-                          match("minestatus", names(mines_quarters)),
-                          match("minestatusdate", names(mines_quarters)), 
-                          match("operatorid", names(mines_quarters)),
-                          match("operatorname", names(mines_quarters)),   
-                          match("coalcormetalmmine", names(mines_quarters)),
-                          match("stateabbreviation", names(mines_quarters)),
-                          match("idate", names(mines_quarters)),  
-                          match("idesc", names(mines_quarters)),  
-                          match("daysperweek", names(mines_quarters)),  
-                          match("productionshiftsperday", names(mines_quarters)))]
+temp = mines_quarters[, c("mineid", 
+                          "year",
+                          "quarter",
+                          "minetype",
+                          "minename",
+                          "minestatus",
+                          "minestatusdate",
+                          "operatorid",
+                          "operatorname",
+                          "coalcormetalmmine",
+                          "stateabbreviation",
+                          "idate",
+                          "idesc",
+                          "daysperweek",
+                          "productionshiftsperday")]
 
-mines_quarters = ddply(mines_quarters[, c(match("hours_qtr", names(mines_quarters)), 
-                                          match("employment_qtr", names(mines_quarters)), 
-                                          match("coal_prod_qtr", names(mines_quarters)), 
-                                          match("mineid", names(mines_quarters)), 
-                                          match("year", names(mines_quarters)), 
-                                          match("quarter", names(mines_quarters)))], c("mineid", "quarter"), 
+mines_quarters = ddply(mines_quarters[, c("hours_qtr",
+                                          "employment_qtr", 
+                                          "coal_prod_qtr", 
+                                          "mineid", 
+                                          "year", 
+                                          "quarter")], c("mineid", "quarter"), 
                        function(x) colMeans(x[, c(match("hours_qtr", names(x)), 
                                                   match("employment_qtr", names(x)), 
-                                                  match("coal_prod_qtr", names(x)))], na.rm = T))
+                                                  match("coal_prod_qtr", names(x)))], na.rm = TRUE))
 mines_quarters = merge(mines_quarters, temp, by = c("mineid", "quarter"), all = T)
 
 # drop observations with no hours
-mines_quarters = mines_quarters[(mines_quarters$hours_qtr != 0),]
-
-# memory
-rm(temp, open_data_mines)
+mines_quarters = mines_quarters[(mines_quarters$hours_qtr != 0), ]
 
 # output mine-level data
 saveRDS(mines_quarters, file = mines_quarters_file_name)
