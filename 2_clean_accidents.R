@@ -6,17 +6,15 @@
   # Merges open source accidents data (post-2000) and non-open source accidents data (1983-2013)
   # Outputs clean and merged accidents data
 
-# Last edit 7/29/16
+# Last edit 8/1/16
 
 ######################################################################################################
 
-setwd("X:/Projects/Mining/NIOSH/analysis/")
-
 # define file names
   # input: open source accidents data (post-2000)
-acc_2000_16_file_name = "data/0_originals/MSHA/open_data/Accidents.txt" 
+acc_2000_16_file_name = "X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA/open_data/Accidents.txt" 
   # input: non-open source accidents data (1983-2013)
-acc_83_13_file_name = "data/0_originals/MSHA/rec_2015_06_02/Accidents_1983_2013/Accidents_1983_2013.csv" 
+acc_83_13_file_name = "X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA/rec_2015_06_02/Accidents_1983_2013/Accidents_1983_2013.csv" 
   # output: clean and merged accidents data
 accidents_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_accidents.rds" 
 
@@ -27,6 +25,16 @@ accidents_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_ac
 # read open source accidents data (post-2000)
   # dataset downloaded on 4/20/16 from http://arlweb.msha.gov/OpenGovernmentData/OGIMSHA.asp 
 acc_2000_16 = read.table(acc_2000_16_file_name, header = TRUE, sep = "|")
+
+# drop data from times and environments not of interest
+acc_2000_16 = acc_2000_16[acc_2000_16$CAL_YR > 1999, ]
+acc_2000_16 = acc_2000_16[acc_2000_16$COAL_METAL_IND == "C", ]
+acc_2000_16 = acc_2000_16[!is.na(acc_2000_16$COAL_METAL_IND), ]
+acc_2000_16 = acc_2000_16[acc_2000_16$SUBUNIT == "UNDERGROUND", ]
+
+# drop unnecessary variables
+acc_2000_16$CLOSED_DOC_NO = 
+  acc_2000_16$COAL_METAL_IND = NULL
 
 # re-name variables
 names(acc_2000_16)[names(acc_2000_16) == "MINE_ID"] = "mineid"
@@ -40,8 +48,6 @@ names(acc_2000_16)[names(acc_2000_16) == "CAL_QTR"] = "calendarquarter"
 names(acc_2000_16)[names(acc_2000_16) == "CAL_YR"] = "calendaryear"
 names(acc_2000_16)[names(acc_2000_16) == "CLASSIFICATION"] = "accidentclassification"
 names(acc_2000_16)[names(acc_2000_16) == "CLASSIFICATION_CD"] = "classificationcode"
-names(acc_2000_16)[names(acc_2000_16) == "CLOSED_DOC_NO"] = "closeddocumentno"
-names(acc_2000_16)[names(acc_2000_16) == "COAL_METAL_IND"] = "coalcormetalm"
 names(acc_2000_16)[names(acc_2000_16) == "CONTRACTOR_ID"] = "contractorid"
 names(acc_2000_16)[names(acc_2000_16) == "CONTROLLER_ID"] = "controllerid"
 names(acc_2000_16)[names(acc_2000_16) == "CONTROLLER_NAME"] = "controllername"
@@ -93,16 +99,9 @@ acc_2000_16$datasource = "opendata"
 # format variables to facilitate merging
 acc_2000_16$mineid = sprintf("%07s", acc_2000_16$mineid)
 acc_2000_16$documentno = sprintf("%12s", acc_2000_16$documentno)
-acc_2000_16$documentno = as_character(acc_2000_16$documentno)
+acc_2000_16$documentno = as.character(acc_2000_16$documentno)
 acc_2000_16$oldoccupationcode = ""
-acc_2000_16 = acc_2000_16[, c(-match("closeddocumentno", names(acc_2000_16)), -match("coalcormetalm", names(acc_2000_16)))]
-
-# drop data from times and environments not of interest
-acc_2000_16 = acc_2000_16[acc_2000_16$calendaryear > 1999, ]
-acc_2000_16 = acc_2000_16[acc_2000_16$coalcormetalm == "C", ]
-acc_2000_16 = acc_2000_16[!is.na(acc_2000_16$coalcormetalm), ]
 acc_2000_16$subunit = tolower(acc_2000_16$subunit)
-acc_2000_16 = acc_2000_16[acc_2000_16$subunit == "underground", ]
 
 ######################################################################################################
 
@@ -112,27 +111,28 @@ acc_2000_16 = acc_2000_16[acc_2000_16$subunit == "underground", ]
   # originally a .txt file, converted to .csv format in Stata
 acc_83_13 = read.csv(acc_83_13_file_name, header = TRUE, sep = ",",  stringsAsFactors = FALSE)
 
+# drop data from times and environments not of interest
+acc_83_13 = acc_83_13[acc_83_13$calendaryear < 2000, ]
+acc_83_13 = acc_83_13[acc_83_13$subunit == "UNDERGROUND", ]
+
 # track data source
 acc_83_13$datasource = "msha"
 
 # format variables to facilitate merging
 acc_83_13$mineid = sprintf("%07s", acc_83_13$mineid)
 acc_83_13$documentno = sprintf("%12s", acc_83_13$documentno)
-acc_83_13$documentno = as_character(acc_83_13$documentno)
+acc_83_13$documentno = as.character(acc_83_13$documentno)
+acc_83_13$subunit = tolower(acc_83_13$subunit)
 acc_83_13$controllername = ""
 acc_83_13$operatorname = ""
 acc_83_13$fiscalquarter = ""
 acc_83_13$fiscalyear = ""
 acc_83_13$investigationbegindate = ""
-acc_83_13$subunit = tolower(acc_83_13$subunit)
-acc_83_13 = acc_83_13[acc_83_13$subunit == "underground", ]
-acc_83_13 = acc_83_13[acc_83_13$calendaryear < 2000, ]
 
 ######################################################################################################
 
 # MERGE OPEN SOURCE ACCIDENTS DATA (post-2000) AND NON-OPEN SOURCE ACCIDENTS DATA (1983-2013), THEN OUTPUT
-
-accidents = rbind(acc_83_13, acc_2000_16) # should have 675902 observations
+accidents = rbind(acc_83_13, acc_2000_16) # should have 284109 observations
 
 # format variables
 accidents$mineid = sprintf("%07s", accidents$mineid)
