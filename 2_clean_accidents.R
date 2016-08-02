@@ -16,7 +16,7 @@ acc_2000_16_file_name = "X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA
   # input: non-open source accidents data (1983-2013)
 acc_83_13_file_name = "X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA/rec_2015_06_02/Accidents_1983_2013/Accidents_1983_2013.csv" 
   # output: clean and merged accidents data
-accidents_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_accidents.rds" 
+accidents_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_accidents_TEST.rds" 
 
 ######################################################################################################
 
