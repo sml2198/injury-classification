@@ -132,6 +132,7 @@ acc_83_13$investigationbegindate = ""
 ######################################################################################################
 
 # MERGE OPEN SOURCE ACCIDENTS DATA (post-2000) AND NON-OPEN SOURCE ACCIDENTS DATA (1983-2013), THEN OUTPUT
+
 accidents = rbind(acc_83_13, acc_2000_16) # should have 284109 observations
 
 # format variables
