@@ -1,34 +1,39 @@
 # NIOSH Project 2014-N-15776
 
 # 8 - Clean Inspections
-  # Reads and cleans open source inspections data 
-  # Reads clean mine type data
-  # Merges and cleans open source inspections data and mine type data
-  # Reads and cleans open source inspection hours data 
-  # Merges inspections data with open source inspection hours data
+  # Reads and cleans inspections data 
+  # Reads clean mine type data (1_clean_mines)
+  # Merges and cleans inspections data and mine type data
+  # Reads and cleans inspection hours data 
+  # Merges inspections data with inspection hours data
   # Outputs merged and clean inspections data
 
-# Last edit 7/29/16
+# Last edit 8/2/16
 
 ######################################################################################################
+
+library(stringr)
 
 # define file names
-  # input: open source inspections data
+  # input: inspections data
 open_data_inspecs_in_file_name = "X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA/open_data/Inspections.txt"
-  # input: open source inspection hours data
+  # input: inspection hours data
 early_inspecs_hours_file_name = "X:/Projects/Mining/NIOSH/analysis/data/1_converted/MSHA/inspection_hours_fromText.csv"
-  # input: clean mine type data
-mine_types_file_name = "X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_mines_accidents.rds"
+  # input: clean mine type data (1_clean_mines)
+mine_types_file_name = "X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_mines_accidents_TEST.rds"
   # output: clean and merged inspections data, uniquely identified by mineid *eventno
-open_data_inspecs_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_Inspections.rds"
+open_data_inspecs_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_Inspections_TEST.rds"
 
 ######################################################################################################
 
-# READ AND CLEAN OPEN SOURCE INSPECTIONS DATA
+# READ AND CLEAN INSPECTIONS DATA
 
-# read open source inspections data
+# read inspections data
   # dataset downloaded on 4/20/16 from http://arlweb.msha.gov/OpenGovernmentData/OGIMSHA.asp [Inspections]
 open_data_inspecs = read.table(open_data_inspecs_in_file_name, header = T, sep = "|")
+
+# drop observations for environments not of interest
+open_data_inspecs = open_data_inspecs[open_data_inspecs$COAL_METAL_IND != "M", ]
 
 # rename variables
 names(open_data_inspecs)[names(open_data_inspecs) == "EVENT_NO"] = "eventno"
@@ -72,33 +77,24 @@ names(open_data_inspecs)[names(open_data_inspecs) == "CONTROLLER_ID"] = "control
 names(open_data_inspecs)[names(open_data_inspecs) == "OPERATOR_ID"] = "operatorid"
 names(open_data_inspecs)[names(open_data_inspecs) == "CONTROLLER_NAME"] = "controllername"
 names(open_data_inspecs)[names(open_data_inspecs) == "OPERATOR_NAME"] = "operatorname"
+names(open_data_inspecs) = tolower(names(open_data_inspecs))
 
 # format variables
-names(open_data_inspecs) = tolower(names(open_data_inspecs))
-open_data_inspecs[, "eventno"] = as.character(open_data_inspecs[, "eventno"])
-open_data_inspecs[, "eventno"] = ifelse(nchar(open_data_inspecs[, "eventno"], type = "chars", allowNA = F, keepNA = T) < 7, 
-                                        paste("0", open_data_inspecs[, "eventno"], sep = ""), open_data_inspecs[, "eventno"])
+open_data_inspecs$eventno = as.character(open_data_inspecs$eventno)
 open_data_inspecs$beginningdate = as.character(open_data_inspecs$beginningdate)
 open_data_inspecs$endingdate = as.character(open_data_inspecs$endingdate)
+open_data_inspecs$mineid = str_pad(open_data_inspecs$mineid, 7, pad = "0")
+open_data_inspecs$eventno = str_pad(open_data_inspecs$eventno, 7, pad = "0")
 
 # memory
 clean_inspecs = open_data_inspecs
 rm(open_data_inspecs)
 
-# format variables
-clean_inspecs$mineid = str_pad(clean_inspecs$mineid, 7, pad = "0")
-clean_inspecs$mineid = withr::with_options(c(scipen = 999), str_pad(clean_inspecs$mineid, 7, pad = "0"))
-clean_inspecs$eventno = str_pad(clean_inspecs$eventno, 7, pad = "0")
-clean_inspecs$eventno = withr::with_options(c(scipen = 999), str_pad(clean_inspecs$eventno, 7, pad = "0"))
-
-# drop observations for environments not of interest
-clean_inspecs = clean_inspecs[clean_inspecs$coal_metal_ind != "M", ]
-
 ######################################################################################################
 
-# READ CLEAN MINE TYPE DATA, MERGE WITH OPEN SOURCE INSPECTIONS DATA, THEN CLEAN RESULTING DATA
+# READ CLEAN MINE TYPE DATA, MERGE WITH INSPECTIONS DATA, THEN CLEAN RESULTING DATA
 
-# read clean mine type data
+# read clean mine type data (1_clean_mines)
 mine_types = readRDS(mine_types_file_name)
 
 # merge open source inspections data with mine type data to drop non-coal and non-underground observations
@@ -114,7 +110,7 @@ clean_inspecs = clean_inspecs[!is.na(clean_inspecs$mergecheck.hrs) & !is.na(clea
 
 ######################################################################################################
 
-# READ AND CLEAN OPEN SOURCE INSPECTION HOURS DATA 
+# READ AND CLEAN INSPECTION HOURS DATA 
 
 # read open source inspection hours data
   # dataset downloaded on 5/15/15 from http://arlweb.msha.gov/OpenGovernmentData/OGIMSHA.asp [Inspections]
@@ -139,7 +135,7 @@ early_inspecs_hours = early_inspecs_hours[early_inspecs_hours$coalcormetalmmine 
 
 ######################################################################################################
 
-# MERGE OPEN SOURCE INSPECTION HOURS DATA WITH INSPECTIONS DATA, THEN OUTPUT
+# MERGE INSPECTION HOURS DATA WITH INSPECTIONS DATA, THEN OUTPUT
 
 # create variables to check the merge results
 clean_inspecs$mergecheck.inspec = 1
