@@ -25,12 +25,12 @@ open_data_viols_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleane
 open_data_viols = read.table(open_data_viols_in_file_name, header = T, sep = "|")
 
 # drop data from environments not of interest
-# facility means a mill/processing location, always above ground, according to April Ramirez @ DOL on 6/6/16
+  # facility means a mill/processing location, always above ground, according to April Ramirez @ DOL on 6/6/16
 open_data_viols = open_data_viols[open_data_viols$COAL_METAL_IND == "C", ]
 open_data_viols = open_data_viols[!is.na(open_data_viols$COAL_METAL_IND), ]
 open_data_viols = open_data_viols[open_data_viols$MINE_TYPE == "Underground", ]
 
-# flag and drop duplicates on violation number
+# flag and drop duplicates on violationno
 open_data_viols[, "dup"] = duplicated(open_data_viols$VIOLATION_NO)
 table(open_data_viols$dup) # same duplicates as in the STATA version of the code
 open_data_viols = open_data_viols[open_data_viols$dup == F, ]
