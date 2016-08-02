@@ -1,23 +1,23 @@
 # NIOSH Project 2014-N-15776
 
 # 7 - Clean Assessments
-  # Reads and cleans open source assessments data
-  # Reads clean mine type data
-  # Merges open source assessment data and clean mine type data to drop environments not of interest
+  # Reads and cleans assessments data
+  # Reads clean mine types data (1_clean_mines)
+  # Merges assessment data and mine types data to drop environments not of interest
   # Outputs clean assessments data
 
-# Last edit 7/29/16
+# Last edit 8/2/16
 
 ######################################################################################################
 
 # define file names
-  # input: open source assessments data
+  # input: assessments data
 open_data_assessments_in_file_name = "X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA/open_data/AssessedViolations.txt"
-  # input: mine-type data
-mine_types_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/mine_types.rds"
+  # input: mine-type data (1_clean_mines)
+mine_types_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/mine_types_TEST.rds"
   # output: clean assessments data
     # uniquely identified by eventno (inspection number) * violationno (violation number)
-open_data_assessments_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_assessments.rds"
+open_data_assessments_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_assessments_TEST.rds"
 
 ######################################################################################################
 
