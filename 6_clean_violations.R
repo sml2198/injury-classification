@@ -1,26 +1,39 @@
 # NIOSH Project 2014-N-15776
 
 # 6 - Clean Violations
-  # Reads, cleans, then outputs open source violations data
+  # Reads, cleans, then outputs violations data
 
-# Last edit 7/29/16
+# Last edit 8/2/16
 
 ######################################################################################################
 
+library(stringr)
+
 # define file names
-  # input: open source violations data
+  # input: violations data
 open_data_viols_in_file_name = "X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA/open_data/Violations.txt"
   # output: clean violations data
     # uniquely identified by eventno (inspection number) * violationno (violation number)
-open_data_viols_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_violations.rds"
+open_data_viols_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_violations_TEST.rds"
 
 ######################################################################################################
 
-# READ AND CLEAN OPEN SOURCE VIOLATIONS DATA, THEN OUTPUT
+# READ AND CLEAN VIOLATIONS DATA, THEN OUTPUT
 
-# read open source violations data
+# read violations data
   # dataset downloaded on 4/20/16 from http://arlweb.msha.gov/OpenGovernmentData/OGIMSHA.asp [MSHA open data platform (Violations)]
 open_data_viols = read.table(open_data_viols_in_file_name, header = T, sep = "|")
+
+# drop data from environments not of interest
+# facility means a mill/processing location, always above ground, according to April Ramirez @ DOL on 6/6/16
+open_data_viols = open_data_viols[open_data_viols$COAL_METAL_IND == "C", ]
+open_data_viols = open_data_viols[!is.na(open_data_viols$COAL_METAL_IND), ]
+open_data_viols = open_data_viols[open_data_viols$MINE_TYPE == "Underground", ]
+
+# flag and drop duplicates on violation number
+open_data_viols[, "dup"] = duplicated(open_data_viols$VIOLATION_NO)
+table(open_data_viols$dup) # same duplicates as in the STATA version of the code
+open_data_viols = open_data_viols[open_data_viols$dup == F, ]
 
 # rename variables
 names(open_data_viols)[names(open_data_viols) == "VIOLATION_NO"] = "violationno"
@@ -55,30 +68,14 @@ names(open_data_viols)[names(open_data_viols) == "VIOLATION_ISSUE_DT"] = "dateis
 names(open_data_viols)[names(open_data_viols) == "CONTESTED_IND"] = "contestedindicator"
 names(open_data_viols)[names(open_data_viols) == "MINE_NAME"] = "minename"
 names(open_data_viols)[names(open_data_viols) == "MINE_TYPE"] = "minetype"
-
-# format variables
 names(open_data_viols) = tolower(names(open_data_viols))
 
-# flag and drop duplicates on violation number
-open_data_viols[, "dup"] = duplicated(open_data_viols$violationno)
-table(open_data_viols$dup) # same duplicates as in the STATA version of the code
-open_data_viols = open_data_viols[open_data_viols$dup == F, ]
-
-# drop data from environments not of interest
-  # facility means a mill/processing location, always above ground, according to April Ramirez @ DOL on 6/6/16
-open_data_viols = open_data_viols[open_data_viols$coalcormetalm == "C", ]
-open_data_viols = open_data_viols[!is.na(open_data_viols$coalcormetalm), ]
-open_data_viols = open_data_viols[open_data_viols$minetype == "Underground", ]
-
 # format variables
-open_data_viols[, "violationno"] = as.character(open_data_viols[, "violationno"])
-open_data_viols[, "eventno"] = as.character(open_data_viols[, "eventno"])
+open_data_viols$violationno = as.character(open_data_viols$violationno)
+open_data_viols$eventno = as.character(open_data_viols$eventno)
 open_data_viols$mineid = str_pad(open_data_viols$mineid, 7, pad = "0")
-open_data_viols$mineid = withr::with_options(c(scipen = 999), str_pad(open_data_viols$mineid, 7, pad = "0"))
 open_data_viols$eventno = str_pad(open_data_viols$eventno, 7, pad = "0")
-open_data_viols$eventno = withr::with_options(c(scipen = 999), str_pad(open_data_viols$eventno, 7, pad = "0"))
 open_data_viols$violationno = str_pad(open_data_viols$violationno, 7, pad = "0")
-open_data_viols$violationno = withr::with_options(c(scipen = 999), str_pad(open_data_viols$violationno, 7, pad = "0"))
 
 # output clean violations data
 saveRDS(open_data_viols, file = open_data_viols_out_file_name)
@@ -86,6 +83,7 @@ saveRDS(open_data_viols, file = open_data_viols_out_file_name)
 ######################################################################################################
 
 # THIS CODE IS RETIRED # 
+
 # this code loads and cleans data from Carolyn Stasik's (MSHA) data pull from May 20th, 2015
 
 # early_viols = read.csv("X:/Projects/Mining/NIOSH/analysis/data/1_converted/MSHA/violations_fromText.csv")
