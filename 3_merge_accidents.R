@@ -8,9 +8,9 @@
 ######################################################################################################
 
 # define file names
-  # input: clean and merged accidents data
+  # input: clean and merged accidents data (2_clean_accidents)
 accidents_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_accidents_TEST.rds" 
-  # input: clean and merged mines data
+  # input: clean and merged mines data (1_clean_mines)
 mines_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_mines_TEST.rds" 
   # output: merged mines and accidents data
 mines_accidents_file_name = "X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_mines_accidents_TEST.rds"
