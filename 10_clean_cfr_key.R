@@ -1,40 +1,39 @@
 # NIOSH Project 2014-N-15776
 
 # 10 - Clean CFR Key
-    # Marks all subsection codes as either relevent or maybe relevant to each subtype
-    # Saves a CFR key to be merged onto violations data in 12_prepare_violations.R
+    # Marks all CFR subsection codes as either relevent or maybe relevant to each injury subtype (PS/MR)
+      # codes not flagged as "relevant" or "maybe relevant" can be regarded as irrelevant
+      # codings from a meeting between Alison Morantz, Nikhil Saifullah, and Sarah Levine at NIOSH in Pittsburgh in 2/12/16
+    # Outputs a CFR key to be merged onto violations data
 
 # Last edit 7/29/16
-
-# In this file we code all violations as either "relevant" or "maybe relevant" to the cause of
-# pinning and striking (PS) and maintenance and repair (MR) injuries, respectively. Violation
-# codes not flagged as "relevant" or "maybe relevant" can be regarded as irrelevant. These codings
-# came from a meeting between Alison Morantz, Nikhil Saifullah, and Sarah Levine at NIOSH in
-# Pittsburgh in February of 2016.
 
 ######################################################################################################
 
 library(stringr)
 
 # define file names
-  # input: raw cfr key created by Katie Choi on 2/16/2015 from the e-CFR (current as of 2/12/2015) from: 
-  # http://www.ecfr.gov/cgi-bin/text-idx?SID=95a3589813c4b48d6daa8f8df80f0ead&c=ecfr&tpl=/ecfrbrowse/Title30/30cfrv1_02.tpl
-  # See X:\Projects\Mining\NIOSH\analysis\data\0_originals\MSHA\cfr_key\Notes.txt for more.
-cfr_key.in.file.name = "X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA/cfr_key/cfr_key.csv"
-  # output: cleaned cfr key with PS and MR relevance markings, from meeting with NIOSH in Pittsburgh on 2/12/2016
-cfr_key.out.file.name = "X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_cfr_key.rds"
+  # input: cfr key data
+cfr_key_in_file_name = "X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA/cfr_key/cfr_key.csv"
+  # output: clean cfr key with PS and MR relevance markings
+cfr_key_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_cfr_key.rds"
 
 ######################################################################################################
 
-# Read data file
-cfr_key = read.csv(cfr_key.in.file.name)
+# READ AND PREPARE  CFR KEY DATA
 
-# Format cfr subsection code description var
+# read cfr key data
+  # key created by Katie Choi on 2/16/2015 from the e-CFR (current as of 2/12/2015) from: 
+  # http://www.ecfr.gov/cgi-bin/text-idx?SID=95a3589813c4b48d6daa8f8df80f0ead&c=ecfr&tpl=/ecfrbrowse/Title30/30cfrv1_02.tpl
+  # See X:\Projects\Mining\NIOSH\analysis\data\0_originals\MSHA\cfr_key\Notes.txt for more
+cfr_key = read.csv(cfr_key_in_file_name)
+
+# format cfr subsection code
 cfr_key$cfr_section_code_desc = as.character(cfr_key$cfr_section_code_desc)
 
-# Makes the subsection codes var
+# make the subsection codes var
 subsection_code_length = attr(regexpr("[0-9]+\\.[0-9]+(-)*[0-9]*", cfr_key$cfr_section_code_desc), "match.length")
-cfr_key$subsection_code = substr(cfr_key$cfr_section_code_desc, 2, 1+subsection_code_length)
+cfr_key$subsection_code = substr(cfr_key$cfr_section_code_desc, 2, 1 + subsection_code_length)
 
 ######################################################################################################
 
@@ -185,9 +184,9 @@ cfr_key$MR_maybe_relevant = ifelse(cfr_key$cfr_part_code == "77" & (cfr_key$cfr_
 
 ######################################################################################################
 
-#cfr_key = cfr_key[, c(grep("relevant", names(cfr_key)), grep("subsection_code", names(cfr_key)))]
+# OUTPUT CLEAN CFR KEY
 
-saveRDS(cfr_key, file = cfr_key.out.file.name)
-rm(subsection_code_length, cfr_key)
+# output clean cfr key with PS and MR relevance markings
+saveRDS(cfr_key, file = cfr_key_out_file_name)
 
 ######################################################################################################
