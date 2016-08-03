@@ -11,19 +11,19 @@ library(plyr)
 
 # define file names
   # input: clean and merged accidents data (2_clean_accidents)
-accidents_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_accidents_TEST.rds" 
+accidents_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_accidents.rds" 
   # input: clean and merged mines data (1_clean_mines) - ALL mines
-mines_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/all_clean_mines_TEST.rds" 
+mines_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/all_clean_mines.rds" 
   # output: merged mines and accidents data
-mines_accidents_file_name = "X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_mines_accidents_TEST.rds"
+mines_accidents_file_name = "X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_mines_accidents.rds"
 
 ######################################################################################################
 
 # MERGE MINES AND ACCIDENTS DATA, THEN OUTPUT
 
 # read data files
-accidents = readRDS(accidents_file_name) #284,109 obs, 58 vars, 5592 unique mines
-mines_quarters = readRDS(mines_file_name) #50,890 obs, 68 vars, 14,508 unique mines
+accidents = readRDS(accidents_file_name) #284,109 obs, 58 vars, 5592 unique mineids
+mines_quarters = readRDS(mines_file_name) #50,890 obs, 68 vars, 14,508 unique mineids
 
 # collapse mines data to the mine level (no quarters required) - these are already mine-level vars
 temp = mines_quarters[, c("mineid", 
@@ -56,7 +56,7 @@ names(vars_to_avrg)[names(vars_to_avrg) == "hours_qtr"] = "avg_hours_qtr"
 names(vars_to_avrg)[names(vars_to_avrg) == "employment_qtr"] = "avg_employment_qtr"
 names(vars_to_avrg)[names(vars_to_avrg) == "coal_prod_qtr"] = "avg_coal_prod_qtr"
 
-mines = merge(vars_to_avrg, temp, by = "mineid") # should have 50,890 observations, 18 vars, 14,508 unique mines
+mines = merge(vars_to_avrg, temp, by = "mineid") # should have 50,890 observations, 18 vars, 14,508 unique mineids
 
 # keep unique mine info for 14,508 unique mines
 mines = mines[!duplicated(mines$mineid), ]
@@ -65,7 +65,7 @@ mines = mines[!duplicated(mines$mineid), ]
 rm(mines_quarters, temp, vars_to_avrg)
 
 # merge mines and accidents data
-mines_accidents = merge(accidents, mines, by = "mineid") # should have 199,022 obs of unique accidents, 4829 unique mines
+mines_accidents = merge(accidents, mines, by = "mineid") # should have 199,022 obs of unique accidents, 4829 unique mineids
 
 # keep mine-level information from mines data (.y)
 mines_accidents = mines_accidents[, c(-grep("\\.x", names(mines_accidents)))]
@@ -75,7 +75,9 @@ names(mines_accidents) = gsub("\\.[x|y]", "", names(mines_accidents))
 mines_accidents = mines_accidents[mines_accidents$problem != 1, ]
 mines_accidents = mines_accidents[, c(-match("problem", names(mines_accidents)))]
 
-# output merged mines and accidents data - 199,019 unique accidents, 4829 unique mines, 72 vars
+# output merged mines and accidents data - 199,019 unique accidents, 4829 unique mineids, 72 vars
 saveRDS(mines_accidents, file = mines_accidents_file_name)
+rm(list = ls())
+gc()
 
 ######################################################################################################
