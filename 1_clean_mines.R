@@ -21,23 +21,23 @@ library(zoo)
   # input: quarterly under-reporting employment/production data
 underreporting_employment_in_file_name = "X:/Projects/Mining/MSHA_OSHA_Underreporting/analysis/data/0_originals/MSHA/rec_2015_03_03/Operator_Quarterly_Emp_Production/Operator_Quarterly_Emp_Production.txt"
   # output: clean quarterly under-reporting employment/production data
-underreporting_employment_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_underreporting_employment_TEST.rds"
+underreporting_employment_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_underreporting_employment.rds"
   # input: quarterly employment/production data
 quarterly_employment_in_file_name = "X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA/open_data/MinesProdQuarterly.txt"
   # output: clean quarterly employment/production data
-quarterly_employment_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_employment_TEST.rds"
+quarterly_employment_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_employment.rds"
   # input: annual employment/production data
 yearly_employment_in_file_name = "X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA/open_data/MinesProdYearly.txt"
   # output: clean annual employment/production data
-yearly_employment_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_employment_yrly_TEST.rds"
+yearly_employment_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_employment_yrly.rds"
   # input: mines data
 open_data_mines_file_name = "X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA/open_data/Mines.txt"
   # output: clean mine type data
-mine_types_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/mine_types_TEST.rds"
+mine_types_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/mine_types.rds"
   # output: clean mine-quarter level data (has observations dropped in preparation for prediction)
-mines_quarters_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_mines_TEST.rds"
+mines_quarters_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_mines.rds"
   # output: all clean mine-quarter level data
-all_mines_quarters_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/all_clean_mines_TEST.rds"
+all_mines_quarters_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/all_clean_mines.rds"
 
 ######################################################################################################
 
@@ -376,5 +376,7 @@ mines_quarters = mines_quarters[(mines_quarters$hours_qtr != 0), ]
 
 # output mine-level data
 saveRDS(mines_quarters, file = mines_quarters_file_name)
+rm(list = ls())
+gc()
 
 ######################################################################################################
