@@ -28,10 +28,21 @@ library(adabag)
 library(DMwR)
 library(caret)
 
-######################################################################################################
-rm(list = ls())
+# define file names
+  # input: coded training set - sent to us by NIOSH on 8/28/2015
+coded_training_set_file_name = "X:/Projects/Mining/NIOSH/analysis/data/training/coded_sets/Training_Set_Maintenance_And_Repair_Accidents_August_2015_2.csv"
+  # input: additional maintenance and repair accidents (all fatalities) collected by Sarah L. following correspondence with John H. from NIOSH on 4/14/2016
+fatalities_data_file_name = "X:/Projects/Mining/NIOSH/analysis/data/4_coded/coded_MR_fatalities.csv"
+  # input: all accidents data, unclassified, cleaned in 2_clean_accidents.R and merged on mines in 3_merge_accidents.R
+accidents_data_file_name = "X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_mines_accidents.rds"
+  # output: all accidents, now classified after algorithm
+classified_accidents_file_name = "C:/Users/slevine2/Dropbox (Stanford Law School)/R-code/accidents_with_predictions.csv"
 
-# SET PREFERENCES - IMPUTATION METHOD - METHOD 3 IS RANDOM DRAWS FROM DISTRIBUTION (OUR BEST METHOD)
+######################################################################################################
+
+# SET PREFERENCES 
+
+# imputation method: method 3 is random draws from distribution (our best method)
 imputation.method = 3
 
 # Different people at NIOSH told us different things about whether or not to include accidents that occur during MR
@@ -41,21 +52,26 @@ imputation.method = 3
 #falling.accidents = "excluded"
 falling.accidents = "included"
 
-# SET PREFERENCES - DATA TYPE - EITHER TRAINING DATA FOR MODEL SELECTION, OR REAL ACCIDENTS DATA FOR CLASSIFICATION
+# set preferences - data type - either training data for model selection, or real accidents data for classification
 #data.type = "training data"
 data.type = "real accidents data"
 
 dummies.option = "off"
 
-# LOAD IN CODED TRAINING SET (1000 OBSERVATIONS, CODED FOR "MR")
-mr.data = read.csv("X:/Projects/Mining/NIOSH/analysis/data/training/coded_sets/Training_Set_Maintenance_And_Repair_Accidents_August_2015_2.csv", header = TRUE, sep = ",", nrows = 1001, stringsAsFactors = FALSE)
-# LOAD IN DATASET OF ADDITIONAL FATALITIES (FROM OPEN DATA) TO APPEND TO OUR TRAINING SET - ALL "MR"
-mr.fatalities = read.csv("X:/Projects/Mining/NIOSH/analysis/data/4_coded/coded_MR_fatalities.csv", header = TRUE, sep = ",", nrows = 24, stringsAsFactors = FALSE)
+######################################################################################################
 
+# LOAD IN DATA
+
+# load in coded training set (1000 observations unique on documentno, 111 vars, coded for "MR")
+mr.data = read.csv(coded_training_set_file_name, header = TRUE, sep = ",", nrows = 1001, stringsAsFactors = FALSE)
+
+# load in dataset of additional fatalities (from open data) to append to our training set - 23 obs unique on documentno, 110 vars, all "MR"
+mr.fatalities = read.csv(fatalities_data_file_name, header = TRUE, sep = ",", nrows = 24, stringsAsFactors = FALSE)
+
+# load in real accidents data for classification
 if (data.type == "real accidents data") {
-  # LOAD IN REAL ACCIDENTS DATA FOR CLASSIFICATION
   #accidents.data = read.csv("C:/Users/slevine2/Dropbox (Stanford Law School)/R-code/prepped_mines_accidents.csv", header = TRUE, sep = ",", stringsAsFactors = FALSE)
-  accidents.data = readRDS("X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_mines_accidents_TEST.rds") # 199019 obs 
+  accidents.data = readRDS(accidents_data_file_name) # 199,019 obs unique on documentno, 4829 unique mineids
 }
 
 ######################################################################################################
@@ -66,7 +82,7 @@ mr.data$MR = as.factor(mr.data$M.R.)
 mr.data = mr.data[, c(-match("M.R.", names(mr.data)))]
 mr.data[, "death"] = ifelse(grepl("fatality", mr.data[,"degreeofinjury"]), 1, 0)
     
-# Clean up fatalities variables - drop variables not present in training set before appending
+# clean up fatalities variables - drop variables not present in training set before appending
 mr.fatalities$MR = as.factor(mr.fatalities$MR_fatality)
 mr.fatalities = mr.fatalities[, c(-grep("MR_fatality", names(mr.fatalities)), -grep("v56", names(mr.fatalities)),
                                       -grep("v57", names(mr.fatalities)), -grep("v58", names(mr.fatalities)), 
@@ -76,11 +92,11 @@ mr.fatalities = mr.fatalities[, c(-grep("MR_fatality", names(mr.fatalities)), -g
 # However, it's really only evident from the fatalgrams (see open data folder) that these were sustained
 # during larger group m&r activities. Nothing from the narrative field/occupation indicates that M&R was the
 # activity at the time. Essentially, training on these observations will stack the deck against us.
-# Let's delete them for now. We wind up with 19 extra observations.
+# Let's delete them for now. We wind up with 19 fatality observations.
 mr.fatalities = mr.fatalities[!(mr.fatalities$documentno=="220030290001") & !(mr.fatalities$documentno=="220030290002") &
                                   !(mr.fatalities$documentno=="220030290003") & !(mr.fatalities$documentno=="220030130149"),]
     
-# Clean narrative fields: drop redundant vars and keep lowercase version
+# clean narrative fields: drop redundant vars and keep lowercase version
 drops <- c("narrativemodified", "degreeofinjury", "accidentclassification", "accidenttype", "natureofinjury", "mineractivity")
 mr.data = mr.data[, !(names(mr.data) %in% drops)]
 names(mr.data)[names(mr.data) == 'narrativemodified.1'] = 'narrative'
@@ -103,9 +119,10 @@ mr.data$equipmanufacturer = tolower(mr.data$equipmanufacturer)
 mr.data$immediatenotificationclass = tolower(mr.data$immediatenotificationclass)
 mr.data$uglocation = tolower(mr.data$uglocation)
     
-# Append dataset of additional fatality observations for training set - wind up with 1019 obs
+# append dataset of additional fatality observations for training set - wind up with 1019 obs, 106 vars
 mr.data <- rbind(mr.data, mr.fatalities) 
-# One of these was redundant (same docno) so we drop this - wind up with 1018 obs
+
+# One of these was redundant (same docno) so we drop this - wind up with 1018 obs, 106 vars
 mr.data = mr.data[!duplicated(mr.data$documentno), ]
 
 # make MR a factor variable
@@ -122,7 +139,8 @@ mr.data$MR[mr.data$documentno=="219932950056"] = "NO"
 # DO THIS CODE IF YOU'RE RUNNING ON THE REAL ACCIDENTS DATA (NOT THE TRAINING SET)
 
 if (data.type == "real accidents data") {
-    # FIRST MAKE A FLAG FOR TRAINING OBSERVATIONS
+  
+    # first make a flag for training observations
     mr.data[, "type"] = "training"  
     mr.data[, "datasource"] = "training"  
     mr.data[, "investigationbegindate"] = "" 
@@ -130,7 +148,7 @@ if (data.type == "real accidents data") {
     accidents.data[, "contractor_accident"] = "" 
     accidents.data[, "MR"] = "" 
     
-    # CLEAN NARRATIVE FIELDS: DROP REDUNDANT VARS AND KEEP LOWERCASE VERSION
+    # clean narrative fields: drop redundant vars and keep lowercase version
     accidents.data$narrative = tolower(accidents.data$narrative)
     accidents.data$degreeofinjury = tolower(accidents.data$degreeofinjury)
     accidents.data$accidentclassification = tolower(accidents.data$accidentclassification)
@@ -168,14 +186,14 @@ if (data.type == "real accidents data") {
     accidents.data = accidents.data[which(accidents.data$documentno %in% keep.docnos), ]
     rm(mr.names, accident.names, mr.docnos, accident.docnos, keep.docnos)
     
-    # APPEND DATASET OF TRAINING OBSERVATIONS AND REAL ACCIDENTS FOR CLASSIFICATION
-    mr.data <- rbind(mr.data, accidents.data) # now we have 199,171 observations unique on documentno, 4860 unique mines
+    # append dataset of training observations and real accidents for classification
+    mr.data <- rbind(mr.data, accidents.data) # now we have 199,171 observations unique on documentno, 68 vars, 4860 unique mineids
 }
 
 ######################################################################################################
 # CLEAN UP ALL VARS 
 
-# DESTRING VARIABLES
+# destring variables
 mr.data[,grep("numberofemployees", names(mr.data))] = gsub(pattern = ",",replacement =  "", mr.data[,grep("numberofemployees", names(mr.data))])
 mr.data[,grep("numberofemployees", names(mr.data))] = as.numeric(mr.data[,grep("numberofemployees", names(mr.data))])
 mr.data[,grep("methaneliberation", names(mr.data))] = gsub(pattern = ",",replacement =  "", mr.data[,grep("methaneliberation", names(mr.data))])
@@ -183,7 +201,7 @@ mr.data[,grep("methaneliberation", names(mr.data))] = as.numeric(mr.data[,grep("
 mr.data[,grep("averagemineheight", names(mr.data))] = gsub(pattern = ",",replacement =  "", mr.data[,grep("averagemineheight", names(mr.data))])
 mr.data[,grep("averagemineheight", names(mr.data))] = as.numeric(mr.data[,grep("averagemineheight", names(mr.data))])
 
-# MERGE REDUNDANT "NO VALUE FOUND" FIELDS IN FACTOR VARIABLES
+# merge redundant "no value found" fields in factor variables
 mr.data[, "uglocation"] = ifelse(mr.data[, "uglocation"] == "not marked", "no value found", mr.data[, "uglocation"])
 mr.data[, "immediatenotificationclass"] = ifelse(mr.data[, "immediatenotificationclass"] == "not marked", "no value found", mr.data[, "immediatenotificationclass"])
 mr.data[, "natureofinjury"] = ifelse(mr.data[, "natureofinjury"] == "unclassified,not determed", "no value found", mr.data[, "natureofinjury"])
@@ -196,11 +214,12 @@ mr.data$accident.only = ifelse(mr.data$degreeofinjury == "accident only" | mr.da
 mr.data$MR = ifelse(mr.data$MR == "YES" & mr.data$accident.only == 0, 1, 0)
 mr.data$MR[mr.data$MR == "YES" & mr.data$accident.only == 1] = 0
 
-# MAKE SURE MR IS STILL A FACTOR VARIABLE
+# make sure mr is still a factor variable
 mr.data[, "MR"] = factor(ifelse(mr.data[, "MR"] == 1, "YES", "NO"))
 names(mr.data)[names(mr.data) == "MR"] = "MR"
 
 ######################################################################################################
+
 # 60 NARRATIVE FIELDS ARE POLLUTED WITH OTHER COLUMNS - SPLIT AND REPLACE THESE 
 
 mr.data[, "messy"] = ifelse(grepl("\\|[0-9]*[0-9]*[0-9]*\\|", mr.data[,"narrative"]), 1, 0)
@@ -214,19 +233,20 @@ for (i in 1:length(messy.rows)) {
 }
 mr.data = mr.data[, c(-match("messy", names(mr.data)))]
 
-# DEAL WITH MESSY NUMBER TYPOS - RANDOM NUMBERS THAT HAVE BEEN DROPPED INTO NARRATIVES 
+# deal with messy number typos - random numbers that have been dropped into narratives 
 mr.data[, "numbertypo"] = ifelse(grepl("[a-z][0-9][a-z]", mr.data[,"narrative"]), 1, 0)
 for (i in 0:9) {
   mr.data[mr.data$numbertypo == 1,]$narrative <- gsub(i, "", mr.data[mr.data$numbertypo == 1,]$narrative)
 }
 
-# CONVERT DATES - THIS NEEDS TO HAPPEN AFTER REPLACING RETURNTOWORKDATE WITH EXTRACTS FROM NARRATIVE FIELDS
+# convert dates - this needs to happen after replacing returntoworkdate with extracts from narrative fields
 indices_with_date = grep("date", names(mr.data))
 for (i in indices_with_date) {
   mr.data[,i] = as.Date(mr.data[,i], "%m/%d/%Y")
 }
 
 ######################################################################################################
+
 # ADD NEW KEYWORD VARS
 
 # GENERATE LIKELY POSITIVE KEYWORDS (LIKELY TO INDICATE POSITIVE OUTCOMES) 
@@ -695,9 +715,10 @@ train <- mr.data[order(rand),]
 rand2 <- runif(nrow(simple.data))
 simple <- simple.data[order(rand2),]
 remove(rand,rand2)
+
 # just to find out which col # MR is
-which( colnames(train)=="MR" )
-which( colnames(simple)=="MR" )
+which(colnames(train)=="MR" )
+which(colnames(simple)=="MR" )
 
 if (data.type == "training" ) {
       ######################################################################################################
@@ -813,7 +834,11 @@ if (data.type == "training" ) {
       #View(adaboost_test[adaboost_test$MR == "YES" & adaboost_test$adaboost == "NO",]$documentno)
 }
 
+######################################################################################################
+# NOW ALGORITHM WITH REAL ACCIDENTS DATA (not just testing)
+
 if (data.type == "real accidents data") {
+  
     # USE BOOSTING TO CLASSIFY REAL ACCIDENTS DATA WITH UNKNOWN "MR" STATUS
     set.seed(625)
     mr.adaboost = boosting(MR ~ . , data = simple[simple$type!="unclassified",!(names(simple) %in% c('documentno','narrative','type','mineid'))], boos = T, mfinal = 300, coeflearn = 'Freund')
@@ -822,12 +847,14 @@ if (data.type == "real accidents data") {
     names(accidents.data)[names(accidents.data) == 'adaboost.pred$class'] = 'adaboost'
     
     ######################################################################################################
+    
     # POST-PROCESSING
     
-    # merge in the rest of the variables from the original accidents-mines data #     
-    accidents.mines = readRDS("X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_mines_accidents_TEST.rds")
+    # merge in the rest of the variables from the original accidents-mines data     
+    accidents.mines = readRDS(accidents_data_file_name)
     accidents.data = merge(accidents.data, accidents.mines,by="documentno", all = TRUE)
-    
+
+    # clean up var names from the merge
     rm(train, simple, simple.data, mr.fatalities, accidents.mines)
     accidents.data = accidents.data[, c(-grep("\\.x", names(accidents.data)))]
     names(accidents.data) = gsub("\\.[x|y]", "", names(accidents.data))
@@ -844,13 +871,13 @@ if (data.type == "real accidents data") {
                                                  (accidents.data$maybe.activy == 1 & accidents.data$maybe.keyword == 1))) |
                                            accidents.data$likely.keyword == 1) & accidents.data$accident.only == 0, 1, 0)
     
-    # false negatives #
+    # false negatives 
     accidents.data[, "flashburn"] = ifelse(grepl("weld.{1,40}flash( |-)*burn", accidents.data[,"narrative"]) | 
                                            grepl("flash( |-)*burn.{1,40}weld", accidents.data[,"narrative"]), 1, 0)
     
     accidents.data$false.neg = ifelse(accidents.data$flashburn == 1 & accidents.data$adaboost == "NO", 1, 0)
     
-    # false positives #  
+    # false positives   
     accidents.data[, "carpal.tunnel"] = ifelse((grepl("carp(a|u|e)l( |-)*tun(n)*(e|l)(e|l)", accidents.data[,"narrative"]) | 
                                                 grepl("bursitis", accidents.data[,"narrative"])) &
                                                 !grepl("fracture", accidents.data[,"narrative"]), 1, 0)
@@ -872,7 +899,7 @@ if (data.type == "real accidents data") {
                                           (grepl("no (accident|incident|injury)", accidents.data[,"narrative"]) & 
                                           !grepl("no (accident|incident|injury).{1,5}report", accidents.data[,"narrative"])), 1, 0)
     
-    # last ditch attempt to find likely verbs and nouns before dropping false positives # 
+    # last ditch attempt to find likely verbs and nouns before dropping false positives 
     accidents.data[, "working.on"] = ifelse(grepl("(to work|workin(g)*)( |-)*(on|in|under|out|at)", accidents.data[,"narrative"]), 1, 0)
     accidents.data[, "barring"] = ifelse(grepl("barr(ed|ing).{1,10}(rock|motor)", accidents.data[,"narrative"]), 1, 0)
     accidents.data[, "otherverb"] = ifelse(grepl("( |^)patch", accidents.data[,"narrative"]) | 
@@ -898,14 +925,14 @@ if (data.type == "real accidents data") {
                                            accidents.data$working.on == 1 | accidents.data$barring == 1) &
                                            accidents.data$accident.only == 0, 1, 0)
   
-    # flag definitely and likely false positives # 
+    # flag definitely and likely false positives  
     accidents.data$false.pos = ifelse((accidents.data$carpal.tunnel == 1 | accidents.data$cumulative == 1 | accidents.data$heartattack == 1 |
                                        accidents.data$hearingloss == 1 | accidents.data$exposure == 1 |
                                        accidents.data$unrelated == 1 | accidents.data$accident.only == 1) & accidents.data$adaboos == "YES", 1, 0)
     accidents.data$false.pos = ifelse(accidents.data$adaboos == "YES" & accidents.data$likely.keyword == 0 &
                                       accidents.data$maybe.keyword == 0 & accidents.data$other.keyword == 0, 1, accidents.data$false.pos)  
     
-    # SAVE FINAL MR PREDICTION AND DATASET WITH JUST DOC NO'S  & PREDICTIONS
+    # save final mr prediction and dataset with just doc no's  & predictions
     accidents.data$MR  = ifelse((accidents.data$adaboost == "YES" & accidents.data$false.pos == 0) | accidents.data$false.neg == 1, 1, 0)
     accidents.data = accidents.data[, c(-grep("accident.only", names(accidents.data)), -grep("adaboost", names(accidents.data)),
                                       -grep("barring", names(accidents.data)), -grep("battery", names(accidents.data)),
@@ -940,8 +967,11 @@ if (data.type == "real accidents data") {
                                       -grep("washingdown", names(accidents.data)), -grep("welding", names(accidents.data)),
                                       -grep("working.on", names(accidents.data)), -grep("wrench", names(accidents.data)))]
     
-write.csv(accidents.data, file = "C:/Users/slevine2/Dropbox (Stanford Law School)/R-code/accidents_with_predictions.csv", row.names = FALSE)
+  write.csv(accidents.data, file = classified_accidents_file_name, row.names = FALSE)
+  # still 199019 obs, 35187 MR injuries, 162966 non-MR injuries.
 }
+rm(list = ls())
+gc()
 
 ######################################################################################################
 
