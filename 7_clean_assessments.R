@@ -16,10 +16,10 @@ library(stringr)
   # input: assessments data
 open_data_assessments_in_file_name = "X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA/open_data/AssessedViolations.txt"
   # input: mine-type data (1_clean_mines)
-mine_types_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/mine_types_TEST.rds"
+mine_types_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/mine_types.rds"
   # output: clean assessments data
     # uniquely identified by eventno (inspection number) * violationno (violation number)
-open_data_assessments_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_assessments_TEST.rds"
+open_data_assessments_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_assessments.rds"
 
 ######################################################################################################
 
