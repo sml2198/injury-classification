@@ -34,8 +34,10 @@ yearly_employment_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_clea
 open_data_mines_file_name = "X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA/open_data/Mines.txt"
   # output: clean mine type data
 mine_types_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/mine_types_TEST.rds"
-  # output: clean mine-quarter level data
+  # output: clean mine-quarter level data (has observations dropped in preparation for prediction)
 mines_quarters_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_mines_TEST.rds"
+  # output: all clean mine-quarter level data
+all_mines_quarters_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/all_clean_mines_TEST.rds"
 
 ######################################################################################################
 
@@ -62,7 +64,7 @@ names(underreporting_employment)[names(underreporting_employment) == "Coal.Produ
 # format mine id
 underreporting_employment$mineid = str_pad(underreporting_employment$mineid, 7, pad = "0")
 
-# output clean quarterly under-reporting employment/production data
+# output clean quarterly under-reporting employment/production data - 187370 obs, 6 vars
 saveRDS(underreporting_employment, file = underreporting_employment_out_file_name)
 
 ######################################################################################################
@@ -96,7 +98,7 @@ names(quarterly_employment)[names(quarterly_employment) == "COAL_PRODUCTION"] = 
 # format mine id
 quarterly_employment$mineid = str_pad(quarterly_employment$mineid, 7, pad = "0")
 
-# output clean quarterly employment/production data
+# output clean quarterly employment/production data - 41623 obs, 6 vars
 saveRDS(quarterly_employment, file = quarterly_employment_out_file_name)
 
 ######################################################################################################
@@ -104,10 +106,10 @@ saveRDS(quarterly_employment, file = quarterly_employment_out_file_name)
 # READ AND CLEAN ANNUAL EMPLOYMENT/PRODUCTION DATA, THEN OUTPUT
 
 # read annual employment/production data
-  # dataset downloaded on 4/20/16 from http://arlweb.msha.gov/OpenGovernmentData/OGIMSHA.asp 
+  # dataset downloaded on 4/20/16 from http://arlweb.msha.gov/OpenGovernmentData/OGIMSHA.asp - 427741 obs, 11 vars
 yearly_employment = read.table(yearly_employment_in_file_name, header = T, sep = "|")
 
-# drop data from environments not of interest
+# drop data from environments not of interest - 9762 obs, 11 vars
 yearly_employment = yearly_employment[(yearly_employment$SUBUNIT == "UNDERGROUND" & yearly_employment$COAL_METAL_IND == "C"), ]
 
 # drop unnecessary variables
@@ -129,7 +131,7 @@ names(yearly_employment)[names(yearly_employment) == "ANNUAL_HOURS"] = "hours_yr
 # format mine id
 yearly_employment$mineid = str_pad(yearly_employment$mineid, 7, pad = "0")
 
-# output clean annual employment/production data
+# output clean annual employment/production data - 9762 obs, 7 vars
 saveRDS(yearly_employment, file = yearly_employment_out_file_name)
 
 ######################################################################################################
@@ -140,7 +142,7 @@ saveRDS(yearly_employment, file = yearly_employment_out_file_name)
 # early_mines = read.csv("X:/Projects/Mining/NIOSH/analysis/data/1_converted/MSHA/mines_fromText.csv")
 
 # read mines data
-  # dataset downloaded on 4/20/16 from http://arlweb.msha.gov/OpenGovernmentData/OGIMSHA.asp
+  # dataset downloaded on 4/20/16 from http://arlweb.msha.gov/OpenGovernmentData/OGIMSHA.asp - 86135 obs, 59 vars
 open_data_mines = read.table(open_data_mines_file_name, header = T, sep = "|")
 
 # re-name variables
@@ -212,7 +214,7 @@ saveRDS(mine_types, file = mine_types_file_name)
 
 # MERGE MINES AND EMPLOYMENT/PRODUCTION DATA, THEN CLEAN
 
-# merge mines and employment/production data on mineid, year, and quarter
+# merge mines and employment/production data on mineid, year, and quarter - wind up with 125692 obs, 73 vars, 86135 unique mines
 # drop observations missing for coalcormetalmmine
 mines_quarters = merge(quarterly_employment, open_data_mines, by = c("mineid"), all = T)
 mines_quarters = mines_quarters[!is.na(mines_quarters$coalcormetalmmine), ]
@@ -221,12 +223,12 @@ mines_quarters = mines_quarters[!is.na(mines_quarters$coalcormetalmmine), ]
 mines_quarters = merge(mines_quarters, underreporting_employment, by = c("mineid", "year", "quarter"), all = T)
 mines_quarters = mines_quarters[!is.na(mines_quarters$coalcormetalmmine), ]
 
-# drop data from environments not of interest
+# drop data from environments not of interest - now we have 50890 obs, 73 vars, 14508 unique mines
   # (facility means a mill/processing location, always above ground, according to April Ramirez @ DOL on 6/6/16)
 mines_quarters = mines_quarters[mines_quarters$coalcormetalmmine == "C", ]
 mines_quarters = mines_quarters[mines_quarters$minetype == "Underground", ]
 
-# drop production variables that are not quarterly coal production
+# drop production variables that are not quarterly coal production - now we have 50890 obs, 71 vars
   # coal_prod_qtr is most reliable (spot-checked against MSHA mine retrieval system)
 mines_quarters$coal_prod_yr = 
   mines_quarters$under_coal_prod_qtr = NULL
@@ -246,12 +248,12 @@ mines_quarters$final_employment_qtr = ifelse((mines_quarters$under_avg_employee_
                                                 !is.na(mines_quarters$under_avg_employee_cnt_qtr) &
                                                 is.na(mines_quarters$avg_employee_cnt_qtr)), mines_quarters$under_avg_employee_cnt_qtr, mines_quarters$final_employment_qtr)
 
-  # if no quarterly data is available, use annual average employment
+# if no quarterly data is available, use annual average employment
 mines_quarters$final_employment_qtr = ifelse((mines_quarters$avg_employee_cnt_yr != 0 & 
                                                 is.na(mines_quarters$final_employment_qtr) &
                                                 !is.na(mines_quarters$avg_employee_cnt_yr)), mines_quarters$avg_employee_cnt_yr, mines_quarters$final_employment_qtr)
 
-  # last resort: use # of employees from the mines dataset (this is # employees as of minestatus date (not relevant to quarters))
+# last resort: use # of employees from the mines dataset (this is # employees as of minestatus date (not relevant to quarters))
 mines_quarters$final_employment_qtr = ifelse(is.na(mines_quarters$final_employment_qtr), mines_quarters$numberofemployees, mines_quarters$final_employment_qtr)
 
 # create new variable: quarterly hours
@@ -261,7 +263,7 @@ mines_quarters$final_hours_qtr = ifelse((is.na(mines_quarters$hours_qtr) &
 mines_quarters$final_hours_qtr = ifelse((is.na(mines_quarters$final_hours_qtr) &
                                            !is.na(mines_quarters$hours_yr)), (mines_quarters$hours_yr / 4), mines_quarters$final_hours_qtr)
 
-# drop variables other than "final" count
+# drop variables other than "final" count - we still have 50890 obs, 66 vars, 14508 unique mines
 mines_quarters$avg_employee_cnt_yr =
   mines_quarters$avg_employee_cnt_qtr =
   mines_quarters$numberofemployees =
@@ -283,24 +285,32 @@ names(mines_quarters)[names(mines_quarters) == "final_employment_qtr"] = "employ
 mines_quarters$minestatusdate = as.Date(mines_quarters$minestatusdate, "%m/%d/%Y")
 mines_quarters$statusquarter = as.yearqtr(mines_quarters$minestatusdate)
 mines_quarters$statusyear = as.numeric(format(mines_quarters$minestatusdate, "%Y"))
-mines_quarters$missing = ifelse((mines_quarters$minestatus == "Abandoned" | mines_quarters$minestatus == "Abandoned and Sealed" | 
-                                mines_quarters$minestatus == "NonProducing") & (mines_quarters$statusyear < 2000), 1, 0)
-
-# drop data for which:
-  # the hours/production file didn't merge with a mine
-  # AND the minestatus is abandoned/nonproducing
-  # AND the minestatus date is before 2000
-mines_quarters = mines_quarters[mines_quarters$missing == 0, ] # 12340 observations dropped
-
-# drop observations without year/quarter data 
-mines_quarters = mines_quarters[!is.na(mines_quarters$year), ] # 359 observations dropped
 
 # format date variables so quarter contains date-formatted year and quarter info
 mines_quarters$quarter = paste(mines_quarters$year, mines_quarters$quarter, sep = "-")
 mines_quarters$quarter = ifelse(mines_quarters$quarter == "NA-NA", NA, mines_quarters$quarter)
 mines_quarters$quarter = as.yearqtr(mines_quarters$quarter)
 
-# drop observations for mines that are abandoned or sealed when their status date comes before the current quarter
+# output mines data BEFORE dropping any observations base don missing data.
+# this data is for merging on accidents - will be used in 3_merge_accidents.R
+saveRDS(mines_quarters, file = all_mines_quarters_file_name)
+
+######################################################################################################
+
+# HERE WE DROP OBSERVATIONS THAT DON'T BELONG 
+
+# drop data for which:
+  # the hours/production file didn't merge with a mine
+  # AND the minestatus is abandoned/nonproducing
+  # AND the minestatus date is before 2000
+mines_quarters$missing = ifelse((mines_quarters$minestatus == "Abandoned" | mines_quarters$minestatus == "Abandoned and Sealed" | 
+                                   mines_quarters$minestatus == "NonProducing") & (mines_quarters$statusyear < 2000), 1, 0)
+mines_quarters = mines_quarters[mines_quarters$missing == 0, ] # 12340 observations dropped, we now have 2257 unique mines
+
+# drop observations without year/quarter data - we now have 1898 unique mines
+mines_quarters = mines_quarters[!is.na(mines_quarters$year), ] # 359 observations dropped
+
+# drop observations for mines that are abandoned or sealed when their status date comes before the current quarter - wind up with 37189 obs, 70 vars
 mines_quarters$minestatus = as.character(mines_quarters$minestatus)
 mines_quarters$drop = ifelse((mines_quarters$minestatus == "Abandoned" | mines_quarters$minestatus == "Abandoned and Sealed") &
                                (mines_quarters$statusquarter <= mines_quarters$quarter), 1, 0)
@@ -316,14 +326,14 @@ mines_quarters$minestatus = ifelse((mines_quarters$statusquarter >= mines_quarte
 # drop the data that is wacky in the mine data retrieval system
   # sometimes the employment looks like it should be zero, but sometimes the employment is positive (and the hours are wrong)
 mines_quarters$missing = is.na(mines_quarters$employment_qtr)
-mines_quarters = mines_quarters[mines_quarters$missing == 0, ] # 563 observations dropped
+mines_quarters = mines_quarters[mines_quarters$missing == 0, ] # 563 observations dropped, now we have 1801 unique mines
 
-# remove mine-quarters with minestatus "Temporarily Idled" and zero hours/employment/production (these are nonproducing)
+# remove mine-quarters with minestatus "Temporarily Idled" and zero hours/employment/production (these are nonproducing) - wind up with 36270 obs, 70 vars, 1796 unique mines
 mines_quarters = mines_quarters[(mines_quarters$minestatus != "Temporarily Idled" | mines_quarters$hours_qtr != 0), ]
 mines_quarters = mines_quarters[(mines_quarters$minestatus != "Temporarily Idled" | mines_quarters$employment_qtr != 0), ]
 mines_quarters = mines_quarters[(mines_quarters$minestatus != "Temporarily Idled" | mines_quarters$coal_prod_qtr != 0), ]
 
-# drop unnecessary variables
+# drop unnecessary variables - wind up with 36270 obs, 66 vars
 mines_quarters$statusyear = 
   mines_quarters$statusquarter = 
   mines_quarters$drop = 
@@ -333,7 +343,7 @@ mines_quarters$statusyear =
 
 # COLLAPSE MERGED DATA TO THE MINE-QUARTER LEVEL, THEN OUTPUT
 
-# collapse data to mine-quarter level
+# collapse data to mine-quarter level - wind up with 36270 obs, 18 vars
 temp = mines_quarters[, c("mineid", 
                           "year",
                           "quarter",
@@ -361,7 +371,7 @@ mines_quarters = ddply(mines_quarters[, c("hours_qtr",
                                                   match("coal_prod_qtr", names(x)))], na.rm = TRUE))
 mines_quarters = merge(mines_quarters, temp, by = c("mineid", "quarter"), all = T)
 
-# drop observations with no hours
+# drop observations with no hours - wind up with 30466 obs, 18 vars, 1587 unique mines
 mines_quarters = mines_quarters[(mines_quarters$hours_qtr != 0), ]
 
 # output mine-level data
