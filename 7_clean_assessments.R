@@ -6,7 +6,7 @@
   # Merges assessment data and mine types data to drop environments not of interest
   # Outputs clean assessments data
 
-# Last edit 8/2/16
+# Last edit 8/3/16
 
 ######################################################################################################
 
@@ -25,13 +25,12 @@ open_data_assessments_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_
 
 # READ, CLEAN, AND MERGE ASSESSMENTS DATA AND MINE TYPE DATA, THEN OUTPUT
 
-# read assessments data
+# read assessments data - 2107492 obs, 58 vars
   # dataset downloaded on 4/21/16 from http://arlweb.msha.gov/OpenGovernmentData/OGIMSHA.asp [MSHA open data platform (Assessed Violations)]
 open_data_assessments = read.table(open_data_assessments_in_file_name, header = T, sep = "|")
 
 # drop data from environments not of interest
-open_data_assessments = open_data_assessments[open_data_assessments$COAL_METAL_IND == "C", ]
-open_data_assessments = open_data_assessments[!is.na(open_data_assessments$COAL_METAL_IND), ]
+open_data_assessments = open_data_assessments[open_data_assessments$COAL_METAL_IND == "C", ] # drop 959176 obs
 
 # rename variables
 names(open_data_assessments)[names(open_data_assessments) == "VIOLATION_NO"] = "violationno"
@@ -75,55 +74,21 @@ open_data_assessments$mineid = str_pad(open_data_assessments$mineid, 7, pad = "0
 open_data_assessments$eventno = str_pad(open_data_assessments$eventno, 7, pad = "0")
 open_data_assessments$violationno = str_pad(open_data_assessments$violationno, 7, pad = "0")
 
-# read mine types data (1_clean_mines)
+# read mine types data (1_clean_mines) - 86135 obs, 3 vars
 mine_types = readRDS(mine_types_file_name)
 
-# merge assessments with mine types and drop non-coal and non-underground observations
-  # facility means a mill/processing location, always above ground, according to April Ramirez @ DOL on 6/6/16
+# merge assessments with mine types - 1229627 obs, 60 vars
 open_data_assessments = merge(open_data_assessments, mine_types, by = c("mineid"), all = T)
-open_data_assessments = open_data_assessments[!is.na(open_data_assessments$eventno), ]
-open_data_assessments = open_data_assessments[open_data_assessments$minetype == "Underground", ]
+open_data_assessments = open_data_assessments[!is.na(open_data_assessments$eventno), ] # drop 81311 obs
+
+# drop data from environments not of interest
+  # facility means a mill/processing location, always above ground, according to April Ramirez @ DOL on 6/6/16
+open_data_assessments = open_data_assessments[open_data_assessments$minetype == "Underground", ] # drop 306643 obs
 
 # drop unnecessary variables
 open_data_assessments$coalcormetalmmine = NULL
 
-# output clean assessments data
+# output clean assessments data - 841673 obs, 59 vars, 1673 unique mines
 saveRDS(open_data_assessments, file = open_data_assessments_out_file_name)
-
-######################################################################################################
-
-# THIS CODE IS RETIRED #
-
-# This code loads and cleans data from Carolyn Stasik's (MSHA) data pull from March 3rd, 2015
-
-# early_assessments = read.csv("X:/Projects/Mining/NIOSH/analysis/data/1_converted/MSHA/assessments_fromText.csv")
-# early_assessments[, "dup"] = duplicated(early_assessments) #Checks out with total number of duplicates implied by STATA's "duplicates" command
-# table(early_assessments$dup)
-# FALSE    TRUE 
-# 2639669    3238
-# early_assessments = early_assessments[early_assessments$dup == F,]
-# names(early_assessments)[names(early_assessments) == "Ã.Ã.violationno"] = "violationno"
-
-# early_assessments$src = "early"
-# open_data_assessments$src = "open_data"
-
-# clean_assessments = merge(open_data_assessments, early_assessments, by = "violationno", all = T)
-# clean_assessments[, "merge"] = ifelse(!is.na(clean_assessments$issuedate.y) & !is.na(clean_assessments$issuedate.x), 3, 0)
-# clean_assessments[, "merge"] = ifelse(is.na(clean_assessments$issuedate.x) & !is.na(clean_assessments$issuedate.y), 2, clean_assessments[, "merge"])
-# clean_assessments[, "merge"] = ifelse(is.na(clean_assessments$issuedate.y) & !is.na(clean_assessments$issuedate.x), 1, clean_assessments[, "merge"])
-# table(clean_assessments$merge) #1 observation in STATA's open data as compared with open_data_assessments. Nikhil 5/13/16
-# 1       2       3 
-# 237358  769535 1870134 
-
-# Next two lines to ensure R doesn't automatically convert occurrencedate to an integer (a likely quirk with factor variables)
-# clean_assessments$occurrencedate.x = as.character(clean_assessments$occurrencedate.x)
-# clean_assessments$occurrencedate.y = as.character(clean_assessments$occurrencedate.y)
-# common_varstbs = sub(".x", "", names(clean_assessments)[grep(".x", names(clean_assessments), fixed = T)], fixed = T)
-# for (i in 1:length(common_varstbs)) {
-#   clean_assessments[, paste(common_varstbs[i], ".x", sep = "")] = ifelse(clean_assessments[, "merge"] == 2, clean_assessments[, paste(common_varstbs[i], ".y", sep = "")], clean_assessments[, paste(common_varstbs[i], ".x", sep = "")])
-# }
-# clean_assessments = clean_assessments[, -grep(".y", names(clean_assessments), fixed = T)]
-# names(clean_assessments)[grep(".x", names(clean_assessments), fixed = T)] = common_varstbs
-# clean_assessments = clean_assessments[, -grep("merge", names(clean_assessments))]
 
 ######################################################################################################
