@@ -8,7 +8,7 @@
   # Merges inspections data with inspection hours data
   # Outputs merged and clean inspections data
 
-# Last edit 8/2/16
+# Last edit 8/3/16
 
 ######################################################################################################
 
@@ -20,20 +20,20 @@ open_data_inspecs_in_file_name = "X:/Projects/Mining/NIOSH/analysis/data/0_origi
   # input: inspection hours data
 early_inspecs_hours_file_name = "X:/Projects/Mining/NIOSH/analysis/data/1_converted/MSHA/inspection_hours_fromText.csv"
   # input: clean mine type data (1_clean_mines)
-mine_types_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/mine_types_TEST.rds"
+mine_types_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/mine_types.rds"
   # output: clean and merged inspections data, uniquely identified by mineid *eventno
-open_data_inspecs_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_Inspections_TEST.rds"
+open_data_inspecs_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_Inspections.rds"
 
 ######################################################################################################
 
 # READ AND CLEAN INSPECTIONS DATA
 
-# read inspections data
+# read inspections data - 775245 obs, 45 vars
   # dataset downloaded on 4/20/16 from http://arlweb.msha.gov/OpenGovernmentData/OGIMSHA.asp [Inspections]
 open_data_inspecs = read.table(open_data_inspecs_in_file_name, header = T, sep = "|")
 
 # drop observations for environments not of interest
-open_data_inspecs = open_data_inspecs[open_data_inspecs$COAL_METAL_IND != "M", ]
+open_data_inspecs = open_data_inspecs[open_data_inspecs$COAL_METAL_IND != "M", ] # drop 451932 obs
 
 # rename variables
 names(open_data_inspecs)[names(open_data_inspecs) == "EVENT_NO"] = "eventno"
@@ -94,30 +94,30 @@ rm(open_data_inspecs)
 
 # READ CLEAN MINE TYPE DATA, MERGE WITH INSPECTIONS DATA, THEN CLEAN RESULTING DATA
 
-# read clean mine type data (1_clean_mines)
+# read clean mine type data (1_clean_mines) - 86135 obs, 3 vars
 mine_types = readRDS(mine_types_file_name)
 
-# merge open source inspections data with mine type data to drop non-coal and non-underground observations
+# merge open source inspections data with mine type data - 403701 obs, 47 vars
 clean_inspecs = merge(clean_inspecs, mine_types, by = c("mineid"), all = T)
 
 # drop problematic merge observations
-clean_inspecs = clean_inspecs[!is.na(clean_inspecs$eventno), ]
+clean_inspecs = clean_inspecs[!is.na(clean_inspecs$eventno), ] # drop 80388 obs
 
 # drop observations from environments not of interest
   # facility means a mill/processing location, always above ground, according to April Ramirez @ DOL on 6/6/16
-clean_inspecs = clean_inspecs[(!is.na(clean_inspecs$calendaryear) & !is.na(clean_inspecs$calendarquarter) & !is.na(clean_inspecs$program_area)), ]
-clean_inspecs = clean_inspecs[clean_inspecs$minetype == "Underground", ]
+clean_inspecs = clean_inspecs[(!is.na(clean_inspecs$calendaryear) & !is.na(clean_inspecs$calendarquarter) & !is.na(clean_inspecs$program_area)), ] # drop 619 obs
+clean_inspecs = clean_inspecs[clean_inspecs$minetype == "Underground", ] # drop 128120 obs
 
 ######################################################################################################
 
 # READ AND CLEAN INSPECTION HOURS DATA 
 
-# read inspection hours data
+# read inspection hours data - 4634874 obs, 10 vars
   # dataset downloaded on 5/15/15 from http://arlweb.msha.gov/OpenGovernmentData/OGIMSHA.asp [Inspections]
 early_inspecs_hours = read.csv(early_inspecs_hours_file_name)
 
 # drop observations from envrionments not of interest
-early_inspecs_hours = early_inspecs_hours[early_inspecs_hours$coalcormetalmmine == "C", ]
+early_inspecs_hours = early_inspecs_hours[early_inspecs_hours$coalcormetalmmine == "C", ] # drop 1744657 obs
 
 # rename variables
 names(early_inspecs_hours)[names(early_inspecs_hours) == "sumtotalminingareatime"] = "sumtotal_on_site_hours"
@@ -139,14 +139,14 @@ early_inspecs_hours$eventno = str_pad(early_inspecs_hours$eventno, 7, pad = "0")
 clean_inspecs$mergecheck.inspec = 1
 early_inspecs_hours$mergecheck.hrs = 1
 
-# merge inspections data with open source inspection hours data 
+# merge inspections data with open source inspection hours data - 1087895 obs, 52 vars
 clean_inspecs = merge(clean_inspecs, early_inspecs_hours, by = c("mineid", "eventno"), all = T)
 
 # check for conflicts in the merge
 insp_conflcts = sum(!is.na(clean_inspecs[, "sumtotal_insp_hours.x"]) & (clean_inspecs[, "sumtotal_insp_hours.x"] != clean_inspecs[, "sumtotal_insp_hours.y"])) # 6 observations
 on_site_conflcts = sum(!is.na(clean_inspecs[, "sumtotal_on_site_hours.x"]) & (clean_inspecs[, "sumtotal_on_site_hours.x"] != clean_inspecs[, "sumtotal_on_site_hours.y"])) # 2 observations
 nonNA_conflicts = max(insp_conflcts, on_site_conflcts)
-clean_inspecs = clean_inspecs[(!is.na(clean_inspecs$mergecheck.hrs) & !is.na(clean_inspecs$mergecheck.inspec)), ]
+clean_inspecs = clean_inspecs[(!is.na(clean_inspecs$mergecheck.hrs) & !is.na(clean_inspecs$mergecheck.inspec)), ] # drop 916126 obs
 
 # rename duplicate variables
 clean_inspecs = clean_inspecs[, -grep(".y", names(clean_inspecs), fixed = T)]
@@ -154,52 +154,7 @@ names(clean_inspecs)[c(grep(".x", names(clean_inspecs), fixed = TRUE))] = sub(".
 clean_inspecs = clean_inspecs[!(((!is.na(clean_inspecs$controllerid) & clean_inspecs$controllerid == "C11088") | is.na(clean_inspecs$controllerid)) & clean_inspecs$eventno == "4165469"),
                               c(-grep("coal_metal_ind", names(clean_inspecs)), -grep("merge", names(clean_inspecs)))]
 
-# output merged and clean inspections data
+# output merged and clean inspections data - 171768 obs, 46 vars, 1884 unique mines
 saveRDS(clean_inspecs, file = open_data_inspecs_out_file_name)
-
-######################################################################################################
-
-# THIS CODE IS RETIRED #
-# This code loads and cleans data from Carolyn Stasik's (MSHA) data pull from May 20th, 2015 
-
-# clean_inspecs = merge(open_data_inspecs, early_inspecs, by = "eventno", all = T)
-# clean_inspecs[, "merge"] = ifelse(!is.na(clean_inspecs$beginningdate.y) & !is.na(clean_inspecs$beginningdate.x), 3, 0)
-# clean_inspecs[, "merge"] = ifelse(is.na(clean_inspecs$beginningdate.x) & !is.na(clean_inspecs$beginningdate.y), 2, clean_inspecs[, "merge"])
-# clean_inspecs[, "merge"] = ifelse(is.na(clean_inspecs$beginningdate.y) & !is.na(clean_inspecs$beginningdate.x), 1, clean_inspecs[, "merge"])
-# table(clean_inspecs$merge)
-# 1       2 
-# 775245 1415166
-
-# common_varstbs = sub(".x", "", names(clean_inspecs)[grep(".x", names(clean_inspecs), fixed = T)], fixed = T)
-# for (i in 1:length(common_varstbs)) {
-#   clean_inspecs[, paste(common_varstbs[i], ".x", sep = "")] = ifelse(clean_inspecs[, "merge"] == 2, clean_inspecs[, paste(common_varstbs[i], ".y", sep = "")], clean_inspecs[, paste(common_varstbs[i], ".x", sep = "")])
-# }
-# clean_inspecs = clean_inspecs[, -grep(".y", names(clean_inspecs), fixed = T)]
-# names(clean_inspecs)[grep(".x", names(clean_inspecs), fixed = T)] = common_varstbs
-
-# code from before we merged on mineid AND eventno
-# clean_inspecs[, "mergehrs"] = ifelse(!is.na(clean_inspecs$mineid.y) & !is.na(clean_inspecs$mineid.x), 3, 0)
-# clean_inspecs[, "mergehrs"] = ifelse(is.na(clean_inspecs$mineid.x) & !is.na(clean_inspecs$mineid.y), 2, clean_inspecs[, "mergehrs"])
-# clean_inspecs[, "mergehrs"] = ifelse(is.na(clean_inspecs$mineid.y) & !is.na(clean_inspecs$mineid.x), 1, clean_inspecs[, "mergehrs"])
-# table(clean_inspecs$mergehrs)
-# 1       2       3 
-# 198270   71243 1992141
-# Only Open Data:
-# 1       2       3 
-# 103014 1391153  672231 
-
-# common_varstbs = sub(".x", "", names(clean_inspecs)[grep(".x", names(clean_inspecs), fixed = T)], fixed = T)
-# for (i in 1:length(common_varstbs)) {
-#   mstr_copy = paste(common_varstbs[i], ".x", sep = "")
-#   usng_copy = paste(common_varstbs[i], ".y", sep = "")
-#   clean_inspecs[, mstr_copy] = ifelse(clean_inspecs[, "mergehrs"] == 3 & is.na(clean_inspecs[, mstr_copy]), clean_inspecs[, usng_copy], clean_inspecs[, mstr_copy])
-#   clean_inspecs[, mstr_copy] = ifelse(clean_inspecs[, "mergehrs"] == 2, clean_inspecs[, usng_copy], clean_inspecs[, mstr_copy])
-# }
-
-# insp_conflcts = sum(clean_inspecs[, "mergehrs"] == 3 & !is.na(clean_inspecs[, "sumtotal_insp_hours.x"]) & (clean_inspecs[, "sumtotal_insp_hours.x"] != clean_inspecs[, "sumtotal_insp_hours.y"]))
-# on_site_conflcts = sum(clean_inspecs[, "mergehrs"] == 3 & !is.na(clean_inspecs[, "sumtotal_on_site_hours.x"]) & (clean_inspecs[, "sumtotal_on_site_hours.x"] != clean_inspecs[, "sumtotal_on_site_hours.y"]))
-# nonNA_conflicts = max(insp_conflcts, on_site_conflcts)
-# clean_inspecs = clean_inspecs[, -grep(".y", names(clean_inspecs), fixed = T)]
-# names(clean_inspecs)[grep(".x", names(clean_inspecs), fixed = T)] = common_varstbs
 
 ######################################################################################################
