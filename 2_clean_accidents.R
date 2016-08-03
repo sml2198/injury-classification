@@ -16,7 +16,7 @@ acc_2000_16_file_name = "X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA
   # input: non-open source accidents data (1983-2013)
 acc_83_13_file_name = "X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA/rec_2015_06_02/Accidents_1983_2013/Accidents_1983_2013.csv" 
   # output: clean and merged accidents data
-accidents_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_accidents_TEST.rds" 
+accidents_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_accidents.rds" 
 
 ######################################################################################################
 
@@ -133,7 +133,7 @@ acc_83_13$investigationbegindate = ""
 
 # MERGE OPEN SOURCE ACCIDENTS DATA (post-2000) AND NON-OPEN SOURCE ACCIDENTS DATA (1983-2013), THEN OUTPUT
 
-accidents = rbind(acc_83_13, acc_2000_16) #284109 obs unique on documentno, 5592 unique mines
+accidents = rbind(acc_83_13, acc_2000_16) #284,109 obs unique on documentno, 5592 unique mines
 
 # format variables
 accidents$mineid = sprintf("%07s", accidents$mineid)
@@ -175,7 +175,9 @@ accidents$equipmanufacturer = tolower(accidents$equipmanufacturer)
 accidents$accidentclassification = tolower(accidents$accidentclassification)
 accidents$occupation = tolower(accidents$occupation)
 
-# output clean and merged accidents data
+# output clean and merged accidents data - 284,109 obs unique on documentno, 5592 unique mines
 saveRDS(accidents, file = accidents_file_name)
+rm(list = ls())
+gc()
 
 ######################################################################################################
