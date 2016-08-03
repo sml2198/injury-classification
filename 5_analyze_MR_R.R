@@ -32,7 +32,7 @@ library(caret)
 rm(list = ls())
 
 # SET PREFERENCES - IMPUTATION METHOD - METHOD 3 IS RANDOM DRAWS FROM DISTRIBUTION (OUR BEST METHOD)
-imputation.method = 0
+imputation.method = 3
 
 # Different people at NIOSH told us different things about whether or not to include accidents that occur during MR
 # but are not related in nature to MR activities, for example falling rock/metal accidents, or an employee walking
@@ -403,6 +403,7 @@ if (falling.accidents == "excluded") {
 } 
 
 ######################################################################################################
+
 # CREATE/PREP VARIOUS TIME AND DATE VARIABLES - YEAR AND QUARTER
 date <- strptime(mr.data$calendaryear, "%Y")
 format(date, "%Y")
@@ -410,22 +411,14 @@ mr.data[, "year"] = format(date, "%Y")
 mr.data[, "quarter"] = as.yearqtr(mr.data$accidentdate,"%Y-%m-%d")
 mr.data = mr.data[, c(-grep("calendar", names(mr.data)), -grep("accidentdate", names(mr.data)))]
 
-# REMOVE IRRELEVANT VARS: 25 OF 116 VARS 
+# REMOVE IRRELEVANT VARS
 mr.data = mr.data[, c(-match("minestatus", names(mr.data)), -match("minetype", names(mr.data)), 
                       -match("roof.bolt", names(mr.data)), -match("rib.hole", names(mr.data)), 
-                      -match("milesfromoffice", names(mr.data)), -match("primarysiccodesuffix", names(mr.data)),
-                      -match("portableoperationindicator", names(mr.data)), -match("roomandpillarindicator", names(mr.data)),
-                      -match("highwallminerindicator", names(mr.data)), -match("multiplepitsindicator", names(mr.data)),
-                      -match("minersrepindicator", names(mr.data)), -match("coalcormetalmmine", names(mr.data)),
-                      -match("primarycanvasscodedesc", names(mr.data)), -match("primarysiccodesuffix", names(mr.data)),
-                      -match("transferredorterminated", names(mr.data)))]
+                      -match("coalcormetalmmine", names(mr.data)), -match("transferredorterminated", names(mr.data)),
+                      -match("accidenttime", names(mr.data)))]
 
-# REMOVE VARS UNIQUE AT OBS. LEVEL - 4 OF 89
-mr.data = mr.data[, c(-match("accidenttime", names(mr.data)), -grep("date", names(mr.data)))]
-
-# SHOULD NOW HAVE 89 VARS, NOW REMOVE REDUNDANT VARS (CODES/IDS WITH CORRESPONDING CLASSES - 30 VARS)
+# NOW REMOVE REDUNDANT VARS (CODES/IDS WITH CORRESPONDING CLASSES - HAVE 91 REMAINING VARS)
 mr.data = mr.data[, c(-match("operatorid", names(mr.data)), -match("controllerid", names(mr.data)), 
-                      -match("primarycanvasscode", names(mr.data)), -match("portablefipsstatecode", names(mr.data)),
                       -match("subunitcode", names(mr.data)), -match("oldoccupationcode", names(mr.data)),
                       -match("fipsstatecode", names(mr.data)), -match("activitycode", names(mr.data)), 
                       -match("injurysourcecode", names(mr.data)), -match("natureofinjurycode", names(mr.data)),
@@ -433,12 +426,9 @@ mr.data = mr.data[, c(-match("operatorid", names(mr.data)), -match("controllerid
                       -match("uglocationcode", names(mr.data)), -match("ugminingmethodcode", names(mr.data)),
                       -match("classificationcode", names(mr.data)), -match("accidenttypecode", names(mr.data)),
                       -match("equiptypecode", names(mr.data)), -match("equipmanufacturercode", names(mr.data)),
-                      -match("immediatenotificationcode", names(mr.data)), -match("occupcode3digit", names(mr.data)),
-                      -match("fipscountycode", names(mr.data)), -match("officecode", names(mr.data)), 
-                      -match("bomstatecode", names(mr.data)), -match("primarysiccode", names(mr.data)), 
-                      -match("primarysiccodegroup", names(mr.data)))]
+                      -match("immediatenotificationcode", names(mr.data)), -match("occupcode3digit", names(mr.data)))]
 
-# SHOULD NOW HAVE 59 VARS, NOW REMOVE 1 OLD/UNKNOWN VAR 
+# S NOW REMOVE 1 OLD/UNKNOWN VAR 
 mr.data = mr.data[, c(-grep("idesc", names(mr.data)))]
 
 ######################################################################################################
@@ -511,7 +501,6 @@ if (dummies.option == "on") {
       test.data2 <- datdum(x="equipmentmodelno",data=mr.data,name="equipmentmodelno")
       test.data3 <- datdum(x="minename",data=mr.data,name="minename")
       test.data4 <- datdum(x="operatorname",data=mr.data,name="operatorname")
-      test.data5 <- datdum(x="fipscountyname",data=mr.data,name="fipscountyname")
       test.data6 <- datdum(x="controllername",data=mr.data,name="controllername")
       test.data7 <- datdum(x="mineractivity",data=mr.data,name="mineractivity")
       test.data8 <- datdum(x="quarter",data=mr.data,name="quarter")
@@ -522,14 +511,13 @@ if (dummies.option == "on") {
       test.data2 <- test.data2 [, c(grep("equipmentmodelno", names(test.data2)))]
       test.data3 <- test.data3 [, c(grep("minename", names(test.data3)))]
       test.data4 <- test.data4 [, c(grep("operatorname", names(test.data4)))]
-      test.data5 <- test.data5 [, c(grep("fipscountyname", names(test.data5)))]
       test.data6 <- test.data6 [, c(grep("controllername", names(test.data6)))]
       test.data7 <- test.data7 [, c(grep("mineractivity", names(test.data7)))]
       test.data8 <- test.data8 [, c(grep("quarter", names(test.data8)))]
       test.data9 <- test.data9 [, c(grep("occupation", names(test.data9)))]
       
-      mr.data = cbind(mr.data, test.data1, test.data2, test.data3, test.data4, test.data5, test.data6, test.data7, test.data8, test.data9)
-      remove(test.data1,test.data2,test.data3,test.data4,test.data5,test.data6,test.data7,test.data8,test.data9)
+      mr.data = cbind(mr.data,test.data1,test.data2,test.data3,test.data4,test.data6,test.data7,test.data8,test.data9)
+      remove(test.data1,test.data2,test.data3,test.data4,test.data6,test.data7,test.data8,test.data9)
 }
 
 ######################################################################################################
@@ -837,8 +825,10 @@ if (data.type == "real accidents data") {
     # POST-PROCESSING
     
     # merge in the rest of the variables from the original accidents-mines data #     
-    accidents.mines = read.csv("C:/Users/slevine2/Dropbox (Stanford Law School)/R-code/prepped_mines_accidents.csv", header = TRUE, sep = ",", stringsAsFactors = FALSE)
+    accidents.mines = readRDS("X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_mines_accidents_TEST.rds")
     accidents.data = merge(accidents.data, accidents.mines,by="documentno", all = TRUE)
+    
+    rm(train, simple, simple.data, mr.fatalities, accidents.mines)
     accidents.data = accidents.data[, c(-grep("\\.x", names(accidents.data)))]
     names(accidents.data) = gsub("\\.[x|y]", "", names(accidents.data))
     
