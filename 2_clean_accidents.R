@@ -24,9 +24,9 @@ accidents_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_ac
 
 # read open source accidents data (post-2000)
   # dataset downloaded on 4/20/16 from http://arlweb.msha.gov/OpenGovernmentData/OGIMSHA.asp 
-acc_2000_16 = read.table(acc_2000_16_file_name, header = TRUE, sep = "|")
+acc_2000_16 = read.table(acc_2000_16_file_name, header = TRUE, sep = "|") #210259 obs unique on documentno, 11686 unique mines
 
-# drop data from times and environments not of interest
+# drop data from times and environments not of interest - wind up with 75014 obs unique on documentno, 1468 unique mines 
 acc_2000_16 = acc_2000_16[acc_2000_16$CAL_YR > 1999, ]
 acc_2000_16 = acc_2000_16[acc_2000_16$COAL_METAL_IND == "C", ]
 acc_2000_16 = acc_2000_16[!is.na(acc_2000_16$COAL_METAL_IND), ]
@@ -109,9 +109,9 @@ acc_2000_16$subunit = tolower(acc_2000_16$subunit)
 
 # read non-open source accidents data (1983-2013)
   # originally a .txt file, converted to .csv format in Stata
-acc_83_13 = read.csv(acc_83_13_file_name, header = TRUE, sep = ",",  stringsAsFactors = FALSE)
+acc_83_13 = read.csv(acc_83_13_file_name, header = TRUE, sep = ",",  stringsAsFactors = FALSE) # 656373 obs unique on documentno, 22593 unique mines
 
-# drop data from times and environments not of interest
+# drop data from times and environments not of interest, wind up with 209095 obs unique on documentno, 4738 unique mines
 acc_83_13 = acc_83_13[acc_83_13$calendaryear < 2000, ]
 acc_83_13 = acc_83_13[acc_83_13$subunit == "UNDERGROUND", ]
 
@@ -133,7 +133,7 @@ acc_83_13$investigationbegindate = ""
 
 # MERGE OPEN SOURCE ACCIDENTS DATA (post-2000) AND NON-OPEN SOURCE ACCIDENTS DATA (1983-2013), THEN OUTPUT
 
-accidents = rbind(acc_83_13, acc_2000_16) # should have 284109 observations
+accidents = rbind(acc_83_13, acc_2000_16) #284109 obs unique on documentno, 5592 unique mines
 
 # format variables
 accidents$mineid = sprintf("%07s", accidents$mineid)
