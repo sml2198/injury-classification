@@ -15,18 +15,6 @@
 
 ######################################################################################################
 
-install.packages("zoo")
-install.packages("rpart")
-install.packages("rpart.plot")
-install.packages("tree")
-install.packages("randomForest")
-install.packages("ggplot2")
-install.packages("reshape2")
-install.packages("pROC")
-install.packages("ROSE")
-install.packages("adabag")
-install.packages("DMwR")
-install.packages("caret")
 library(zoo)
 library(tree)
 library(randomForest)
@@ -66,7 +54,8 @@ mr.fatalities = read.csv("X:/Projects/Mining/NIOSH/analysis/data/4_coded/coded_M
 
 if (data.type == "real accidents data") {
   # LOAD IN REAL ACCIDENTS DATA FOR CLASSIFICATION
-  accidents.data = read.csv("C:/Users/slevine2/Dropbox (Stanford Law School)/R-code/prepped_mines_accidents.csv", header = TRUE, sep = ",", stringsAsFactors = FALSE)
+  #accidents.data = read.csv("C:/Users/slevine2/Dropbox (Stanford Law School)/R-code/prepped_mines_accidents.csv", header = TRUE, sep = ",", stringsAsFactors = FALSE)
+  accidents.data = readRDS("X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_mines_accidents_TEST.rds") # 199019 obs 
 }
 
 ######################################################################################################
@@ -87,7 +76,7 @@ mr.fatalities = mr.fatalities[, c(-grep("MR_fatality", names(mr.fatalities)), -g
 # However, it's really only evident from the fatalgrams (see open data folder) that these were sustained
 # during larger group m&r activities. Nothing from the narrative field/occupation indicates that M&R was the
 # activity at the time. Essentially, training on these observations will stack the deck against us.
-# Let's delete them for now.
+# Let's delete them for now. We wind up with 19 extra observations.
 mr.fatalities = mr.fatalities[!(mr.fatalities$documentno=="220030290001") & !(mr.fatalities$documentno=="220030290002") &
                                   !(mr.fatalities$documentno=="220030290003") & !(mr.fatalities$documentno=="220030130149"),]
     
@@ -114,9 +103,11 @@ mr.data$equipmanufacturer = tolower(mr.data$equipmanufacturer)
 mr.data$immediatenotificationclass = tolower(mr.data$immediatenotificationclass)
 mr.data$uglocation = tolower(mr.data$uglocation)
     
-# Append dataset of additional fatality observations for training set
+# Append dataset of additional fatality observations for training set - wind up with 1019 obs
 mr.data <- rbind(mr.data, mr.fatalities) 
-    
+# One of these was redundant (same docno) so we drop this - wind up with 1018 obs
+mr.data = mr.data[!duplicated(mr.data$documentno), ]
+
 # make MR a factor variable
 mr.data[, "MR"] = factor(ifelse(mr.data[, "MR"] == 1, "YES", "NO"))
 names(mr.data)[names(mr.data) == "MR"] = "MR"
@@ -154,13 +145,31 @@ if (data.type == "real accidents data") {
     accidents.data$immediatenotificationclass = tolower(accidents.data$immediatenotificationclass)
     accidents.data$uglocation = tolower(accidents.data$uglocation)
   
+    # drop vars not common to accidents data and mr.data
     drops <- c("death", "i" )
     mr.data = mr.data[, !(names(mr.data) %in% drops)]  
-    drops <- c("assesscontrolno", "part48training", "controllerbegindate", "fiscalquarter", "fiscalyear" )
+    drops <- c("assesscontrolno", "part48training", "controllerbegindate", "fiscalquarter", "fiscalyear", "year", "quarter", "avg_hours_qtr", "avg_employment_qtr", "avg_coal_prod_qtr")
     accidents.data = accidents.data[, !(names(accidents.data) %in% drops)]
+ 
+    # drop any remaining vars not common to accidents data and mr.data   
+    mr.names = names(mr.data)
+    accident.names = names(accidents.data)
+    mr.data = mr.data[,names(mr.data) %in% accident.names]
+
+    # create lists of documentnos from each dataset 
+    mr.docnos = mr.data$documentno
+    mr.docnos = as.character(mr.docnos)
+    accident.docnos = accidents.data$documentno
+    
+    # identify common documentnos
+    keep.docnos = setdiff(accident.docnos, mr.docnos)  
+    
+    # remove observations from accidents data present in the mr.data/training set - wind up with 199,019 observations unique on documentno, from 4829 mines
+    accidents.data = accidents.data[which(accidents.data$documentno %in% keep.docnos), ]
+    rm(mr.names, accident.names, mr.docnos, accident.docnos, keep.docnos)
     
     # APPEND DATASET OF TRAINING OBSERVATIONS AND REAL ACCIDENTS FOR CLASSIFICATION
-    mr.data <- rbind(mr.data, accidents.data)
+    mr.data <- rbind(mr.data, accidents.data) # now we have 199,171 observations unique on documentno, 4860 unique mines
 }
 
 ######################################################################################################
@@ -402,11 +411,7 @@ mr.data[, "quarter"] = as.yearqtr(mr.data$accidentdate,"%Y-%m-%d")
 mr.data = mr.data[, c(-grep("calendar", names(mr.data)), -grep("accidentdate", names(mr.data)))]
 
 # REMOVE IRRELEVANT VARS: 25 OF 116 VARS 
-mr.data = mr.data[, c(-match("directionstominemodified", names(mr.data)), -match("minegascategorycode", names(mr.data)),
-                      -match("nooftailingponds", names(mr.data)), -match("noofproducingpits", names(mr.data)),
-                      -match("longitude", names(mr.data)), -match("latitude", names(mr.data)),
-                      -match("nearesttown", names(mr.data)), -match("minestatus", names(mr.data)),
-                      -grep("secondary", names(mr.data)), -match("minetype", names(mr.data)), 
+mr.data = mr.data[, c(-match("minestatus", names(mr.data)), -match("minetype", names(mr.data)), 
                       -match("roof.bolt", names(mr.data)), -match("rib.hole", names(mr.data)), 
                       -match("milesfromoffice", names(mr.data)), -match("primarysiccodesuffix", names(mr.data)),
                       -match("portableoperationindicator", names(mr.data)), -match("roomandpillarindicator", names(mr.data)),
