@@ -22,15 +22,13 @@ library(psych)
 
 # define file names
   # input: merged violations data produced in 11_merge_violations.R
-merged_violations.in.file.name = "X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_violations.rds"
-  # input: merged cfr key data produced in 10_clean_cfr_key.R
-merged_cfr_key.file.name = "X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_cfr_key.rds"
+merged_violations_in_file_name = "X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_violations.rds"
   # input: collapsed coded accidents data (contains MR indicator - no PS indicator yet) produced in 6_collapse_accidents.R
-mines_accidents_coded.file.name = "X:/Projects/Mining/NIOSH/analysis/data/4_collapsed/collapsed_accidents.rds"
+mines_accidents_coded_file_name = "X:/Projects/Mining/NIOSH/analysis/data/4_collapsed/collapsed_accidents.rds"
   # input: cleaned mine-quarters as produced in 1_clean_mines.R
-mines_quarters.file.name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_mines.rds"
+mines_quarters_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_mines.rds"
   # input: cleaned mine-types key produced in produced in 1_clean_mines.R
-mine.types.file.name = "X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_mines_accidents.rds"
+mine_types_file_name = "X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_mines_accidents.rds"
 
 # When relevant-only option is set to "on" (not commented out) only CFR subsections marked as "relevant" will be used for creating
 # vars. Otherwise, "relevant" and "maybe relevant subsections" will be used.
@@ -39,138 +37,116 @@ relevant.only.option = "off"
 
 ######################################################################################################################################
 
-# MERGE CFR CODES ONTO VIOLATIONS AND MAKE VARIABLES FOR COLLAPSING ON
+merged_violations = readRDS(merged_violations_in_file_name)
 
-# Read data files
-merged_violations = readRDS(merged_violations.in.file.name)
-merged_cfr_key = readRDS(merged_cfr_key.file.name)
-
-# Format cfr code
-merged_violations$cfrstandardcode = gsub("(\\(([0-9]|[a-z]|-|[A-Z])+\\))+", "", merged_violations$cfrstandardcode)
-merged_violations$cfrstandardcode = gsub("(-([a-z]+)\\))+(\\([0-9])*", "", merged_violations$cfrstandardcode)
-names(merged_violations)[names(merged_violations) == "cfrstandardcode"] = "subsection_code"
-merged_violations$subsection_code_marker = paste("S", merged_violations$subsection_code, sep = "")
-merged_cfr_key$subsection_code_marker = paste("S", merged_cfr_key$subsection_code, sep = "")
-
-# In some cases where subsection is missing, part_section is not and can be subbed in 
-merged_violations$part_section2 = merged_violations$part_section
-merged_violations$part_section2 = gsub("\\([a-z]+\\)", "", merged_violations$part_section2)
-merged_violations$part_section2 = gsub("\\([0-9]+\\)", "", merged_violations$part_section2)
-merged_violations$subsection_code = ifelse((is.na(merged_violations$subsection_code) 
-                                            & !is.na(merged_violations$part_section2)), merged_violations$part_section2, 
-                                            merged_violations$subsection_code)
-
-# Merge violations and cfr key
-merged_violations = merge(merged_violations, merged_cfr_key, by = "subsection_code", all = T)
-
-# Flag which observations merged from each dataset - this is only useful for comparing the merge to Stata output
-merged_violations[, "merge"] = ifelse(!is.na(merged_violations$subsection_code_marker.y) 
-                                      & !is.na(merged_violations$subsection_code_marker.x), 3, 0)
-merged_violations[, "merge"] = ifelse(is.na(merged_violations$subsection_code_marker.x) 
-                                      & !is.na(merged_violations$subsection_code_marker.y), 2, merged_violations[, "merge"])
-merged_violations[, "merge"] = ifelse(is.na(merged_violations$subsection_code_marker.y) 
-                                      & !is.na(merged_violations$subsection_code_marker.x), 1, merged_violations[, "merge"])
-
-# Clean up redundant varnames from the merge
-common_varstbs = sub(".x", "", names(merged_violations)[grep(".x", names(merged_violations), fixed = T)], fixed = T)
-for (i in 1:length(common_varstbs)) {
-  merged_violations[, paste(common_varstbs[i], ".x", sep = "")] = ifelse(merged_violations[, "merge"] == 2, 
-                                                                         merged_violations[, paste(common_varstbs[i], ".y", sep = "")], 
-                                                                         merged_violations[, paste(common_varstbs[i], ".x", sep = "")])
-}
-merged_violations = merged_violations[, -grep(".y", names(merged_violations), fixed = T)]
-names(merged_violations)[grep(".x", names(merged_violations), fixed = T)] = common_varstbs
-rm(merged_cfr_key, common_varstbs, i)
-
-# Format date vars
-datevars = names(merged_violations)[grep("date", names(merged_violations))]
-for (i in 1:length(datevars)) {
-  merged_violations[, datevars[i]] = as.Date(as.character(merged_violations[, datevars[i]]), "%m/%d/%Y")
-}
-
-# Remove observations from cfr data that didn't merge onto our violations data 
-merged_violations = merged_violations[complete.cases(merged_violations$violationno),]
-
-# Condition the per-day vars on positive denominator. (There are 256 cases of zero inspection days and positive violation counts). 6/6/16
-merged_violations$contractor_violation_cnt = ifelse(merged_violations$violatortypecode == "Contractor", merged_violations$violator_violation_cnt, NA)
-merged_violations$operator_violation_pInspDay = ifelse(merged_violations$violatortypecode == "Operator" & merged_violations$violator_inspection_day_cnt > 0, 
-                                                       merged_violations$violator_violation_cnt/merged_violations$violator_inspection_day_cnt, NA)
-merged_violations$contractor_repeated_viol_cnt = ifelse(merged_violations$violatortypecode == "Contractor", merged_violations$violator_repeated_viol_cnt, NA)
-merged_violations$operator_repeated_viol_pInspDay = ifelse(merged_violations$violatortypecode == "Operator" & merged_violations$violator_inspection_day_cnt > 0, 
-                                                           merged_violations$violator_repeated_viol_cnt/merged_violations$violator_inspection_day_cnt, NA)
-
-# Remove unnecessary vars
-merged_violations = merged_violations[, c(-grep("merge", names(merged_violations)))]
-
-######################################################################################################################################
-
-# DUMMY-OUT FACTOR VARIABLES
-
-# Clean up the field that reports the type of inspection (some of this is unnecessary now that we merge codes but oh well)
+# format inspection type
 merged_violations$inspacty = tolower(merged_violations$inspacty)
-merged_violations[, "inspacty"] = ifelse(merged_violations[, "inspacty"] == "mine idle activity", "mine idle", merged_violations[, "inspacty"])
-merged_violations[, "inspacty"] = ifelse(merged_violations[, "inspacty"] == "na", "n", merged_violations[, "inspacty"])
-merged_violations[, "inspacty"] = ifelse(merged_violations[, "inspacty"] == "part 50 audit", "part 50 audits", merged_violations[, "inspacty"])
-merged_violations[, "inspacty"] = ifelse(merged_violations[, "inspacty"] == "non-fatal accident investigation", "nonfatal injury accident inv", merged_violations[, "inspacty"])
-merged_violations[, "inspacty"] = ifelse(merged_violations[, "inspacty"] == "shaft, slope or major construction spot inspection", "shft, slpe, or maj constr spot insp", merged_violations[, "inspacty"])
-merged_violations[, "inspacty"] = ifelse(merged_violations[, "inspacty"] == "103(g)(1) spot umwa inspection", "103(g)(1) spot inspection", merged_violations[, "inspacty"])
-merged_violations[, "inspacty"] = ifelse(merged_violations[, "inspacty"] == "103(i) spot (ign or expl) insp", "103(i) spot inspections", merged_violations[, "inspacty"])
-merged_violations[, "inspacty"] = ifelse(merged_violations[, "inspacty"] == "103(i) spot (hazard) inspection", "103(i) spot inspections", merged_violations[, "inspacty"])
+merged_violations$inspacty = ifelse(merged_violations$inspacty == "mine idle activity", "mine idle", merged_violations$inspacty)
+merged_violations$inspacty = ifelse(merged_violations$inspacty == "na", "n", merged_violations$inspacty)
+merged_violations$inspacty = ifelse(merged_violations$inspacty == "part 50 audit", "part 50 audits", merged_violations$inspacty)
+merged_violations$inspacty = ifelse(merged_violations$inspacty == "non-fatal accident investigation", "nonfatal injury accident inv", merged_violations$inspacty)
+merged_violations$inspacty = ifelse(merged_violations$inspacty == "shaft, slope or major construction spot inspection", "shft, slpe, or maj constr spot insp", merged_violations$inspacty)
+merged_violations$inspacty = ifelse(merged_violations$inspacty == "103(g)(1) spot umwa inspection", "103(g)(1) spot inspection", merged_violations$inspacty)
+merged_violations$inspacty = ifelse(merged_violations$inspacty == "103(i) spot (ign or expl) insp", "103(i) spot inspections", merged_violations$inspacty)
+merged_violations$inspacty = ifelse(merged_violations$inspacty == "103(i) spot (hazard) inspection", "103(i) spot inspections", merged_violations$inspacty)
 
-# We can't have any missing values or our dummy method won't work
-merged_violations[, "inspacty"] = ifelse(is.na(merged_violations$inspacty), "unknown", merged_violations[, "inspacty"])
+# rename NAs
+merged_violations$inspacty = ifelse(is.na(merged_violations$inspacty), "unknown", merged_violations$inspacty)
 
-# Deal with too many categories here (so we don't have hundreds of vars later - group inspections into categories)
-merged_violations[, "inspacty"] = ifelse((merged_violations[, "inspacty"] == "regular inspection" |
-                                            merged_violations[, "inspacty"] == "regular safety and health inspection"), "regular inspection", merged_violations[, "inspacty"])
-merged_violations[, "inspacty"] = ifelse(grepl("complaint", merged_violations[,"inspacty"]), "complaint inspection", merged_violations[, "inspacty"])
-merged_violations[, "inspacty"] = ifelse(merged_violations[, "inspacty"] == "fatal accident investigation", "fatality inspection", merged_violations[, "inspacty"])
-merged_violations[, "inspacty"] = ifelse(grepl("103", merged_violations[,"inspacty"]), "103", merged_violations[, "inspacty"])
-merged_violations[, "inspacty"] = ifelse(grepl("(103|fatality|unknown|regular|complaint)", merged_violations[,"inspacty"]), merged_violations[, "inspacty"], "other")
+# collapse inspection type categories to resonable amount
+merged_violations$inspacty = ifelse((merged_violations$inspacty == "regular inspection" |
+                                       merged_violations$inspacty == "regular safety and health inspection"), "regular inspection", merged_violations$inspacty)
+merged_violations$inspacty = ifelse(grepl("complaint", merged_violations$inspacty), "complaint inspection", merged_violations$inspacty)
+merged_violations$inspacty = ifelse(merged_violations$inspacty == "fatal accident investigation", "fatality inspection", merged_violations$inspacty)
+merged_violations$inspacty = ifelse(grepl("103", merged_violations$inspacty), "103", merged_violations$inspacty)
+merged_violations$inspacty = ifelse(grepl("(103|fatality|unknown|regular|complaint)", merged_violations$inspacty), merged_violations$inspacty, "other")
 
-# Can't have any missing values or our dummy method won't work
+# rename NAs
 merged_violations$violationtypecode = as.character(merged_violations$violationtypecode)
-merged_violations[, "violationtypecode"] = ifelse(is.na(merged_violations$violationtypecode), "Unknown", merged_violations[, "violationtypecode"])
+merged_violations$violationtypecode = ifelse(is.na(merged_violations$violationtypecode), "Unknown", merged_violations[, "violationtypecode"])
 
-# These make up a grand total of 4 in our observations - not worth making dummies for 4 violation types
-merged_violations = merged_violations[(merged_violations$violationtypecode != "Notice" & merged_violations$violationtypecode != "Safeguard"),]
+# remove violation types with 4 observations
+merged_violations = merged_violations[(merged_violations$violationtypecode != "Notice" & merged_violations$violationtypecode != "Safeguard"), ]
 merged_violations$assessmenttypecode = as.character(merged_violations$assessmenttypecode)
-merged_violations[, "assessmenttypecode"] = ifelse(is.na(merged_violations$assessmenttypecode), "Unknown", merged_violations[, "assessmenttypecode"])
+merged_violations$assessmenttypecode = ifelse(is.na(merged_violations$assessmenttypecode), "Unknown", merged_violations$assessmenttypecode)
 
-# For each of the categorical vars we replace missings with NA, format as character vars, and name all NA "unknown"
+# rename categories and deal with missing values
 is.na(merged_violations$likelihood) = merged_violations$likelihood == ""
 levels(merged_violations$likelihood) = c("Unknown", "Highly", "NoLikelihood", "Occurred", "Reasonably", "Unlikely")
 merged_violations$likelihood = as.character(merged_violations$likelihood)
-merged_violations[, "likelihood"] = ifelse(is.na(merged_violations$likelihood), "Unknown", merged_violations[, "likelihood"])
+merged_violations$likelihood = ifelse(is.na(merged_violations$likelihood), "Unknown", merged_violations$likelihood)
 
-# For each of the categorical vars we replace missings with NA, format as character vars, and name all NA "unknown"
+# rename categories and deal with missing values
 merged_violations$injuryillness = as.character(merged_violations$injuryillness)
-is.na(merged_violations$injuryillness) = merged_violations$injuryillness==""
+is.na(merged_violations$injuryillness) = merged_violations$injuryillness == ""
 levels(merged_violations$injuryillness) = c("Unknown", "Fatal", "LostDays", "NoLostDays", "Permanent")
-merged_violations[, "injuryillness"] = ifelse(is.na(merged_violations$injuryillness), "Unknown", merged_violations[, "injuryillness"])
+merged_violations$injuryillness = ifelse(is.na(merged_violations$injuryillness), "Unknown", merged_violations$injuryillness)
 
-# For each of the categorical vars we replace missings with NA, format as character vars, and name all NA "unknown"
-is.na(merged_violations$negligence) = merged_violations$negligence==""
-levels(merged_violations$injuryillness) = c("Unknown", "HighNegligence", "LowNegligence", "ModNegligence", "NoNegligence", "Reckless")
+# rename categories and deal with missing values
+is.na(merged_violations$negligence) = merged_violations$negligence == ""
+levels(merged_violations$negligence) = c("Unknown", "HighNegligence", "LowNegligence", "ModNegligence", "NoNegligence", "Reckless")
 merged_violations$negligence = as.character(merged_violations$negligence)
-merged_violations[, "negligence"] = ifelse(is.na(merged_violations$negligence), "Unknown", merged_violations[, "negligence"])
+merged_violations$negligence = ifelse(is.na(merged_violations$negligence), "Unknown", merged_violations$negligence)
+
+
 
 ######################################################################################################################################
 
 # FINISH DUMMYING-OUT CATEGORICAL VARIABLES 
 
 # This is the function that will dummy out the categorical variables
-datdum <- function(x, data, name){
-  data$rv <- rnorm(dim(data)[1],1,1)
-  mm <- data.frame(model.matrix(lm(data$rv~-1+factor(data[,x]))))
-  names(mm) <- paste(name,1:dim(mm)[2],sep=".")
-  data$rv <- NULL
-  data <- cbind(data,mm)
+
+julia = c("hi", "hello", "yo", "hi", "hey", "heyy")
+sarah = c("a", "b", "c", "c", "b", "b")
+taylor = c("yellow", "blue", "green", "purple", "yellow", "yellow")
+office = cbind(julia, sarah, taylor)
+
+datdum = function(x, data){
+  data$rv = rnorm(nrow(data), 1, 1)
+  mm = data.frame(model.matrix(lm(data$rv ~ -1 + factor(data[, x]))))
+  names(mm) = paste(name, 1:ncol(mm), sep = ".")
+  data$rv = NULL
+  data = cbind(data, mm)
   return(data)
 }
 
+datdum = function(var, data) {
+  assign('office',data,envir=.GlobalEnv)
+  print(var)
+  data$rv = rnorm(nrow(data), 1, 1)
+  print(dim(data))
+  #print(data[, var])
+  mm = data.frame(model.matrix(lm(data$rv ~ -1 + factor(data[, var]))))
+  #print(mm)
+  data$rv = NULL
+  data[, var] = NULL
+  names(mm) = paste(var, 1:ncol(mm), sep = ".")
+  data = cbind(data, mm)
+  #return(data)
+}
+
+test = sapply(colnames(office), datdum, data = office)
+
+
 # Apply the dummy function to each categorical variable
-test.data1 <- datdum(x="inspacty",data=merged_violations,name="inspacty")
+merged_violations = datdum(x = "inspacty",data=merged_violations,name="inspacty")
+merged_violations = datdum(x = "assessmenttypecode",data=merged_violations,name="assessmenttypecode")
+merged_violations = datdum(x="violationtypecode",data=merged_violations,name="violationtypecode")
+merged_violations = datdum(x="likelihood",data=merged_violations,name="likelihood")
+merged_violations = datdum(x="injuryillness",data=merged_violations,name="injuryillness")
+merged_violations = datdum(x="negligence",data=merged_violations,name="negligence")
+
+
+merged_violations = merged_violations[, c(-match("inspacty", names(merged_violations)),
+                                          -match("assessmenttypecode", names(merged_violations)),
+                                          -match("violationtypecode", names(merged_violations))
+                                          -match("likelihood", names(merged_violations)),
+                                          -match("injuryillness", names(merged_violations)),
+                                          -match("negligence", names(merged_violations)))
+                                      
+
+# Apply the dummy function to each categorical variable
+test.data1 <- datdum(x = "inspacty",data=merged_violations,name="inspacty")
 test.data1 <- test.data1 [, c(grep("inspacty", names(test.data1)))]
 test.data2 <- datdum(x="assessmenttypecode",data=merged_violations,name="assessmenttypecode")
 test.data2 <- test.data2 [, c(grep("assessmenttypecode", names(test.data2)))]
