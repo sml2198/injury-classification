@@ -6,106 +6,134 @@
     # Clean up the merged violations
     # Merge violations and inspections
     # Load and merge in contractor data
-    # Clean merged dataset and output
+    # Clean merged dataset 
+    # Load and merge in cfr-key data
+    # Clean and output
 
-# Last edit 7/29/16
+# Last edit 8/3/16
 
 ######################################################################################################
 
 library(stringr)
 
 # define file names
-  # input: cleaned violations produced in 6_clean_violations.R
-clean_violations.in.file.name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_violations.rds"
-  # output: violations with assessment and inspection data merged on
-clean_violations.out.file.name = "X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_violations.rds"
-  # input: cleaned assessments produced in 7_clean_assessments.R
-clean_assessments.file.name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_assessments.rds" 
-  # input: cleaned inspections produced in 8_clean_inspections.R
-clean_inspections.file.name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_inspections.rds"
+  # input: clean violations data (6_clean_violations)
+clean_violations_in_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_violations.rds"
+  # input: clean assessments data (7_clean_assessments.R
+clean_assessments_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_assessments.rds" 
+  # output: merged violations and assessments data 
+clean_violations_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_violations_TEST.rds"
+
+
+
+  # input: clean inspections data (8_clean_inspections)
+clean_inspections_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_inspections.rds"
+  # input: cfr key data (10_clean_cfr_key)
+clean_cfr_key_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_cfr_key.rds"
   # input: quarterly contractor employment, produced in 9_clean_employment.R
-contractor_quarterly_employment.file.name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_contractor_employment.rds"
+contractor_quarterly_employment_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_contractor_employment.rds"
   # input: annual contractor employment, produced in 9_clean_employment.R
-contractor_yearly_employment.file.name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_contractor_employment_yearly.rds"
+contractor_yearly_employment_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_contractor_employment_yearly.rds"
 
 ######################################################################################################
 
-# MERGE VIOLATIONS AND ASSESSMENTS
+# READ AND MERGE ASSESSMENTS DATA AND VIOLATIONS DATA, THEN CLEAN
 
-# Read data files
-clean_violations = readRDS(clean_violations.in.file.name)
-clean_assessments = readRDS(clean_assessments.file.name) 
-clean_inspections = readRDS(clean_inspections.file.name)
+# read assessments data - 841673 obs, 59 vars
+clean_assessments = readRDS(clean_assessments_file_name) 
 
-# Merge assessments and violations data 
+# read violations data - 866357 obs, 62 vars
+clean_violations = readRDS(clean_violations_in_file_name)
+
+# merge assessments data with violations data - 866390 obs, 119 vars
 assessments_violations = merge(clean_assessments, clean_violations, by = c("mineid","violationno"), all = T)
 
-# Pipe in eventno where it might be missing from either dataset
-assessments_violations$eventno.x = ifelse((is.na(assessments_violations$eventno.x) 
-    & !is.na(assessments_violations$eventno.y)), assessments_violations$eventno.y, assessments_violations$eventno.x)
+# memory
+rm(clean_violations, clean_assessments)
 
-######################################################################################################
+# fill in eventno where missing
+assessments_violations$eventno.x = ifelse((is.na(assessments_violations$eventno.x) & !is.na(assessments_violations$eventno.y)), 
+                                          assessments_violations$eventno.y, assessments_violations$eventno.x)
 
-# CLEAN UP MERGED VIOLATIONS 
-
-# Remove duplicate vars as a result of merge
+# drop duplicate variables from merge
 common_varstbs = sub(".x", "", names(assessments_violations)[grep(".x", names(assessments_violations), fixed = T)], fixed = T)
 assessments_violations = assessments_violations[, -grep(".y", names(assessments_violations), fixed = T)]
 names(assessments_violations)[grep(".x", names(assessments_violations), fixed = T)] = common_varstbs
 
-# Clean up violatorname fields
+# drop unnecessary variables
+assessments_violations$issuedate =
+  assessments_violations$final_order_issue_dt =
+  assessments_violations$last_action_dt =
+  assessments_violations$datevacated =
+  assessments_violations$righttoconferencedate =
+  assessments_violations$bill_print_dt =
+  assessments_violations$number =
+  assessments_violations$violdup = NULL
+
+# format/rename variables
 assessments_violations[, "violatorname"] = tolower(str_trim(assessments_violations[, "violatorname"], side = c("both")))
 assessments_violations[, "violator_name"] = tolower(str_trim(assessments_violations[, "violator_name"], side = c("both")))
-violnames = c(grep("violatorname", names(assessments_violations)), grep("violator_name", names(assessments_violations)))
-
-# Do some string replacements to clean up violator name fields and reduce disagreements
-# This actually isn't important for anything down the line, but was useful for us comparing the violations and inspections datasets
-for (i in 1:length(violnames)) {
-  assessments_violations[, violnames[i]] = gsub(",", "", assessments_violations[, violnames[i]])
-  assessments_violations[, violnames[i]] = gsub("\\.", "", assessments_violations[, violnames[i]])
-  assessments_violations[, violnames[i]] = gsub("company", "co", assessments_violations[, violnames[i]])
-  assessments_violations[, violnames[i]] = gsub("comp", "co", assessments_violations[, violnames[i]])
-  assessments_violations[, violnames[i]] = gsub("incorporated", "inc", assessments_violations[, violnames[i]])
-  assessments_violations[, violnames[i]] = gsub("and", "&", assessments_violations[, violnames[i]])
-  assessments_violations[, violnames[i]] = gsub("limited", "ltd", assessments_violations[, violnames[i]])
-}
-
-# More work to make violator names agree. This is actually not important for any of our modeling, but is useful as a 
-# sanity check on our merge.
-assessments_violations[(assessments_violations$violator_name != assessments_violations$violatorname) 
-    & !is.na(assessments_violations$violator_name) 
-    & !is.na(assessments_violations$violatorname), "violator_name"] = gsub(" llc", "", assessments_violations[(assessments_violations$violator_name != assessments_violations$violatorname) 
-    & !is.na(assessments_violations$violator_name) & !is.na(assessments_violations$violatorname), "violator_name"])
-assessments_violations[(assessments_violations$violator_name != assessments_violations$violatorname) 
-    & !is.na(assessments_violations$violator_name) 
-    & !is.na(assessments_violations$violatorname), "violatorname"] = gsub(" llc", "", assessments_violations[(assessments_violations$violator_name != assessments_violations$violatorname) 
-    & !is.na(assessments_violations$violator_name) & !is.na(assessments_violations$violatorname), "violatorname"])
-
-# Clean up occurrencedate field (we use this field later on to create the quarter variables)
-assessments_violations$occurrencedate = as.character(assessments_violations$occurrencedate)
-assessments_violations$violation_occur_dt = as.character(assessments_violations$violation_occur_dt)
-sum(assessments_violations$occurrencedate != assessments_violations$violation_occur_dt, na.rm = T) #214
-assessments_violations = assessments_violations[(assessments_violations$occurrencedate == assessments_violations$violation_occur_dt) 
-    | is.na(assessments_violations$occurrencedate) | is.na(assessments_violations$violation_occur_dt),]
-assessments_violations[is.na(assessments_violations$occurrencedate) 
-    & !is.na(assessments_violations$violation_occur_dt),]$occurrencedate = assessments_violations[is.na(assessments_violations$occurrencedate) 
-    & !is.na(assessments_violations$violation_occur_dt),]$violation_occur_dt
-
-# Drop uninformative variables and perform final renaming before the save
-assessments_violations = assessments_violations[, c(-grep("issuedate", names(assessments_violations)), 
-                                                    -grep("final_order_issue_dt", names(assessments_violations)), 
-                                                    -grep("last_action_dt", names(assessments_violations)), 
-                                                    -grep("violation_occur_dt", names(assessments_violations)), 
-                                                    -grep("datevacated", names(assessments_violations)), 
-                                                    -grep("righttoconferencedate", names(assessments_violations)), 
-                                                    -grep("bill_print_dt", names(assessments_violations)), 
-                                                    -grep("number", names(assessments_violations)), 
-                                                    -grep("violdup", names(assessments_violations)))]
 names(assessments_violations)[names(assessments_violations) == "bill_print_fiscal_yr"] = "billprintfiscalyr"
 names(assessments_violations)[names(assessments_violations) == "good_faith_ind"] = "goodfaithind"
 
+# clean violator name field
+string_fun_temp = function(var) {
+  assessments_violations[, var] = gsub(",", "", assessments_violations[, var])
+  assessments_violations[, var] = gsub("\\.", "", assessments_violations[, var])
+  assessments_violations[, var] = gsub("company", "co", assessments_violations[, var])
+  assessments_violations[, var] = gsub("comp", "co", assessments_violations[, var])
+  assessments_violations[, var] = gsub("incorporated", "inc", assessments_violations[, var])
+  assessments_violations[, var] = gsub("and", "&", assessments_violations[, var])
+  assessments_violations[, var] = gsub("limited", "ltd", assessments_violations[, var])
+}
+assessments_violations$violatorname = string_fun_temp("violatorname")
+assessments_violations$violator_name = string_fun_temp("violator_name")
+
+assessments_violations[((assessments_violations$violator_name != assessments_violations$violatorname) & 
+                         !is.na(assessments_violations$violator_name) & 
+                         !is.na(assessments_violations$violatorname)), "violator_name"] = 
+  gsub(" llc", "", assessments_violations[((assessments_violations$violator_name != assessments_violations$violatorname) & 
+                                            !is.na(assessments_violations$violator_name) & 
+                                            !is.na(assessments_violations$violatorname)), "violator_name"])
+
+assessments_violations[((assessments_violations$violator_name != assessments_violations$violatorname) & 
+                         !is.na(assessments_violations$violator_name) & 
+                         !is.na(assessments_violations$violatorname)), "violatorname"] = 
+  gsub(" llc", "", assessments_violations[((assessments_violations$violator_name != assessments_violations$violatorname) & 
+                                            !is.na(assessments_violations$violator_name) & 
+                                            !is.na(assessments_violations$violatorname)), "violatorname"])
+
+# clean occurrencedate field
+assessments_violations$occurrencedate = as.character(assessments_violations$occurrencedate)
+assessments_violations$violation_occur_dt = as.character(assessments_violations$violation_occur_dt)
+sum(assessments_violations$occurrencedate != assessments_violations$violation_occur_dt, na.rm = T) # 114
+assessments_violations = assessments_violations[((assessments_violations$occurrencedate == assessments_violations$violation_occur_dt) | 
+                                                  is.na(assessments_violations$occurrencedate) | 
+                                                  is.na(assessments_violations$violation_occur_dt)), ]
+assessments_violations[is.na(assessments_violations$occurrencedate) & !is.na(assessments_violations$violation_occur_dt), ]$occurrencedate = 
+  assessments_violations[is.na(assessments_violations$occurrencedate) & !is.na(assessments_violations$violation_occur_dt), ]$violation_occur_dt
+assessments_violations$violation_occur_dt = NULL
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# output - 866276 obs, 105 vars
 saveRDS(assessments_violations, file = "X:/Projects/Mining/NIOSH/analysis/data/3_merged/assessments_violations.rds")
-rm(clean_violations, clean_assessments)
+
+
+clean_inspections = readRDS(clean_inspections_file_name)
 
 assessments_violations$inspecid = paste("L", assessments_violations$eventno, sep = "")
 clean_inspections$inspecid = paste("L", clean_inspections$eventno, sep = "")
@@ -171,8 +199,8 @@ merged_violations$contractorid = ifelse(merged_violations$violatortypecode == "C
 # MERGE ON CONTRACTOR INFORMATIO
 
 # Load data
-contractor_quarterly_employment = readRDS(contractor_quarterly_employment.file.name)
-contractor_yearly_employment = readRDS(contractor_yearly_employment.file.name)
+contractor_quarterly_employment = readRDS(contractor_quarterly_employment_file_name)
+contractor_yearly_employment = readRDS(contractor_yearly_employment_file_name)
 
 # Merge it on
 merged_violations = merge(merged_violations, contractor_quarterly_employment, by = c("contractorid", "quarter"), all = T)
@@ -241,7 +269,74 @@ merged_violations = merged_violations[, c(-grep("datevacated", names(merged_viol
                                           -match("draglineconstinspected", names(merged_violations)), 
                                           -match("miscellaneous", names(merged_violations)))]
 
-saveRDS(merged_violations, file = clean_violations.out.file.name)
+######################################################################################################
+
+# MERGE CFR CODES ONTO VIOLATIONS AND MAKE VARIABLES FOR COLLAPSING ON
+
+# Read data files
+merged_cfr_key = readRDS(clean_cfr_key_file_name)
+
+# Format cfr code
+merged_violations$cfrstandardcode = gsub("(\\(([0-9]|[a-z]|-|[A-Z])+\\))+", "", merged_violations$cfrstandardcode)
+merged_violations$cfrstandardcode = gsub("(-([a-z]+)\\))+(\\([0-9])*", "", merged_violations$cfrstandardcode)
+names(merged_violations)[names(merged_violations) == "cfrstandardcode"] = "subsection_code"
+merged_violations$subsection_code_marker = paste("S", merged_violations$subsection_code, sep = "")
+merged_cfr_key$subsection_code_marker = paste("S", merged_cfr_key$subsection_code, sep = "")
+
+# In some cases where subsection is missing, part_section is not and can be subbed in 
+merged_violations$part_section2 = merged_violations$part_section
+merged_violations$part_section2 = gsub("\\([a-z]+\\)", "", merged_violations$part_section2)
+merged_violations$part_section2 = gsub("\\([0-9]+\\)", "", merged_violations$part_section2)
+merged_violations$subsection_code = ifelse((is.na(merged_violations$subsection_code) 
+                                            & !is.na(merged_violations$part_section2)), merged_violations$part_section2, 
+                                           merged_violations$subsection_code)
+
+# Merge violations and cfr key
+merged_violations = merge(merged_violations, merged_cfr_key, by = "subsection_code", all = T)
+
+# Flag which observations merged from each dataset - this is only useful for comparing the merge to Stata output
+merged_violations[, "merge"] = ifelse(!is.na(merged_violations$subsection_code_marker.y) 
+                                      & !is.na(merged_violations$subsection_code_marker.x), 3, 0)
+merged_violations[, "merge"] = ifelse(is.na(merged_violations$subsection_code_marker.x) 
+                                      & !is.na(merged_violations$subsection_code_marker.y), 2, merged_violations[, "merge"])
+merged_violations[, "merge"] = ifelse(is.na(merged_violations$subsection_code_marker.y) 
+                                      & !is.na(merged_violations$subsection_code_marker.x), 1, merged_violations[, "merge"])
+
+# Clean up redundant varnames from the merge
+common_varstbs = sub(".x", "", names(merged_violations)[grep(".x", names(merged_violations), fixed = T)], fixed = T)
+for (i in 1:length(common_varstbs)) {
+  merged_violations[, paste(common_varstbs[i], ".x", sep = "")] = ifelse(merged_violations[, "merge"] == 2, 
+                                                                         merged_violations[, paste(common_varstbs[i], ".y", sep = "")], 
+                                                                         merged_violations[, paste(common_varstbs[i], ".x", sep = "")])
+}
+merged_violations = merged_violations[, -grep(".y", names(merged_violations), fixed = T)]
+names(merged_violations)[grep(".x", names(merged_violations), fixed = T)] = common_varstbs
+rm(merged_cfr_key, common_varstbs, i)
+
+# Format date vars
+datevars = names(merged_violations)[grep("date", names(merged_violations))]
+for (i in 1:length(datevars)) {
+  merged_violations[, datevars[i]] = as.Date(as.character(merged_violations[, datevars[i]]), "%m/%d/%Y")
+}
+
+# Remove observations from cfr data that didn't merge onto our violations data 
+merged_violations = merged_violations[complete.cases(merged_violations$violationno),]
+
+# Condition the per-day vars on positive denominator. (There are 256 cases of zero inspection days and positive violation counts). 6/6/16
+merged_violations$contractor_violation_cnt = ifelse(merged_violations$violatortypecode == "Contractor", merged_violations$violator_violation_cnt, NA)
+merged_violations$operator_violation_pInspDay = ifelse(merged_violations$violatortypecode == "Operator" & merged_violations$violator_inspection_day_cnt > 0, 
+                                                       merged_violations$violator_violation_cnt/merged_violations$violator_inspection_day_cnt, NA)
+merged_violations$contractor_repeated_viol_cnt = ifelse(merged_violations$violatortypecode == "Contractor", merged_violations$violator_repeated_viol_cnt, NA)
+merged_violations$operator_repeated_viol_pInspDay = ifelse(merged_violations$violatortypecode == "Operator" & merged_violations$violator_inspection_day_cnt > 0, 
+                                                           merged_violations$violator_repeated_viol_cnt/merged_violations$violator_inspection_day_cnt, NA)
+
+######################################################################################################
+
+# REMOVE UNNECESSARY VARS AND OUTPUT 
+
+merged_violations = merged_violations[, c(-grep("merge", names(merged_violations)))]
+
+saveRDS(merged_violations, file = clean_violations_out_file_name)
 rm(assessments_violations, clean_inspections, common_varstbs, violnames, i)
 
 ######################################################################################################
