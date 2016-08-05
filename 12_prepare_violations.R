@@ -88,44 +88,33 @@ levels(merged_violations$negligence) = c("Unknown", "HighNegligence", "LowNeglig
 merged_violations$negligence = as.character(merged_violations$negligence)
 merged_violations$negligence = ifelse(is.na(merged_violations$negligence), "Unknown", merged_violations$negligence)
 
-
-
 ######################################################################################################################################
 
 # FINISH DUMMYING-OUT CATEGORICAL VARIABLES 
 
 # This is the function that will dummy out the categorical variables
 
+# TESTING 1-2-3
 julia = c("hi", "hello", "yo", "hi", "hey", "heyy")
 sarah = c("a", "b", "c", "c", "b", "b")
 taylor = c("yellow", "blue", "green", "purple", "yellow", "yellow")
-office = cbind(julia, sarah, taylor)
-
-datdum = function(x, data){
-  data$rv = rnorm(nrow(data), 1, 1)
-  mm = data.frame(model.matrix(lm(data$rv ~ -1 + factor(data[, x]))))
-  names(mm) = paste(name, 1:ncol(mm), sep = ".")
-  data$rv = NULL
-  data = cbind(data, mm)
-  return(data)
-}
+office = data.frame(cbind(julia, sarah, taylor))
 
 datdum = function(var, data) {
-  assign('office',data,envir=.GlobalEnv)
-  print(var)
   data$rv = rnorm(nrow(data), 1, 1)
-  print(dim(data))
-  #print(data[, var])
   mm = data.frame(model.matrix(lm(data$rv ~ -1 + factor(data[, var]))))
-  #print(mm)
   data$rv = NULL
   data[, var] = NULL
   names(mm) = paste(var, 1:ncol(mm), sep = ".")
   data = cbind(data, mm)
-  #return(data)
+  assign("office", data, .GlobalEnv) 
 }
 
-test = sapply(colnames(office), datdum, data = office)
+for (var in colnames(office)) {
+  datdum(var, office)
+}
+
+
 
 
 # Apply the dummy function to each categorical variable
