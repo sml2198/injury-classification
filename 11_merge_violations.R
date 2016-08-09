@@ -281,7 +281,6 @@ rm(merged_cfr_key)
 # drop data that didn't merge onto violations
 merged_violations = merged_violations[complete.cases(merged_violations$violationno), ] # drop 1247 obs
 
-
 # condition the per-day vars on positive denominator
   # there are 256 cases of zero inspection days and positive violation counts 6/6/16
 merged_violations$contractor_violation_cnt = ifelse(merged_violations$violatortypecode == "Contractor", merged_violations$violator_violation_cnt, NA)
