@@ -49,8 +49,6 @@ merged_violations$inspacty = ifelse(merged_violations$inspacty == "shaft, slope 
 merged_violations$inspacty = ifelse(merged_violations$inspacty == "103(g)(1) spot umwa inspection", "103(g)(1) spot inspection", merged_violations$inspacty)
 merged_violations$inspacty = ifelse(merged_violations$inspacty == "103(i) spot (ign or expl) insp", "103(i) spot inspections", merged_violations$inspacty)
 merged_violations$inspacty = ifelse(merged_violations$inspacty == "103(i) spot (hazard) inspection", "103(i) spot inspections", merged_violations$inspacty)
-
-# rename NAs
 merged_violations$inspacty = ifelse(is.na(merged_violations$inspacty), "unknown", merged_violations$inspacty)
 
 # collapse inspection type categories to resonable amount
@@ -61,7 +59,7 @@ merged_violations$inspacty = ifelse(merged_violations$inspacty == "fatal acciden
 merged_violations$inspacty = ifelse(grepl("103", merged_violations$inspacty), "103", merged_violations$inspacty)
 merged_violations$inspacty = ifelse(grepl("(103|fatality|unknown|regular|complaint)", merged_violations$inspacty), merged_violations$inspacty, "other")
 
-# rename NAs
+# format violation type
 merged_violations$violationtypecode = as.character(merged_violations$violationtypecode)
 merged_violations$violationtypecode = ifelse(is.na(merged_violations$violationtypecode), "Unknown", merged_violations[, "violationtypecode"])
 
@@ -70,19 +68,19 @@ merged_violations = merged_violations[(merged_violations$violationtypecode != "N
 merged_violations$assessmenttypecode = as.character(merged_violations$assessmenttypecode)
 merged_violations$assessmenttypecode = ifelse(is.na(merged_violations$assessmenttypecode), "Unknown", merged_violations$assessmenttypecode)
 
-# rename categories and deal with missing values
+# rename likelihood categories and deal with missing values
 is.na(merged_violations$likelihood) = merged_violations$likelihood == ""
 levels(merged_violations$likelihood) = c("Unknown", "Highly", "NoLikelihood", "Occurred", "Reasonably", "Unlikely")
 merged_violations$likelihood = as.character(merged_violations$likelihood)
 merged_violations$likelihood = ifelse(is.na(merged_violations$likelihood), "Unknown", merged_violations$likelihood)
 
-# rename categories and deal with missing values
+# rename injuryillness categories and deal with missing values
 merged_violations$injuryillness = as.character(merged_violations$injuryillness)
 is.na(merged_violations$injuryillness) = merged_violations$injuryillness == ""
 levels(merged_violations$injuryillness) = c("Unknown", "Fatal", "LostDays", "NoLostDays", "Permanent")
 merged_violations$injuryillness = ifelse(is.na(merged_violations$injuryillness), "Unknown", merged_violations$injuryillness)
 
-# rename categories and deal with missing values
+# rename negligence categories and deal with missing values
 is.na(merged_violations$negligence) = merged_violations$negligence == ""
 levels(merged_violations$negligence) = c("Unknown", "HighNegligence", "LowNegligence", "ModNegligence", "NoNegligence", "Reckless")
 merged_violations$negligence = as.character(merged_violations$negligence)
@@ -90,67 +88,30 @@ merged_violations$negligence = ifelse(is.na(merged_violations$negligence), "Unkn
 
 ######################################################################################################################################
 
-# FINISH DUMMYING-OUT CATEGORICAL VARIABLES 
-
-# This is the function that will dummy out the categorical variables
-
-# TESTING 1-2-3
-julia = c("hi", "hello", "yo", "hi", "hey", "heyy")
-sarah = c("a", "b", "c", "c", "b", "b")
-taylor = c("yellow", "blue", "green", "purple", "yellow", "yellow")
-office = data.frame(cbind(julia, sarah, taylor))
-
-datdum = function(var, data) {
+# function to dummy out vairables
+datdum = function(var_name, data, data_name) {
   data$rv = rnorm(nrow(data), 1, 1)
-  mm = data.frame(model.matrix(lm(data$rv ~ -1 + factor(data[, var]))))
+  mm = data.frame(model.matrix(lm(data$rv ~ -1 + factor(data[, var_name]))))
   data$rv = NULL
-  data[, var] = NULL
+  data[, var_name] = NULL
   names(mm) = paste(var, 1:ncol(mm), sep = ".")
   data = cbind(data, mm)
-  assign("office", data, .GlobalEnv) 
+  assign(data_name, data, .GlobalEnv) 
 }
 
-for (var in colnames(office)) {
-  datdum(var, office)
+dum_vars = c("inspacty", 
+             "assessmenttypecode", 
+             "violationtypecode", 
+             "likelihood", 
+             "injuryillness", 
+             "negligence")
+
+for (var in dum_vars) {
+  datdum(var, merged_violations, "merged_violations")
 }
 
-
-
-
-# Apply the dummy function to each categorical variable
-merged_violations = datdum(x = "inspacty",data=merged_violations,name="inspacty")
-merged_violations = datdum(x = "assessmenttypecode",data=merged_violations,name="assessmenttypecode")
-merged_violations = datdum(x="violationtypecode",data=merged_violations,name="violationtypecode")
-merged_violations = datdum(x="likelihood",data=merged_violations,name="likelihood")
-merged_violations = datdum(x="injuryillness",data=merged_violations,name="injuryillness")
-merged_violations = datdum(x="negligence",data=merged_violations,name="negligence")
-
-
-merged_violations = merged_violations[, c(-match("inspacty", names(merged_violations)),
-                                          -match("assessmenttypecode", names(merged_violations)),
-                                          -match("violationtypecode", names(merged_violations))
-                                          -match("likelihood", names(merged_violations)),
-                                          -match("injuryillness", names(merged_violations)),
-                                          -match("negligence", names(merged_violations)))
-                                      
-
-# Apply the dummy function to each categorical variable
-test.data1 <- datdum(x = "inspacty",data=merged_violations,name="inspacty")
-test.data1 <- test.data1 [, c(grep("inspacty", names(test.data1)))]
-test.data2 <- datdum(x="assessmenttypecode",data=merged_violations,name="assessmenttypecode")
-test.data2 <- test.data2 [, c(grep("assessmenttypecode", names(test.data2)))]
-test.data3 <- datdum(x="violationtypecode",data=merged_violations,name="violationtypecode")
-test.data3 <- test.data3 [, c(grep("violationtypecode", names(test.data3)))]
-test.data4 <- datdum(x="likelihood",data=merged_violations,name="likelihood")
-test.data4 <- test.data4 [, c(grep("likelihood", names(test.data4)))]
-test.data5 <- datdum(x="injuryillness",data=merged_violations,name="injuryillness")
-test.data5 <- test.data5 [, c(grep("injuryillness", names(test.data5)))]
-test.data6 <- datdum(x="negligence",data=merged_violations,name="negligence")
-test.data6 <- test.data6 [, c(grep("negligence", names(test.data6)))]
-
-# Merge all dummied datasets and remove them when done
-merged_violations = cbind(merged_violations, test.data1, test.data2, test.data3, test.data4, test.data5, test.data6)
-rm(test.data1, test.data2, test.data3, test.data4, test.data5, test.data6, datdum)
+# memory
+rm(dum_vars)
 
 ######################################################################################################################################
 
