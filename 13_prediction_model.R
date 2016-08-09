@@ -34,7 +34,7 @@ prediction_data.out.file.name = "X:/Projects/Mining/NIOSH/analysis/data/5_predic
 # FINAL VARIABLE CLEANING AND PREP
 
 # Read data files
-prediction_data = readRDS(prediction_data.file.name)
+prediction_data = readRDS(prediction_data.in.file.name)
 
 # Replace categorical variables with numeric levels
 prediction_data$year = factor(prediction_data$year)
