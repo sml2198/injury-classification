@@ -114,10 +114,6 @@ for (var in dum_vars) {
 # memory
 rm(dum_vars, var)
 
-
-
-
-
 ######################################################################################################################################
 
 # PREPARE TO GENERATE PART AND SUBSECTION SPECIFIC VARIABLES
@@ -521,6 +517,9 @@ gc()
 # Merge violations & accidents with remaining inspections data
 prediction_data = merge(merged_mines_violations_accidents, summed_inspcs, by = c("mineid", "quarter"), all = T)
 
+rm(merged_mines_violations_accidents,summed_inspcs)
+gc()
+
 # Same drill here - just a sanity check 
 prediction_data[, "merge3"] = ifelse(!is.na(prediction_data$row_id.y) & !is.na(prediction_data$row_id.x), 3, 0)
 prediction_data[, "merge3"] = ifelse(is.na(prediction_data$row_id.x) & !is.na(prediction_data$row_id.y), 2, prediction_data[, "merge3"])
@@ -537,154 +536,211 @@ prediction_data = prediction_data[prediction_data$coal_prod_qtr != 0,]
 prediction_data = prediction_data[, c(-grep("merge", names(prediction_data)), -grep("row_id", names(prediction_data)), 
                                       -grep("coalcormetalmmine", names(prediction_data)), -grep("minetype", names(prediction_data)))]
 
-# Set the file name (if part-specific).
-if (relevant.only.option == "on") {
-    saveRDS(prediction_data, file = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_relevant.rds")
-}
-if (relevant.only.option != "on") {
-    #saveRDS(prediction_data, file = "X:/Projects/Mining/NIOSH/analysis/data/4_collapsed/prediction_data.rds")
-    saveRDS(prediction_data, file = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75h.rds")
-}
+######################################################################################################################################
+
+# FINAL VARIABLE CLEANING AND PREP
+
+# Replace categorical variables with numeric levels
+prediction_data$year = factor(prediction_data$year)
+prediction_data$minestatus = ifelse(prediction_data$minestatus == "Abandoned", 1, 
+                                    ifelse(prediction_data$minestatus == "Abandoned and Sealed", 2, 
+                                           ifelse(prediction_data$minestatus == "Active", 3, 
+                                                  ifelse(prediction_data$minestatus == "Intermittent", 4,
+                                                         ifelse(prediction_data$minestatus == "New Mine", 5,
+                                                                ifelse(prediction_data$minestatus == "NonProducing", 6, 
+                                                                       ifelse(prediction_data$minestatus == "Temporarily Idled", 7, NA)))))))
+
+prediction_data$idesc = ifelse(prediction_data$idesc == "Hazard", 1, 
+                               ifelse(prediction_data$idesc == "Ignition or Explosion", 2, 
+                                      ifelse(prediction_data$idesc == "Inspect Once Every 10-days", 3, 
+                                             ifelse(prediction_data$idesc == "Inspect Once Every 15-days", 4,
+                                                    ifelse(prediction_data$idesc == "Inspect Once Every 5-days", 5,
+                                                           ifelse(prediction_data$idesc == "Never Had 103I Status", 6, 
+                                                                  ifelse(prediction_data$idesc == "Removed From 103I Status", 7, NA)))))))
 
 ######################################################################################################################################
 
-# Part 75 is enormous. If we want one dataset with all subsections included, we have to drop a number of variables first.
-# This code will take the various part-75 datasets, keep only those vars that we use for our preliminary prediction algorithm,
-# and merges them together.
+# MAKE MINE AND QUARTER DUMMIES
 
-rm(list=ls())
-gc()
-#part 75 csv
-data_75a = readRDS("X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75a.rds")
-data_75a  = data_75a[,c(match("MR", names(data_75a)),
-                        match("year", names(data_75a)),
-                        match("minename", names(data_75a)),
-                        match("minesizepoints", names(data_75a)),
-                        match("controllersizepoints", names(data_75a)),
-                        match("contractorsizepoints", names(data_75a)),
-                        match("minestatusdate", names(data_75a)),
-                        match("operatorid", names(data_75a)),
-                        match("operatorname", names(data_75a)),
-                        match("stateabbreviation", names(data_75a)),
-                        match("idate", names(data_75a)),
-                        match("hours_qtr", names(data_75a)),
-                        match("employment_qtr", names(data_75a)),
-                        match("coal_prod_qtr", names(data_75a)),
-                        match("productionshiftsperday", names(data_75a)),
-                        match("terminated", names(data_75a)),
-                        match("contractor_repeated_viol_cnt", names(data_75a)),
-                        match("insp_hours_per_qtr", names(data_75a)),
-                        match("terminated", names(data_75a)),
-                        match("idesc", names(data_75a)),
-                        match("minestatus", names(data_75a)),
-                        match("75", names(data_75a)),
-                        grep("75.inspacty", names(data_75a)),
-                        grep("^75\\.[0-9]+(-[0-9]+)*$", names(data_75a)),
-                        grep("penaltypoints", names(data_75a)),
-                        grep("sigandsubdesignation", names(data_75a)),
-                        match("total_violations", names(data_75a)),
-                        match("totalinjuries", names(data_75a)),
-                        match("num_insp", names(data_75a)), 
-                        match("hours_qtr", names(data_75a)),
-                        match("mineid", names(data_75a)), 
-                        match("quarter", names(data_75a)),
-                        match("onsite_insp_hours_per_qtr", names(data_75a)))]
+# # Create mine/quarter specific dummies: function
+# datdum <- function(x, data, name){
+#   data$rv <- rnorm(dim(data)[1],1,1)
+#   mm <- data.frame(model.matrix(lm(data$rv~-1+factor(data[,x]))))
+#   names(mm) <- paste(name,1:dim(mm)[2],sep=".")
+#   data$rv <- NULL
+#   data <- cbind(data,mm)
+#   return(data)
+# }
 
-data_75b = readRDS("X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75b.rds")
-data_75b  = data_75b[, c(match("mineid", names(data_75b)), 
-                        match("quarter", names(data_75b)),
-                        grep("^75\\.14[0-9]+(-[0-9]+)*$", names(data_75b)),
-                        grep("penaltypoints", names(data_75b)),
-                        grep("sigandsubdesignation", names(data_75b)))]
+# dummy out categorical variables
+dum_vars = c("mineid", 
+             "quarter")
 
-data_75c = readRDS("X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75c.rds")
-data_75c  = data_75c[, c(match("mineid", names(data_75c)), 
-                        match("quarter", names(data_75c)),
-                        grep("^75\\.1[5-9][0-9](-[0-9]+)*$", names(data_75c)),
-                        grep("penaltypoints", names(data_75c)),
-                        grep("sigandsubdesignation", names(data_75c)))]
+for (var in dum_vars) {
+  datdum(var, prediction_data, "prediction_data")
+}
 
-data_75d = readRDS("X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75d.rds")
-data_75d  = data_75d[, c(match("mineid", names(data_75d)), 
-                         match("quarter", names(data_75d)),
-                         grep("^75\\.[2-4][0-9]+(-[0-9]+)*$", names(data_75d)),
-                         grep("penaltypoints", names(data_75d)),
-                         grep("sigandsubdesignation", names(data_75d)))]
+rm(dum_vars, var)
 
-data_75e = readRDS("X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75e.rds")
-data_75e  = data_75e[, c(match("mineid", names(data_75e)), 
-                         match("quarter", names(data_75e)),
-                         grep("^75\\.5[0-9]+(-[0-9]+)*$", names(data_75e)),
-                         grep("penaltypoints", names(data_75e)),
-                         grep("sigandsubdesignation", names(data_75e)))]
+# # Create mine/quarter specific dummies: apply function and merge dummies datasets (then remove them)
+# test.data1 <- datdum(x="mineid",data=prediction_data,name="mine")
+# test.data1 <- test.data1[, c(grep("^mine\\.", names(test.data1)))]
+# test.data2 <- datdum(x="quarter",data=prediction_data,name="quart")
+# test.data2 <- test.data2[, c(grep("^quart\\.", names(test.data2)))]
+# prediction_data = cbind(prediction_data, test.data1, test.data2)
+# rm(test.data1, test.data2)
 
-data_75f = readRDS("X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75f.rds")
-data_75f  = data_75f[, c(match("mineid", names(data_75f)), 
-                         match("quarter", names(data_75f)),
-                         grep("^75\\.[6-7][0-9]+(-[0-9]+)*$", names(data_75f)),
-                         grep("penaltypoints", names(data_75f)),
-                         grep("sigandsubdesignation", names(data_75f)))]
+######################################################################################################################################
 
-data_75g = readRDS("X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75g.rds")
-data_75g  = data_75g[, c(match("mineid", names(data_75g)), 
-                         match("quarter", names(data_75g)),
-                         grep("^75\\.[8-9][0-9]+(-[0-9]+)*$", names(data_75g)),
-                         grep("penaltypoints", names(data_75g)),
-                         grep("sigandsubdesignation", names(data_75g)))]
+# FILL IN MISSING VALUES OF MINE CHARACTERISTICS BY MINE_ID/QUARTER GROUPS 
 
-data_75h = readRDS("X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75h.rds")
-data_75h  = data_75h[, c(match("mineid", names(data_75h)), 
-                         match("quarter", names(data_75h)),
-                         grep("^75\\.[8-9][0-9]+(-[0-9]+)*$", names(data_75h)),
-                         grep("penaltypoints", names(data_75h)),
-                         grep("sigandsubdesignation", names(data_75h)))]
+# Group and order the data by mine-quarter
+prediction_data = group_by(prediction_data, mineid, quarter)
+prediction_data = prediction_data[order(prediction_data$mineid, prediction_data$quarter, na.last = T),]
 
-part75_select_vars = merge(data_75a, data_75b, by = c("mineid", "quarter"), all=T)
-part75_select_vars = part75_select_vars[,c(-grep("\\.y$", names(part75_select_vars)))]
-names(part75_select_vars)[names(part75_select_vars) == '75.penaltypoints.x'] = '75.penaltypoints'
-names(part75_select_vars)[names(part75_select_vars) == '75.sigandsubdesignation.x'] = '75.sigandsubdesignation'
+# na.locf pipes the first non-missing value into NA's by mine-quarter group
+prediction_data$minename = na.locf(prediction_data$minename)
+prediction_data$minesizepoints = na.locf(prediction_data$minesizepoints)
+prediction_data$controllersizepoints = na.locf(prediction_data$controllersizepoints)
+prediction_data$contractorsizepoints = na.locf(prediction_data$contractorsizepoints)
+prediction_data$hours_qtr = na.locf(prediction_data$hours_qtr)
+prediction_data$employment_qtr = na.locf(prediction_data$employment_qtr)
+prediction_data$coal_prod_qtr = na.locf(prediction_data$coal_prod_qtr)
+prediction_data$productionshiftsperday = na.locf(prediction_data$productionshiftsperday)
+prediction_data$idesc = na.locf(prediction_data$idesc)
 
-part75_select_vars = merge(part75_select_vars, data_75c, by = c("mineid", "quarter"), all=T)
-part75_select_vars = part75_select_vars[,c(-grep("\\.y$", names(part75_select_vars)))]
-names(part75_select_vars)[names(part75_select_vars) == '75.penaltypoints.x'] = '75.penaltypoints'
-names(part75_select_vars)[names(part75_select_vars) == '75.sigandsubdesignation.x'] = '75.sigandsubdesignation'
+# Pipe in zeroes to the missing part-specific variables (if nothing merged on a mine-quarter then it should be a zero)
+number_to_zero = prediction_data[, c(grep("^[0-9][0-9]", names(prediction_data)), 
+                                     match("mineid", names(prediction_data)),
+                                     match("quarter", names(prediction_data)), 
+                                     match("terminated", names(prediction_data)),
+                                     match("total_violations", names(prediction_data)), 
+                                     match("contractor_repeated_viol_cnt", names(prediction_data)), 
+                                     match("totalinjuries", names(prediction_data)), 
+                                     match("MR", names(prediction_data)),
+                                     match("insp_hours_per_qtr", names(prediction_data)), 
+                                     match("onsite_insp_hours_per_qtr", names(prediction_data)),
+                                     match("num_insp", names(prediction_data)))]
 
-part75_select_vars = merge(part75_select_vars, data_75d, by = c("mineid", "quarter"), all=T)
-part75_select_vars = part75_select_vars[,c(-grep("\\.y$", names(part75_select_vars)))]
-names(part75_select_vars)[names(part75_select_vars) == '75.penaltypoints.x'] = '75.penaltypoints'
-names(part75_select_vars)[names(part75_select_vars) == '75.sigandsubdesignation.x'] = '75.sigandsubdesignation'
+# Remove these from the prediction dataset (they'll be merged back in soon once zeroes are inserted)
+prediction_data = prediction_data[, c(-grep("^[0-9][0-9]", names(prediction_data)), 
+                                      -match("terminated", names(prediction_data)),
+                                      -match("total_violations", names(prediction_data)), 
+                                      -match("contractor_repeated_viol_cnt", names(prediction_data)), 
+                                      -match("totalinjuries", names(prediction_data)), 
+                                      -match("MR", names(prediction_data)),
+                                      -match("insp_hours_per_qtr", names(prediction_data)), 
+                                      -match("onsite_insp_hours_per_qtr", names(prediction_data)),
+                                      -match("num_insp", names(prediction_data)))]
 
-part75_select_vars = merge(part75_select_vars, data_75e, by = c("mineid", "quarter"), all=T)
-part75_select_vars = part75_select_vars[,c(-grep("\\.y$", names(part75_select_vars)))]
-names(part75_select_vars)[names(part75_select_vars) == '75.penaltypoints.x'] = '75.penaltypoints'
-names(part75_select_vars)[names(part75_select_vars) == '75.sigandsubdesignation.x'] = '75.sigandsubdesignation'
-part75_select_vars = part75_select_vars[,c(-grep("\\.x$", names(part75_select_vars)))]
+# Replace missings in the number-to-zero group with zeroes.
+number_to_zero[is.na(number_to_zero)] = 0
 
-part75_select_vars = merge(part75_select_vars, data_75f, by = c("mineid", "quarter"), all=T)
-part75_select_vars = part75_select_vars[,c(-grep("\\.y$", names(part75_select_vars)))]
-names(part75_select_vars)[names(part75_select_vars) == '75.penaltypoints.x'] = '75.penaltypoints'
-names(part75_select_vars)[names(part75_select_vars) == '75.sigandsubdesignation.x'] = '75.sigandsubdesignation'
+# Merge all vars back together now.
+prediction_data = merge(prediction_data, number_to_zero, by = c("mineid", "quarter"), all = T)
+rm(number_to_zero)
 
-part75_select_vars = merge(part75_select_vars, data_75g, by = c("mineid", "quarter"), all=T)
-part75_select_vars = part75_select_vars[,c(-grep("\\.y$", names(part75_select_vars)))]
-names(part75_select_vars)[names(part75_select_vars) == '75.penaltypoints.x'] = '75.penaltypoints'
-names(part75_select_vars)[names(part75_select_vars) == '75.sigandsubdesignation.x'] = '75.sigandsubdesignation'
-part75_select_vars = part75_select_vars[,c(-grep("\\.x$", names(part75_select_vars)))]
+# Now replace any NA's in remaining numeric vars by randomly sampling from the distribution of the column
+var_classes = sapply(prediction_data[,names(prediction_data)], class)
+num_vars = names(var_classes[c(grep("numeric", var_classes), grep("integer", var_classes))])
+for (i in 1:length(num_vars)) {
+  i_rowsmissing = row.names(prediction_data)[is.na(prediction_data[, num_vars[i]])]
+  while (sum(!complete.cases(prediction_data[, num_vars[i]])) > 0) {
+    replace_rows = sample(setdiff(row.names(prediction_data), i_rowsmissing), length(i_rowsmissing), replace = T)
+    prediction_data[i_rowsmissing, num_vars[i]] = prediction_data[replace_rows, num_vars[i]]
+  }
+}
 
-part75_select_vars = merge(part75_select_vars, data_75h, by = c("mineid", "quarter"), all=T)
-part75_select_vars = part75_select_vars[,c(-grep("\\.y$", names(part75_select_vars)))]
-names(part75_select_vars)[names(part75_select_vars) == '75.penaltypoints.x'] = '75.penaltypoints'
-names(part75_select_vars)[names(part75_select_vars) == '75.sigandsubdesignation.x'] = '75.sigandsubdesignation'
+#####################################################################################################################################
 
-saveRDS(part75_select_vars, "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75.rds")
+# FINAL VARIABLE CLEANING AND PREP
 
-varnames = names(part75_select_vars)
-varnames = gsub("\\.", "_", varnames)
-varnames = gsub("-", "_", varnames)
-varnames = paste("_", varnames, sep ="")
-names(part75_select_vars) = varnames
+# Add variables for binary and proportional dependent vars
+prediction_data$MR_indicator = ifelse(prediction_data$MR > 0, 1, 0)
+prediction_data$MR_proportion = prediction_data$MR / prediction_data$totalinjuries
 
-write.csv(part75_select_vars, "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75.csv")
+# All violations should be terminated, meaning the issue has been abated by the violator. A violation that has not been terminated is
+# therefore an indication of mine/operator negligence. Rather than include the number of terminations as a variable in our models
+# (which would yield collinearity because the # of terminations closely tracks the # of violations), we create an indicator for mine
+# quarters that have any non-terminated violations.  
+prediction_data$no_terminations = ifelse(prediction_data$terminated < prediction_data$total_violations, 1, 0)
+
+# This var is the number of non-terminated violations in a mine quarter. Probably can't be used due to collinearity, but not sure. 
+prediction_data$num_no_terminations = ifelse(prediction_data$terminated < prediction_data$total_violations, 
+                                             prediction_data$total_violations-prediction_data$terminated, 0)
+
+#####################################################################################################################################
+
+# CREATE LAGGED VARS
+
+# Create lagged variables of various orders (currently code exists for 6 orders)
+# Currently we're doing this for part 75 only (the biggest part) and for vars that we believe to be strong predictors, based on model
+# selection. This includes penalty points, sig and sub designation, violation counts, MR counts, and one subsection (just as a test - randomly selected)
+prediction_data = as.data.table(prediction_data[order(prediction_data$mineid, prediction_data$quarter, na.last = T),])
+prediction_data[, c("75.penaltypoints_l1", "75.penaltypoints_l2", "75.penaltypoints_l3", "75.penaltypoints_l4", "75.penaltypoints_l5", "75.penaltypoints_l6",
+                    "75.sigandsubdesignation_l1", "75.sigandsubdesignation_l2", "75.sigandsubdesignation_l3", "75.sigandsubdesignation_l4", "75.sigandsubdesignation_l5", "75.sigandsubdesignation_l6",
+                    "75_l1", "75_l2", "75_l3", "75_l4", "75_l5", "75_l6",
+                    "75.1405_l1", "75.1405_l2", "75.1405_l3", "75.1405_l4", "75.1405_l5", "75.1405_l6",
+                    "MR_l1", "MR_l2", "MR_l3", "MR_l4", "MR_l5", "MR_l6", 
+                    "MR_indicator_l1", "MR_indicator_l2", "MR_indicator_l3", "MR_indicator_l4", "MR_indicator_l5", "MR_indicator_l6",
+                    "MR_proportion_l1", "MR_proportion_l2", "MR_proportion_l3", "MR_proportion_l4","MR_proportion_l5","MR_proportion_l6") := shift(.SD, 1:6), 
+                by = mineid, .SDcols = c("75.penaltypoints", "75.sigandsubdesignation", "75", "75.1405", "MR", "MR_indicator", "MR_proportion")]
+prediction_data = as.data.frame(prediction_data)
+
+######################################################################################################################################
+
+# CREATE COMPOUND LAGGED VARS
+
+# Create compound lagged vars: in this formulation, order 6 will be the sum of all violations (or other lagged var) over 
+# the last 6 quarters, instead of simply the value of that var 6 quarters ago.
+prediction_data$sum_75_1_2 = rowSums(prediction_data[,c("75_l1", "75_l2")])
+prediction_data$sum_75_1_3 = rowSums(prediction_data[,c("75_l1", "75_l2", "75_l3")])
+prediction_data$sum_75_1_4 = rowSums(prediction_data[,c("75_l1", "75_l2", "75_l3", "75_l4")])
+prediction_data$sum_75_1_5 = rowSums(prediction_data[,c("75_l1", "75_l2", "75_l3", "75_l4", "75_l5")])
+prediction_data$sum_75_1_6 = rowSums(prediction_data[,c("75_l1", "75_l2", "75_l3", "75_l4", "75_l5", "75_l6")])
+
+# Same process for the subsection var that we're working with right now.
+prediction_data$sum_75.1405_1_2 = rowSums(prediction_data[,c("75.1405_l1", "75.1405_l2")])
+prediction_data$sum_75.1405_1_3 = rowSums(prediction_data[,c("75.1405_l1", "75.1405_l2", "75.1405_l3")])
+prediction_data$sum_75.1405_1_4 = rowSums(prediction_data[,c("75.1405_l1", "75.1405_l2", "75.1405_l3", "75.1405_l4")])
+prediction_data$sum_75.1405_1_5 = rowSums(prediction_data[,c("75.1405_l1", "75.1405_l2", "75.1405_l3", "75.1405_l4", "75.1405_l5")])
+prediction_data$sum_75.1405_1_6 = rowSums(prediction_data[,c("75.1405_l1", "75.1405_l2", "75.1405_l3", "75.1405_l4", "75.1405_l5", "75.1405_l6")])
+
+######################################################################################################################################
+
+# PRUNE VARIABLE SET 
+
+# Pare away variables with zero variation before model selection and prediction stages
+var_stats = describe(prediction_data[, c(-match("mineid", names(prediction_data)), 
+                                         -match("quarter", names(prediction_data)), 
+                                         -match("year", names(prediction_data)),
+                                         -match("minename", names(prediction_data)), 
+                                         -match("minestatusdate", names(prediction_data)), 
+                                         -match("operatorid", names(prediction_data)),
+                                         -match("operatorname", names(prediction_data)), 
+                                         -match("stateabbreviation", names(prediction_data)), 
+                                         -match("idate", names(prediction_data)))])
+
+# Variables are nontrivial (worth keeping) if their standard deviation is greater than zero 
+nontriv_vars = rownames(var_stats[var_stats$sd > 0,])
+triv_vars = setdiff(names(prediction_data), nontriv_vars)
+
+# Keeps only nontrivial vars. Warning: This excludes all non-numeric variables
+prediction_data = prediction_data[, c(nontriv_vars, "mineid", "quarter")]
+
+# This line will report number of missings per var - should be zero (except lagged vars which will be missing for first quarter)!
+apply(is.na(prediction_data),2,sum)
+
+######################################################################################################################################
+
+# Set the file name (if part-specific).
+if (relevant.only.option == "on") {
+  saveRDS(prediction_data, file = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_relevant.rds")
+}
+if (relevant.only.option != "on") {
+  #saveRDS(prediction_data, file = "X:/Projects/Mining/NIOSH/analysis/data/4_collapsed/prediction_data.rds")
+  saveRDS(prediction_data, file = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75h.rds")
+}
   
 ######################################################################################################################################
 
