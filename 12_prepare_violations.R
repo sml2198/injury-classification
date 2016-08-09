@@ -9,7 +9,7 @@
     # Loads accidents data from "6_collapse_accidents.R"
     # Merges mine-quarter level violations with inspections and accidents
 
-# Last edit 7/29/16
+# Last edit 8/10/16
 
 ######################################################################################################
 
@@ -99,6 +99,7 @@ datdum = function(var_name, data, data_name) {
   assign(data_name, data, .GlobalEnv) 
 }
 
+# dummy out categorical variables
 dum_vars = c("inspacty", 
              "assessmenttypecode", 
              "violationtypecode", 
@@ -111,7 +112,11 @@ for (var in dum_vars) {
 }
 
 # memory
-rm(dum_vars)
+rm(dum_vars, var)
+
+
+
+
 
 ######################################################################################################################################
 
@@ -119,7 +124,7 @@ rm(dum_vars)
 
 # Dummy out CFR codes (at the subpart and subsection levels) only for *relevant types and mark all non-relevant CFR codes
 if (relevant.only.option == "on") {
-    MR_relevant_subsectcodes = levels(factor(merged_violations[merged_violations$MR_relevant == 1 ,]$subsection_code))
+    MR_relevant_subsectcodes = levels(factor(merged_violations[merged_violations$MR_relevant == 1, ]$subsection_code))
 }
 if (relevant.only.option != "on") {
     MR_relevant_subsectcodes = levels(factor(merged_violations[merged_violations$MR_relevant == 1 | merged_violations$MR_maybe_relevant == 1,]$subsection_code))
