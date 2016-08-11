@@ -19,6 +19,7 @@ library(stats)
 library(stringr)
 library(withr)
 library(psych)
+library(dplyr)
 
 # define file names
   # input: merged violations data produced in 11_merge_violations.R
@@ -192,14 +193,15 @@ if (relevant.only.option == "on") {
   MR_relevant_subsectcodes_75h = setdiff(MR_relevant_subsectcodes_75h, remove_subcodes)
 }
 MR_relevant_subsectcodes_75 = setdiff(MR_relevant_subsectcodes_75, remove_subcodes)
+MR_relevant_subsectcodes = setdiff(MR_relevant_subsectcodes, remove_subcodes)
 
 # Create lists of number of dummies for violation, assessment, and inspection types 
 likelihoodcodes = seq(1, 6)
 injuryillnesscodes = seq(1, 5)
 negligencecodes = seq(1, 6)
-violationtypecodes = seq(1, 3)
-assessmenttypecodes = seq(1, 4)
-inspactycodes = seq(1, 6)
+violationtypecodes = seq(1, 2)
+assessmenttypecodes = seq(1, 3)
+inspactycodes = seq(1, 5)
 
 ######################################################################################################################################
 
@@ -253,7 +255,7 @@ for (i in 1:length(cfr_codes)) {
 }
 
 # Set this line below to be the subsection code group you want. Cannot do all at once because of memory issues.
-cfr_codes = MR_relevant_subsectcodes_75
+cfr_codes = MR_relevant_subsectcodes
 
 # This loop creates the subsection-specific variable-specific dummies (which will later be collapsed to the mine-quarter level).
 for (i in 1:length(cfr_codes)) {
@@ -460,14 +462,13 @@ collapsed_violations[, "merge1"] = ifelse(is.na(collapsed_violations$row_id.x) &
 collapsed_violations[, "merge1"] = ifelse(is.na(collapsed_violations$row_id.y) & !is.na(collapsed_violations$row_id.x), 1, collapsed_violations[, "merge1"])
 collapsed_violations = collapsed_violations[, -grep("row_id", names(collapsed_violations))]
 collapsed_violations$row_id = seq.int(nrow(collapsed_violations))
-summed_coded_accidents$row_id = seq.int(nrow(summed_coded_accidents))
 
 ######################################################################################################################################
 
 # MERGE VIOLATIONS DATA ONTO MINES
 
 # Read in data
-mines_quarters = readRDS(mines_quarters.file.name)
+mines_quarters = readRDS(mines_quarters_file_name)
 
 # Merge mine-specific contractor info onto mine quarters
 merged_mines_violations = merge(mines_quarters, contractor_vars, by = c("mineid", "quarter"), all = T)
@@ -486,18 +487,10 @@ gc()
 
 # MERGE ACCIDENTS DATA ONTO VIOLATIONS/PER QUARTER
 
-summed_coded_accidents = readRDS(mines_accidents_coded.file.name)
+summed_coded_accidents = readRDS(mines_accidents_coded_file_name)
 
 # Merge violations (now with contractor and mine info) and accidents
 merged_mines_violations_accidents = merge(merged_mines_violations, summed_coded_accidents, by = c("mineid", "quarter"), all = T)
-
-# Same as above - flag observations by merge status so we can compare to Stata output and make sure nothing weird happened in the merge 
-merged_mines_violations_accidents[, "merge2"] = ifelse(!is.na(merged_mines_violations_accidents$row_id.y) 
-                                                       & !is.na(merged_mines_violations_accidents$row_id.x), 3, 0)
-merged_mines_violations_accidents[, "merge2"] = ifelse(is.na(merged_mines_violations_accidents$row_id.x) 
-                                                       & !is.na(merged_mines_violations_accidents$row_id.y), 2, merged_mines_violations_accidents[, "merge2"])
-merged_mines_violations_accidents[, "merge2"] = ifelse(is.na(merged_mines_violations_accidents$row_id.y) 
-                                                       & !is.na(merged_mines_violations_accidents$row_id.x), 1, merged_mines_violations_accidents[, "merge2"])
 
 # Replace missings (mine quarters without violations or accidents data) with zeroes
 merged_mines_violations_accidents$totalinjuries = ifelse(is.na(merged_mines_violations_accidents$totalinjuries), 0, merged_mines_violations_accidents$totalinjuries)
@@ -573,14 +566,14 @@ prediction_data$idesc = ifelse(prediction_data$idesc == "Hazard", 1,
 # }
 
 # dummy out categorical variables
-dum_vars = c("mineid", 
-             "quarter")
-
-for (var in dum_vars) {
-  datdum(var, prediction_data, "prediction_data")
-}
-
-rm(dum_vars, var)
+# dum_vars = c("mineid", 
+#              "quarter")
+# 
+# for (var in dum_vars) {
+#   datdum(var, prediction_data, "prediction_data")
+# }
+# 
+# rm(dum_vars, var)
 
 # # Create mine/quarter specific dummies: apply function and merge dummies datasets (then remove them)
 # test.data1 <- datdum(x="mineid",data=prediction_data,name="mine")
@@ -739,7 +732,7 @@ if (relevant.only.option == "on") {
 }
 if (relevant.only.option != "on") {
   #saveRDS(prediction_data, file = "X:/Projects/Mining/NIOSH/analysis/data/4_collapsed/prediction_data.rds")
-  saveRDS(prediction_data, file = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_75h.rds")
+  saveRDS(prediction_data, file = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_part_level.rds")
 }
   
 ######################################################################################################################################
