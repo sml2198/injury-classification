@@ -14,7 +14,6 @@
 ######################################################################################################
 
 library(plyr)
-library(zoo)
 library(stats)
 library(stringr)
 library(withr)
