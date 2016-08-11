@@ -19,7 +19,7 @@ library(stats)
 library(stringr)
 library(withr)
 library(psych)
-library(dplyr)
+library(data.table)
 
 # define file names
   # input: merged violations data produced in 11_merge_violations.R
@@ -30,6 +30,9 @@ mines_accidents_coded_file_name = "X:/Projects/Mining/NIOSH/analysis/data/4_coll
 mines_quarters_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_mines.rds"
   # input: cleaned mine-types key produced in produced in 1_clean_mines.R
 mine_types_file_name = "X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_mines_accidents.rds"
+
+# define log file name
+sink(file="prepare_violations_log.txt")
 
 # When relevant-only option is set to "on" (not commented out) only CFR subsections marked as "relevant" will be used for creating
 # vars. Otherwise, "relevant" and "maybe relevant subsections" will be used.
@@ -587,20 +590,36 @@ prediction_data$idesc = ifelse(prediction_data$idesc == "Hazard", 1,
 
 # FILL IN MISSING VALUES OF MINE CHARACTERISTICS BY MINE_ID/QUARTER GROUPS 
 
-# Group and order the data by mine-quarter
-prediction_data = group_by(prediction_data, mineid, quarter)
-prediction_data = prediction_data[order(prediction_data$mineid, prediction_data$quarter, na.last = T),]
+# Group data by mines and order the data by mine-quarter
+prediction_data = prediction_data[order(prediction_data[,"mineid"], prediction_data[,"quarter"]),]
 
-# na.locf pipes the first non-missing value into NA's by mine-quarter group
-prediction_data$minename = na.locf(prediction_data$minename)
-prediction_data$minesizepoints = na.locf(prediction_data$minesizepoints)
-prediction_data$controllersizepoints = na.locf(prediction_data$controllersizepoints)
-prediction_data$contractorsizepoints = na.locf(prediction_data$contractorsizepoints)
-prediction_data$hours_qtr = na.locf(prediction_data$hours_qtr)
-prediction_data$employment_qtr = na.locf(prediction_data$employment_qtr)
-prediction_data$coal_prod_qtr = na.locf(prediction_data$coal_prod_qtr)
-prediction_data$productionshiftsperday = na.locf(prediction_data$productionshiftsperday)
-prediction_data$idesc = na.locf(prediction_data$idesc)
+for(i in 2:nrow(prediction_data)){
+  if((prediction_data$mineid[i-1] == prediction_data$mineid[i]) & !is.na(prediction_data$minesizepoints[i-1]))
+  {
+    prediction_data$minesizepoints[i] = prediction_data$minesizepoints[i-1]
+  }
+}
+for(i in 2:nrow(prediction_data)){
+  if((prediction_data$mineid[i-1] == prediction_data$mineid[i]) & !is.na(prediction_data$controllersizepoints[i-1]))
+  {
+    prediction_data$controllersizepoints[i] = prediction_data$controllersizepoints[i-1]
+  }
+}
+for(i in 2:nrow(prediction_data)){
+  if((prediction_data$mineid[i-1] == prediction_data$mineid[i]) & !is.na(prediction_data$contractorsizepoints[i-1]))
+  {
+    prediction_data$contractorsizepoints[i] = prediction_data$contractorsizepoints[i-1]
+  }
+}
+# the mines that are missing productionshiftsperday (1311) and idesc(5) are missing it for all quarters, so the loops wouldn't do anything
+
+# THIS IS OLD CODE THAT USED TO DO THE THING ABOVE (the dplyr package has a bug and won't run on cluster)
+# # na.locf pipes the first non-missing value into NA's by mine-quarter group
+# prediction_data$minesizepoints = na.locf(prediction_data$minesizepoints)
+# prediction_data$controllersizepoints = na.locf(prediction_data$controllersizepoints)
+# prediction_data$contractorsizepoints = na.locf(prediction_data$contractorsizepoints)
+# prediction_data$productionshiftsperday = na.locf(prediction_data$productionshiftsperday)
+# prediction_data$idesc = na.locf(prediction_data$idesc)
 
 # Pipe in zeroes to the missing part-specific variables (if nothing merged on a mine-quarter then it should be a zero)
 number_to_zero = prediction_data[, c(grep("^[0-9][0-9]", names(prediction_data)), 
@@ -636,6 +655,8 @@ rm(number_to_zero)
 # Now replace any NA's in remaining numeric vars by randomly sampling from the distribution of the column
 var_classes = sapply(prediction_data[,names(prediction_data)], class)
 num_vars = names(var_classes[c(grep("numeric", var_classes), grep("integer", var_classes))])
+ignore_vars = c("productionshiftsperday", "idesc")
+num_vars = setdiff(num_vars, ignore_vars)
 for (i in 1:length(num_vars)) {
   i_rowsmissing = row.names(prediction_data)[is.na(prediction_data[, num_vars[i]])]
   while (sum(!complete.cases(prediction_data[, num_vars[i]])) > 0) {
@@ -670,34 +691,30 @@ prediction_data$num_no_terminations = ifelse(prediction_data$terminated < predic
 # Currently we're doing this for part 75 only (the biggest part) and for vars that we believe to be strong predictors, based on model
 # selection. This includes penalty points, sig and sub designation, violation counts, MR counts, and one subsection (just as a test - randomly selected)
 prediction_data = as.data.table(prediction_data[order(prediction_data$mineid, prediction_data$quarter, na.last = T),])
-prediction_data[, c("75.penaltypoints_l1", "75.penaltypoints_l2", "75.penaltypoints_l3", "75.penaltypoints_l4", "75.penaltypoints_l5", "75.penaltypoints_l6",
-                    "75.sigandsubdesignation_l1", "75.sigandsubdesignation_l2", "75.sigandsubdesignation_l3", "75.sigandsubdesignation_l4", "75.sigandsubdesignation_l5", "75.sigandsubdesignation_l6",
-                    "75_l1", "75_l2", "75_l3", "75_l4", "75_l5", "75_l6",
-                    "75.1405_l1", "75.1405_l2", "75.1405_l3", "75.1405_l4", "75.1405_l5", "75.1405_l6",
-                    "MR_l1", "MR_l2", "MR_l3", "MR_l4", "MR_l5", "MR_l6", 
+prediction_data[, c("MR_l1", "MR_l2", "MR_l3", "MR_l4", "MR_l5", "MR_l6", 
                     "MR_indicator_l1", "MR_indicator_l2", "MR_indicator_l3", "MR_indicator_l4", "MR_indicator_l5", "MR_indicator_l6",
                     "MR_proportion_l1", "MR_proportion_l2", "MR_proportion_l3", "MR_proportion_l4","MR_proportion_l5","MR_proportion_l6") := shift(.SD, 1:6), 
-                by = mineid, .SDcols = c("75.penaltypoints", "75.sigandsubdesignation", "75", "75.1405", "MR", "MR_indicator", "MR_proportion")]
+                by = mineid, .SDcols = c("MR", "MR_indicator", "MR_proportion")]
 prediction_data = as.data.frame(prediction_data)
 
 ######################################################################################################################################
-
-# CREATE COMPOUND LAGGED VARS
-
-# Create compound lagged vars: in this formulation, order 6 will be the sum of all violations (or other lagged var) over 
-# the last 6 quarters, instead of simply the value of that var 6 quarters ago.
-prediction_data$sum_75_1_2 = rowSums(prediction_data[,c("75_l1", "75_l2")])
-prediction_data$sum_75_1_3 = rowSums(prediction_data[,c("75_l1", "75_l2", "75_l3")])
-prediction_data$sum_75_1_4 = rowSums(prediction_data[,c("75_l1", "75_l2", "75_l3", "75_l4")])
-prediction_data$sum_75_1_5 = rowSums(prediction_data[,c("75_l1", "75_l2", "75_l3", "75_l4", "75_l5")])
-prediction_data$sum_75_1_6 = rowSums(prediction_data[,c("75_l1", "75_l2", "75_l3", "75_l4", "75_l5", "75_l6")])
-
-# Same process for the subsection var that we're working with right now.
-prediction_data$sum_75.1405_1_2 = rowSums(prediction_data[,c("75.1405_l1", "75.1405_l2")])
-prediction_data$sum_75.1405_1_3 = rowSums(prediction_data[,c("75.1405_l1", "75.1405_l2", "75.1405_l3")])
-prediction_data$sum_75.1405_1_4 = rowSums(prediction_data[,c("75.1405_l1", "75.1405_l2", "75.1405_l3", "75.1405_l4")])
-prediction_data$sum_75.1405_1_5 = rowSums(prediction_data[,c("75.1405_l1", "75.1405_l2", "75.1405_l3", "75.1405_l4", "75.1405_l5")])
-prediction_data$sum_75.1405_1_6 = rowSums(prediction_data[,c("75.1405_l1", "75.1405_l2", "75.1405_l3", "75.1405_l4", "75.1405_l5", "75.1405_l6")])
+# 
+# # CREATE COMPOUND LAGGED VARS
+# 
+# # Create compound lagged vars: in this formulation, order 6 will be the sum of all violations (or other lagged var) over 
+# # the last 6 quarters, instead of simply the value of that var 6 quarters ago.
+# prediction_data$sum_75_1_2 = rowSums(prediction_data[,c("75_l1", "75_l2")])
+# prediction_data$sum_75_1_3 = rowSums(prediction_data[,c("75_l1", "75_l2", "75_l3")])
+# prediction_data$sum_75_1_4 = rowSums(prediction_data[,c("75_l1", "75_l2", "75_l3", "75_l4")])
+# prediction_data$sum_75_1_5 = rowSums(prediction_data[,c("75_l1", "75_l2", "75_l3", "75_l4", "75_l5")])
+# prediction_data$sum_75_1_6 = rowSums(prediction_data[,c("75_l1", "75_l2", "75_l3", "75_l4", "75_l5", "75_l6")])
+# 
+# # Same process for the subsection var that we're working with right now.
+# prediction_data$sum_75.1405_1_2 = rowSums(prediction_data[,c("75.1405_l1", "75.1405_l2")])
+# prediction_data$sum_75.1405_1_3 = rowSums(prediction_data[,c("75.1405_l1", "75.1405_l2", "75.1405_l3")])
+# prediction_data$sum_75.1405_1_4 = rowSums(prediction_data[,c("75.1405_l1", "75.1405_l2", "75.1405_l3", "75.1405_l4")])
+# prediction_data$sum_75.1405_1_5 = rowSums(prediction_data[,c("75.1405_l1", "75.1405_l2", "75.1405_l3", "75.1405_l4", "75.1405_l5")])
+# prediction_data$sum_75.1405_1_6 = rowSums(prediction_data[,c("75.1405_l1", "75.1405_l2", "75.1405_l3", "75.1405_l4", "75.1405_l5", "75.1405_l6")])
 
 ######################################################################################################################################
 
