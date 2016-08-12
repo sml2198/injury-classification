@@ -52,7 +52,6 @@ merged_violations$inspacty = ifelse(merged_violations$inspacty == "shaft, slope 
 merged_violations$inspacty = ifelse(merged_violations$inspacty == "103(g)(1) spot umwa inspection", "103(g)(1) spot inspection", merged_violations$inspacty)
 merged_violations$inspacty = ifelse(merged_violations$inspacty == "103(i) spot (ign or expl) insp", "103(i) spot inspections", merged_violations$inspacty)
 merged_violations$inspacty = ifelse(merged_violations$inspacty == "103(i) spot (hazard) inspection", "103(i) spot inspections", merged_violations$inspacty)
-merged_violations$inspacty = ifelse(is.na(merged_violations$inspacty), "unknown", merged_violations$inspacty)
 
 # collapse inspection type categories to reasonable amount
 merged_violations$inspacty = ifelse((merged_violations$inspacty == "regular inspection" |
@@ -60,13 +59,12 @@ merged_violations$inspacty = ifelse((merged_violations$inspacty == "regular insp
 merged_violations$inspacty = ifelse(grepl("complaint", merged_violations$inspacty), "complaint inspection", merged_violations$inspacty)
 merged_violations$inspacty = ifelse(merged_violations$inspacty == "fatal accident investigation", "fatality inspection", merged_violations$inspacty)
 merged_violations$inspacty = ifelse(grepl("103", merged_violations$inspacty), "103", merged_violations$inspacty)
-merged_violations$inspacty = ifelse(grepl("(103|fatality|unknown|regular|complaint)", merged_violations$inspacty), merged_violations$inspacty, "other")
+merged_violations$inspacty = ifelse(grepl("(103|fatality|regular|complaint)", merged_violations$inspacty), merged_violations$inspacty, "other")
 
 # format violation type
 merged_violations$violationtypecode = as.character(merged_violations$violationtypecode)
-merged_violations$violationtypecode = ifelse(is.na(merged_violations$violationtypecode), "Unknown", merged_violations[, "violationtypecode"])
 
-# remove violation types with 4 observations
+# remove violation/assessment types with 4 observations
 merged_violations = merged_violations[(merged_violations$violationtypecode != "Notice" & merged_violations$violationtypecode != "Safeguard"), ]
 merged_violations$assessmenttypecode = as.character(merged_violations$assessmenttypecode)
 merged_violations$assessmenttypecode = ifelse(is.na(merged_violations$assessmenttypecode), "Unknown", merged_violations$assessmenttypecode)
@@ -756,29 +754,30 @@ if (relevant.only.option != "on") {
 # REFERENCE INFO
 
 # Here we've tabbed our categorical vars, so we know which value will become which dummy.
+
 #table(merged_violations$inspacty)
-#103           complaint inspection  fatality inspection        other         regular inspection         unknown 
-#35583                 4519                  732                69825               657741                97816
+# 103            complaint inspection  fatality inspection      other   regular inspection 
+# 35106                 4397                  424                63493               646383 
 
 #table(merged_violations$violationtypecode)
-#Citation    Order  Unknown 
-#830340    11155    24717 
+# Citation    Notice     Order Safeguard 
+# 739636         3     10163         1 
 
 #table(merged_violations$assessmenttypecode)
-#Regular  Single Special Unknown 
-#640735  187678   13082   24717 
+# Regular  Single Special 
+# 549958  187562   12283
 
 #table(merged_violations$likelihood)
-#Highly NoLikelihood     Occurred   Reasonably      Unknown     Unlikely 
-#5472        23386         1475       271986        18984       544909 
+# Highly NoLikelihood     Occurred   Reasonably     Unlikely 
+# 3         5105        19905         1318       249118       474354 
 
 #table(merged_violations$injuryillness)
-#Fatal   LostDays NoLostDays  Permanent    Unknown 
-#57634     584733     120395      84464      18986 
+# Fatal   LostDays NoLostDays  Permanent 
+# 3      45362     518094     113225      73119 
 
 #table(merged_violations$negligence)
-#HighNegligence  LowNegligence  ModNegligence   NoNegligence       Reckless        Unknown 
-#36421          97549         711082           1221            959          18980 
+# HighNegligence  LowNegligence  ModNegligence   NoNegligence       Reckless 
+# 3          31360          78828         637709           1019            884 
 
 ######################################################################################################################################
 
