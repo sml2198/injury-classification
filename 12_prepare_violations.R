@@ -45,13 +45,13 @@ relevant_subsection_data_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data
 relevant.only.option = "off"
 
 # Specify whether you want to creare part or subsection-specific data.
-#data.level = "part"
-data.level = "subsection"
+data.level = "part"
+#data.level = "subsection"
 
 ######################################################################################################################################
 
 # define log file name
-sink(file="prepare_violations_log.txt")
+#sink(file="prepare_violations_log.txt")
 
 ######################################################################################################################################
 
@@ -555,13 +555,10 @@ prediction_data = prediction_data[, c(-grep("merge", names(prediction_data)), -g
 
 # Replace categorical variables with numeric levels
 prediction_data$year = factor(prediction_data$year)
-prediction_data$minestatus = ifelse(prediction_data$minestatus == "Abandoned", 1, 
-                                    ifelse(prediction_data$minestatus == "Abandoned and Sealed", 2, 
-                                           ifelse(prediction_data$minestatus == "Active", 3, 
-                                                  ifelse(prediction_data$minestatus == "Intermittent", 4,
-                                                         ifelse(prediction_data$minestatus == "New Mine", 5,
-                                                                ifelse(prediction_data$minestatus == "NonProducing", 6, 
-                                                                       ifelse(prediction_data$minestatus == "Temporarily Idled", 7, NA)))))))
+# prediction_data$minestatus = ifelse(prediction_data$minestatus == "Active", 1, 
+#                                     ifelse(prediction_data$minestatus == "NonProducing", 2, 
+#                                            ifelse(prediction_data$minestatus == "Temporarily Idled", 3, 
+#                                                   ifelse(prediction_data$minestatus == "Unknown", 4, NA))))
 
 prediction_data$idesc = ifelse(prediction_data$idesc == "Hazard", 1, 
                                ifelse(prediction_data$idesc == "Ignition or Explosion", 2, 
@@ -695,6 +692,7 @@ var_stats = describe(prediction_data[, c(-match("mineid", names(prediction_data)
                                          -match("quarter", names(prediction_data)), 
                                          -match("year", names(prediction_data)),
                                          -match("minename", names(prediction_data)), 
+                                         -match("minestatus", names(prediction_data)), 
                                          -match("minestatusdate", names(prediction_data)), 
                                          -match("operatorid", names(prediction_data)),
                                          -match("operatorname", names(prediction_data)), 
@@ -726,6 +724,8 @@ if (relevant.only.option != "on" & data.level == "subsection") {
 if (relevant.only.option != "on" & data.level == "part") {
   saveRDS(prediction_data, file = part_data_out_file_name)
 }
+
+sink()
 
 ######################################################################################################################################
 
