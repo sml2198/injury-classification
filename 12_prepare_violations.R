@@ -61,13 +61,9 @@ merged_violations$inspacty = ifelse(merged_violations$inspacty == "fatal acciden
 merged_violations$inspacty = ifelse(grepl("103", merged_violations$inspacty), "103", merged_violations$inspacty)
 merged_violations$inspacty = ifelse(grepl("(103|fatality|regular|complaint)", merged_violations$inspacty), merged_violations$inspacty, "other")
 
-# format violation type
+# format violation and assessment type
 merged_violations$violationtypecode = as.character(merged_violations$violationtypecode)
-
-# remove violation/assessment types with 4 observations
-merged_violations = merged_violations[(merged_violations$violationtypecode != "Notice" & merged_violations$violationtypecode != "Safeguard"), ]
 merged_violations$assessmenttypecode = as.character(merged_violations$assessmenttypecode)
-merged_violations$assessmenttypecode = ifelse(is.na(merged_violations$assessmenttypecode), "Unknown", merged_violations$assessmenttypecode)
 
 # rename likelihood categories and deal with missing values
 is.na(merged_violations$likelihood) = merged_violations$likelihood == ""
@@ -87,9 +83,26 @@ levels(merged_violations$negligence) = c("Unknown", "HighNegligence", "LowNeglig
 merged_violations$negligence = as.character(merged_violations$negligence)
 merged_violations$negligence = ifelse(is.na(merged_violations$negligence), "Unknown", merged_violations$negligence)
 
+# remove the 3 observations that are missing for likelihood, injuryillness & negligence (from 749803 to 749800 obs)
+merged_violations = merged_violations[merged_violations$likelihood != "Unknown",]
+
+# translate the gravitypersonpoints back into the counts (number persons potentially affected)
+# taken from http://www.ecfr.gov/cgi-bin/text-idx?SID=f563151d4c4ee003f464fc78296bc3a8&node=pt30.1.100&rgn=div5
+merged_violations$gravitypersonspoints = as.character(merged_violations$gravitypersonspoints)
+merged_violations$gravitypersonspoints = ifelse(merged_violations$gravitypersonspoints == "4", "3", merged_violations$gravitypersonspoints)
+merged_violations$gravitypersonspoints = ifelse(merged_violations$gravitypersonspoints == "6", "4", merged_violations$gravitypersonspoints)
+merged_violations$gravitypersonspoints = ifelse(merged_violations$gravitypersonspoints == "8", "5", merged_violations$gravitypersonspoints)
+merged_violations$gravitypersonspoints = ifelse(merged_violations$gravitypersonspoints == "10", "6", merged_violations$gravitypersonspoints)
+merged_violations$gravitypersonspoints = ifelse(merged_violations$gravitypersonspoints == "12", "7", merged_violations$gravitypersonspoints)
+merged_violations$gravitypersonspoints = ifelse(merged_violations$gravitypersonspoints == "14", "8", merged_violations$gravitypersonspoints)
+merged_violations$gravitypersonspoints = ifelse(merged_violations$gravitypersonspoints == "16", "9", merged_violations$gravitypersonspoints)
+merged_violations$gravitypersonspoints = ifelse(merged_violations$gravitypersonspoints == "18", "10", merged_violations$gravitypersonspoints)
+names(merged_violations)[names(merged_violations) == "gravitypersonspoints"] = "personsaffected"
+merged_violations$personsaffected = as.numeric(merged_violations$personsaffected)
+
 ######################################################################################################################################
 
-# function to dummy out vairables
+# function to dummy out variables
 datdum = function(var_name, data, data_name) {
   data$rv = rnorm(nrow(data), 1, 1)
   mm = data.frame(model.matrix(lm(data$rv ~ -1 + factor(data[, var_name]))))
@@ -196,10 +209,10 @@ MR_relevant_subsectcodes_75 = setdiff(MR_relevant_subsectcodes_75, remove_subcod
 MR_relevant_subsectcodes = setdiff(MR_relevant_subsectcodes, remove_subcodes)
 
 # Create lists of number of dummies for violation, assessment, and inspection types 
-likelihoodcodes = seq(1, 6)
-injuryillnesscodes = seq(1, 5)
-negligencecodes = seq(1, 6)
-violationtypecodes = seq(1, 2)
+likelihoodcodes = seq(1, 5)
+injuryillnesscodes = seq(1, 4)
+negligencecodes = seq(1, 5)
+violationtypecodes = seq(1, 4)
 assessmenttypecodes = seq(1, 3)
 inspactycodes = seq(1, 5)
 
@@ -225,7 +238,7 @@ for (i in 1:length(cfr_codes)) {
     # There is also a factor var likelihood which marks the severity of negligence e.g., reasonably, unlikely, ...
   #merged_violations[, paste(cfr_codes[i], "gravitylikelihoodpoints", sep = ".")] = apply(cbind(merged_violations[, "gravitylikelihoodpoints"], merged_violations[, cfr_codes[i]]), 1, prod)
   #merged_violations[, paste(cfr_codes[i], "gravityinjurypoints", sep = ".")] = apply(cbind(merged_violations[, "gravityinjurypoints"], merged_violations[, cfr_codes[i]]), 1, prod)
-  #merged_violations[, paste(cfr_codes[i], "gravitypersonspoints", sep = ".")] = apply(cbind(merged_violations[, "gravitypersonspoints"], merged_violations[, cfr_codes[i]]), 1, prod)
+  merged_violations[, paste(cfr_codes[i], "personsaffected", sep = ".")] = apply(cbind(merged_violations[, "personsaffected"], merged_violations[, cfr_codes[i]]), 1, prod)
     # There is also a factor var negligence which marks the severity of negligence e.g., low, high, ...
   #merged_violations[, paste(cfr_codes[i], "negligencepoints", sep = ".")] = apply(cbind(merged_violations[, "negligencepoints"], merged_violations[, cfr_codes[i]]), 1, prod)
   #merged_violations[, paste(cfr_codes[i], "sigandsubdesignation", sep = ".")] = ifelse(merged_violations[, cfr_codes[i]] == 1, merged_violations[, "sigandsubdesignation"], 0)
@@ -317,8 +330,8 @@ violations_to_sum = merged_violations[, c(grep("^[0-9][0-9]", names(merged_viola
                                           match("quarter", names(merged_violations)))]
 
 # These were grabbed by the regular expression above, but we want to average (not sum) these, so we remove them  
-violations_to_sum = violations_to_sum[, c(-grep("operator_repeated_viol_pInspDay", names(violations_to_sum)), 
-                                          -grep("contractor_repeated_viol_cnt", names(violations_to_sum)))]
+# violations_to_sum = violations_to_sum[, c(-grep("operator_repeated_viol_pInspDay", names(violations_to_sum)), 
+#                                           -grep("contractor_repeated_viol_cnt", names(violations_to_sum)))]
 
 # Collapse the variables that we need to sum.
 summed_violations = ddply(violations_to_sum, c("mineid", "quarter"), function(x) colSums(x[, c(grep("^[0-9][0-9]", names(x)), 
@@ -327,19 +340,11 @@ summed_violations = ddply(violations_to_sum, c("mineid", "quarter"), function(x)
                                                                                                match("goodfaithind", names(merged_violations)), 
                                                                                                match("terminated", names(x)))], na.rm = T))
 # Collapse the variables that we need to average.
-averaged_violations = ddply(merged_violations[, c(grep("operator_repeated_viol_pInspDay", names(merged_violations)), 
-                                                  grep("minesizepoints", names(merged_violations)), 
-                                                  grep("controllersizepoints", names(merged_violations)),
-                                                  grep("contractorsizepoints", names(merged_violations)), 
-                                                  grep("contractor_repeated_viol_cnt", names(merged_violations)),
+averaged_violations = ddply(merged_violations[, c(grep("minesizepoints", names(merged_violations)), 
                                                   match("exlate_interest_amt", names(merged_violations)), 
                                                   match("mineid", names(merged_violations)), 
                                                   match("quarter", names(merged_violations)))], c("mineid", "quarter"), 
-                                    function(x) colMeans(x[, c(grep("operator_repeated_viol_pInspDay", names(x)), 
-                                                               grep("minesizepoints", names(x)), 
-                                                               grep("controllersizepoints", names(x)),
-                                                               grep("contractorsizepoints", names(x)), 
-                                                               grep("contractor_repeated_viol_cnt", names(x)),
+                                    function(x) colMeans(x[, c(grep("minesizepoints", names(x)), 
                                                                match("exlate_interest_amt", names(x)))], na.rm = T))
 
 rm(violations_to_sum)
@@ -362,8 +367,8 @@ contractor_vars = contractor_vars[!is.na(contractor_vars$contractorid),]
 contractor_vars = contractor_vars[!is.na(contractor_vars$con_avg_employee_cnt_qtr),]
 
 # Collapse contractor vars to mine quarter level 
-contractor_vars = ddply(contractor_vars[, c(grep("mineid", names(contractor_vars)), grep("quarter", names(contractor_vars)), 
-                                            grep("contractorid", names(contractor_vars)),
+contractor_vars = ddply(contractor_vars[, c(grep("mineid", names(contractor_vars)), 
+                                            grep("quarter", names(contractor_vars)), 
                                             grep("con_avg_employee_cnt_qtr", names(contractor_vars)), 
                                             grep("con_employee_hours_qtr", names(contractor_vars)),
                                             match("con_coal_prod_qtr", names(contractor_vars)))], c("mineid", "quarter"),
@@ -590,24 +595,6 @@ prediction_data$idesc = ifelse(prediction_data$idesc == "Hazard", 1,
 # Group data by mines and order the data by mine-quarter
 prediction_data = prediction_data[order(prediction_data[,"mineid"], prediction_data[,"quarter"]),]
 
-for(i in 2:nrow(prediction_data)){
-  if((prediction_data$mineid[i-1] == prediction_data$mineid[i]) & !is.na(prediction_data$minesizepoints[i-1]))
-  {
-    prediction_data$minesizepoints[i] = prediction_data$minesizepoints[i-1]
-  }
-}
-for(i in 2:nrow(prediction_data)){
-  if((prediction_data$mineid[i-1] == prediction_data$mineid[i]) & !is.na(prediction_data$controllersizepoints[i-1]))
-  {
-    prediction_data$controllersizepoints[i] = prediction_data$controllersizepoints[i-1]
-  }
-}
-for(i in 2:nrow(prediction_data)){
-  if((prediction_data$mineid[i-1] == prediction_data$mineid[i]) & !is.na(prediction_data$contractorsizepoints[i-1]))
-  {
-    prediction_data$contractorsizepoints[i] = prediction_data$contractorsizepoints[i-1]
-  }
-}
 # the mines that are missing productionshiftsperday (1311) and idesc(5) are missing it for all quarters, so the loops wouldn't do anything
 
 # THIS IS OLD CODE THAT USED TO DO THE THING ABOVE (the dplyr package has a bug and won't run on cluster)
@@ -624,7 +611,6 @@ number_to_zero = prediction_data[, c(grep("^[0-9][0-9]", names(prediction_data))
                                      match("quarter", names(prediction_data)), 
                                      match("terminated", names(prediction_data)),
                                      match("total_violations", names(prediction_data)), 
-                                     match("contractor_repeated_viol_cnt", names(prediction_data)), 
                                      match("totalinjuries", names(prediction_data)), 
                                      match("MR", names(prediction_data)),
                                      match("insp_hours_per_qtr", names(prediction_data)), 
@@ -635,7 +621,6 @@ number_to_zero = prediction_data[, c(grep("^[0-9][0-9]", names(prediction_data))
 prediction_data = prediction_data[, c(-grep("^[0-9][0-9]", names(prediction_data)), 
                                       -match("terminated", names(prediction_data)),
                                       -match("total_violations", names(prediction_data)), 
-                                      -match("contractor_repeated_viol_cnt", names(prediction_data)), 
                                       -match("totalinjuries", names(prediction_data)), 
                                       -match("MR", names(prediction_data)),
                                       -match("insp_hours_per_qtr", names(prediction_data)), 
