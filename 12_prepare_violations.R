@@ -455,7 +455,6 @@ num_qtrs_per_inspec = num_qtrs_per_inspec[complete.cases(num_qtrs_per_inspec$min
 num_qtrs_per_inspec = num_qtrs_per_inspec[complete.cases(num_qtrs_per_inspec$eventno),]
 
 # Merge number of quarters per inspection into violations/assessments/mines
-merged_violations2= merged_violations
 merged_violations = merge(num_qtrs_per_inspec, merged_violations, by = c("mineid", "eventno"), all = T)
 
 # Divide inspection hours into quarterly vars (total hours per inspection/number of quarters per inspection)
@@ -509,7 +508,7 @@ merged_mines_violations = merge(mines_quarters, collapsed_violations, by = c("mi
 merged_mines_violations = merged_mines_violations[, -grep("row_id", names(merged_mines_violations))]
 merged_mines_violations$row_id = seq.int(nrow(merged_mines_violations))
 
-rm(contractor_vars, collapsed_violations)
+rm(contractor_vars, collapsed_violations, mines_quarters)
 gc()
 
 ######################################################################################################################################
