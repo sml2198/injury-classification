@@ -339,6 +339,12 @@ rm(MR_relevant_subsectcodes, MR_relevant_subsectcodes_47, MR_relevant_subsectcod
 merged_violations$total_violations = 1
 merged_violations$terminated = ifelse(merged_violations$typeoftermination == "Terminated", 1, 0)
 
+# Reformat vars to be summed so they are all numeric (required for ddply)
+merged_violations$excessive_history_ind = as.numeric(merged_violations$excessive_history_ind)
+merged_violations$excessive_history_ind = ifelse(merged_violations$excessive_history_ind == 2, 1, 0)
+merged_violations$goodfaithind = as.numeric(merged_violations$goodfaithind)
+merged_violations$goodfaithind = ifelse(merged_violations$goodfaithind == 2, 1, 0)
+
 # Select all variables to sum when we collapse to the mine-quarter lever (the first regex will grab all vars created above)
 violations_to_sum = merged_violations[, c(grep("^[0-9][0-9]", names(merged_violations)), 
                                           match("total_violations", names(merged_violations)),
@@ -348,12 +354,13 @@ violations_to_sum = merged_violations[, c(grep("^[0-9][0-9]", names(merged_viola
                                           match("mineid", names(merged_violations)), 
                                           match("quarter", names(merged_violations)))]
 
-# Collapse the variables that we need to sum.
+# Collapse the variables that we need to sum
 summed_violations = ddply(violations_to_sum, c("mineid", "quarter"), function(x) colSums(x[, c(grep("^[0-9][0-9]", names(x)), 
                                                                                                match("total_violations", names(x)),
-                                                                                               match("excessive_history_ind", names(merged_violations)), 
-                                                                                               match("goodfaithind", names(merged_violations)), 
+                                                                                               match("excessive_history_ind", names(x)), 
+                                                                                               match("goodfaithind", names(x)), 
                                                                                                match("terminated", names(x)))], na.rm = T))
+
 # Collapse the variables that we need to average.
 averaged_violations = ddply(merged_violations[, c(grep("minesizepoints", names(merged_violations)), 
                                                   match("exlate_interest_amt", names(merged_violations)), 
@@ -448,6 +455,7 @@ num_qtrs_per_inspec = num_qtrs_per_inspec[complete.cases(num_qtrs_per_inspec$min
 num_qtrs_per_inspec = num_qtrs_per_inspec[complete.cases(num_qtrs_per_inspec$eventno),]
 
 # Merge number of quarters per inspection into violations/assessments/mines
+merged_violations2= merged_violations
 merged_violations = merge(num_qtrs_per_inspec, merged_violations, by = c("mineid", "eventno"), all = T)
 
 # Divide inspection hours into quarterly vars (total hours per inspection/number of quarters per inspection)
@@ -475,6 +483,7 @@ gc()
 summed_violations$row_id = seq.int(nrow(summed_violations))
 averaged_violations$row_id = seq.int(nrow(averaged_violations))
 collapsed_violations = merge(summed_violations, averaged_violations, by = c("mineid", "quarter"), all = T)
+rm(summed_violations, averaged_violations)
 
 # Flag observations that do and don't merge - this was used to tab the merge & compare to Stata as a sanity check
 collapsed_violations[, "merge1"] = ifelse(!is.na(collapsed_violations$row_id.y) & !is.na(collapsed_violations$row_id.x), 3, 0)
@@ -545,7 +554,7 @@ prediction_data = prediction_data[prediction_data$minetype == "Underground",]
 prediction_data = prediction_data[prediction_data$coalcormetalmmine == "C",]
 prediction_data = prediction_data[prediction_data$coal_prod_qtr != 0,]
 
-# Drop unnecessary vars
+# Drop unnecessary vars - at this point should have 27,456 obs & 201 vars
 prediction_data = prediction_data[, c(-grep("merge", names(prediction_data)), -grep("row_id", names(prediction_data)), 
                                       -grep("coalcormetalmmine", names(prediction_data)), -grep("minetype", names(prediction_data)))]
 
@@ -702,8 +711,9 @@ var_stats = describe(prediction_data[, c(-match("mineid", names(prediction_data)
 # Variables are nontrivial (worth keeping) if their standard deviation is greater than zero 
 nontriv_vars = rownames(var_stats[var_stats$sd > 0,])
 triv_vars = setdiff(names(prediction_data), nontriv_vars)
+rm(var_stats)
 
-# Keeps only nontrivial vars. Warning: This excludes all non-numeric variables
+# Keeps only nontrivial vars. Warning: This excludes all non-numeric variables - wind up with 27,456 obs with 166 vars
 prediction_data = prediction_data[, c(nontriv_vars, "mineid", "quarter")]
 
 # This line will report number of missings per var - should be zero (except lagged vars which will be missing for first quarter)!
@@ -718,10 +728,10 @@ if (relevant.only.option == "on" & data.level == "subsection") {
 if (relevant.only.option == "on" & data.level == "part") {
   saveRDS(prediction_data, file = relevant_part_data_out_file_name)
 }
-if (relevant.only.option != "on" & data.level == "subsection") {
+if (relevant.only.option == "off" & data.level == "subsection") {
   saveRDS(prediction_data, file = subsection_data_out_file_name)
 }
-if (relevant.only.option != "on" & data.level == "part") {
+if (relevant.only.option == "off" & data.level == "part") {
   saveRDS(prediction_data, file = part_data_out_file_name)
 }
 
