@@ -26,43 +26,36 @@ data$minestatus =
   data$MR_proportion = 
   data$num_no_terminations = NULL
 
-data = data[, -c(grep("^MR\\_l", names(data)), 
-                 grep("^MR\\_indicator\\_l", names(data)), 
-                 grep("^MR\\_proportion\\_l", names(data)))]
+# reformat variables because R is a lil bitch
+names(data)[grep("^[0-9]", names(data))] = paste("p", names(data)[grep("^[0-9]", names(data))], sep = "")
 
-
-
-
-
-
-
-
-
-
-# un-dummy variables
-un_dum = function(dum_var_names, cat_var_name, data, data_name) {
-  data[, cat_var_name] = character()
-  for (var in dum_var_names) {
-    name = substr(var, nchar(var), nchar(var))
-    data[, cat_var_name] = ifelse(data[, var] == 1, name, data[, cat_var_name])
-    #data[, var] = NULL
-  }
-  data[, cat_var_name] = as.factor(data[, cat_var_name])
+# set violation data to NA if there are no inspections
+make_NA = function(var, data, data_name) {
+  data[, var] = ifelse(data[, "num_insp"] != 0, data[, var], NA)
   assign(data_name, data, .GlobalEnv) 
 }
 
-parts = c("47", "48", "71", "72", "75", "77")
-vars = c("inspacty", 
-         "violationtypecode", 
-         "assessmenttypecode", 
-         "likelihood", 
-         "injuryillness", 
-         "negligence")
-
-for (part in parts) {
-  for (var in vars) {
-    search = paste("^", part, "\\.", var, sep = "")
-    dum_vars = names(data)[grep(search, names(data))]
-    un_dum(dum_vars, paste(part, var, sep = "."), data, "data")
-  }
+violation_vars = names(data)[grep("^p[0-9][0-9]", names(data))]
+violation_vars = c(violation_vars, 
+                   "total_violations", 
+                   "insp_hours_per_qtr", 
+                   "onsite_insp_hours_per_qtr")
+for (var in violation_vars) {
+  make_NA(var, data, "data")
 }
+
+# clear out
+rm(violation_vars, var)
+
+# investigate missing times
+missing_time = data.frame(mineid = character(), 
+                          quarter = numeric())
+for (mine in unique(data$mineid)) {
+  new_info = data[(data$mineid == mine & data$num_insp == 0), c("mineid", "quarter")]
+    missing_time = rbind(missing_time, new_info)
+}
+
+# bye
+rm(mine)
+
+hist(missing_time$quarter)
