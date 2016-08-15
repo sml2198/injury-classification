@@ -239,13 +239,16 @@ if (relevant.only.option == "on") {
     MR_relevant_partcodes = levels(factor(merged_violations[merged_violations$MR_relevant == 1,]$cfr_part_code))
 }
 
-# This loop creates the part-specific variable-specific dummies (which will later be collapsed to the mine-quarter level).
+# Set the list of cfr parts or subsections to produce dummy vars for
 if (data.level == "part") {
-    
-    # Sets the level of CFR code for which to create code-specific variables
     cfr_codes = MR_relevant_partcodes
-  
-    for (i in 1:length(cfr_codes)) {
+}
+if (data.level == "subsection") {
+  cfr_codes = MR_relevant_subsectcodes
+}
+    
+# This loop creates the part-specific variable-specific dummies (which will later be collapsed to the mine-quarter level).
+for (i in 1:length(cfr_codes)) {
     merged_violations[, cfr_codes[i]] = ifelse(merged_violations$cfr_part_code == cfr_codes[i], 1, 0)
     merged_violations[, paste(cfr_codes[i], "personsaffected", sep = ".")] = apply(cbind(merged_violations[, "personsaffected"], merged_violations[, cfr_codes[i]]), 1, prod)
   
@@ -279,50 +282,6 @@ if (data.level == "part") {
       for (j in 1:length(negligencecodes)) {
         merged_violations[, paste(cfr_codes[i], "negligence", negligencecodes[j], sep = ".")] = ifelse(merged_violations[, cfr_codes[i]] == 1 & merged_violations[, paste("negligence", negligencecodes[j], sep = ".")] == 1, 1, 0)
       }
-  }
-}
-
-if (data.level == "subsection") {
-  
-  # Set this line below to be the subsection code group you want. Cannot do all at once because of memory issues.
-  cfr_codes = MR_relevant_subsectcodes
-  
-  # This loop creates the subsection-specific variable-specific dummies (which will later be collapsed to the mine-quarter level).
-  for (i in 1:length(cfr_codes)) {
-    merged_violations[, cfr_codes[i]] = ifelse(merged_violations$subsection_code == cfr_codes[i], 1, 0)
-    merged_violations[, paste(cfr_codes[i], "personsaffected", sep = ".")] = apply(cbind(merged_violations[, "personsaffected"], merged_violations[, cfr_codes[i]]), 1, prod)
-    
-    # WE NO LONGER CARE ABOUT THE PTS VARS
-    #merged_violations[, paste(cfr_codes[i], "penaltypoints", sep = ".")] = apply(cbind(merged_violations[, "penaltypoints"], merged_violations[, cfr_codes[i]]), 1, prod)
-    #merged_violations[, paste(cfr_codes[i], "gravitylikelihoodpoints", sep = ".")] = apply(cbind(merged_violations[, "gravitylikelihoodpoints"], merged_violations[, cfr_codes[i]]), 1, prod)
-    #merged_violations[, paste(cfr_codes[i], "gravityinjurypoints", sep = ".")] = apply(cbind(merged_violations[, "gravityinjurypoints"], merged_violations[, cfr_codes[i]]), 1, prod)
-    #merged_violations[, paste(cfr_codes[i], "negligencepoints", sep = ".")] = apply(cbind(merged_violations[, "negligencepoints"], merged_violations[, cfr_codes[i]]), 1, prod)
-    #merged_violations[, paste(cfr_codes[i], "sigandsubdesignation", sep = ".")] = ifelse(merged_violations[, cfr_codes[i]] == 1, merged_violations[, "sigandsubdesignation"], 0)
-    #merged_violations[, paste(cfr_codes[i], "contractor_violation_cnt", sep = ".")] = apply(cbind(merged_violations[, "contractor_violation_cnt"], merged_violations[, cfr_codes[i]]), 1, prod)
-    #merged_violations[, paste(cfr_codes[i], "operator_violation_pInspDay", sep = ".")] = apply(cbind(merged_violations[, "operator_violation_pInspDay"], merged_violations[, cfr_codes[i]]), 1, prod)
-    #merged_violations[, paste(cfr_codes[i], "contractor_repeated_viol_cnt", sep = ".")] = apply(cbind(merged_violations[, "contractor_repeated_viol_cnt"], merged_violations[, cfr_codes[i]]), 1, prod)
-    #merged_violations[, paste(cfr_codes[i], "operator_repeated_viol_pInspDay", sep = ".")] = apply(cbind(merged_violations[, "operator_repeated_viol_pInspDay"], merged_violations[, cfr_codes[i]]), 1, prod)
-      
-      # Dummied out categorical vars
-      for (j in 1:length(inspactycodes)) {
-        merged_violations[, paste(cfr_codes[i], "inspacty", inspactycodes[j], sep = ".")] = ifelse(merged_violations[, cfr_codes[i]] == 1 & merged_violations[, paste("inspacty", inspactycodes[j], sep = ".")] == 1, 1, 0)
-      }
-      for (j in 1:length(violationtypecodes)) {
-        merged_violations[, paste(cfr_codes[i], "violationtypecode", violationtypecodes[j], sep = ".")] = ifelse(merged_violations[, cfr_codes[i]] == 1 & merged_violations[, paste("violationtypecode", violationtypecodes[j], sep = ".")] == 1, 1, 0)
-      }
-      for (j in 1:length(assessmenttypecodes)) {
-        merged_violations[, paste(cfr_codes[i], "assessmenttypecode", assessmenttypecodes[j], sep = ".")] = ifelse(merged_violations[, cfr_codes[i]] == 1 & merged_violations[, paste("assessmenttypecode", assessmenttypecodes[j], sep = ".")] == 1, 1, 0)
-      }
-      for (j in 1:length(likelihoodcodes)) {
-        merged_violations[, paste(cfr_codes[i], "likelihood", likelihoodcodes[j], sep = ".")] = ifelse(merged_violations[, cfr_codes[i]] == 1 & merged_violations[, paste("likelihood", likelihoodcodes[j], sep = ".")] == 1, 1, 0)
-      }
-      for (j in 1:length(injuryillnesscodes)) {
-        merged_violations[, paste(cfr_codes[i], "injuryillness", injuryillnesscodes[j], sep = ".")] = ifelse(merged_violations[, cfr_codes[i]] == 1 & merged_violations[, paste("injuryillness", injuryillnesscodes[j], sep = ".")] == 1, 1, 0)
-      }
-      for (j in 1:length(negligencecodes)) {
-        merged_violations[, paste(cfr_codes[i], "negligence", negligencecodes[j], sep = ".")] = ifelse(merged_violations[, cfr_codes[i]] == 1 & merged_violations[, paste("negligence", negligencecodes[j], sep = ".")] == 1, 1, 0)
-      }
-  }
 }
 
 # Remove things we won't use again.
