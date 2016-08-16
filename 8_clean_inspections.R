@@ -29,11 +29,11 @@ open_data_inspecs_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_clea
 # READ AND CLEAN INSPECTIONS DATA
 
 # read inspections data - 775245 obs, 45 vars
-  # dataset downloaded on 4/20/16 from http://arlweb.msha.gov/OpenGovernmentData/OGIMSHA.asp [Inspections]
+  # dataset downloaded on 8/16/16 from http://arlweb.msha.gov/OpenGovernmentData/OGIMSHA.asp [Inspections]
 open_data_inspecs = read.table(open_data_inspecs_in_file_name, header = T, sep = "|")
 
 # drop observations for environments not of interest
-open_data_inspecs = open_data_inspecs[open_data_inspecs$COAL_METAL_IND != "M", ] # drop 451932 obs
+open_data_inspecs = open_data_inspecs[open_data_inspecs$COAL_METAL_IND != "M", ] # now we have 323313 obs
 
 # rename variables
 names(open_data_inspecs)[names(open_data_inspecs) == "EVENT_NO"] = "eventno"
@@ -105,15 +105,14 @@ clean_inspecs = clean_inspecs[!is.na(clean_inspecs$eventno), ] # drop 80388 obs
 
 # drop observations from environments not of interest
   # facility means a mill/processing location, always above ground, according to April Ramirez @ DOL on 6/6/16
-clean_inspecs = clean_inspecs[(!is.na(clean_inspecs$calendaryear) & !is.na(clean_inspecs$calendarquarter) & !is.na(clean_inspecs$program_area)), ] # drop 619 obs
-clean_inspecs = clean_inspecs[clean_inspecs$minetype == "Underground", ] # drop 128120 obs
+clean_inspecs = clean_inspecs[(!is.na(clean_inspecs$calendaryear) & !is.na(clean_inspecs$calendarquarter) & !is.na(clean_inspecs$program_area)), ] 
+clean_inspecs = clean_inspecs[clean_inspecs$minetype == "Underground", ] # now we have 194574 obs
 
 ######################################################################################################
 
 # READ AND CLEAN INSPECTION HOURS DATA 
 
 # read inspection hours data - 4634874 obs, 10 vars
-  # dataset downloaded on 5/15/15 from http://arlweb.msha.gov/OpenGovernmentData/OGIMSHA.asp [Inspections]
 early_inspecs_hours = read.csv(early_inspecs_hours_file_name)
 
 # drop observations from envrionments not of interest
@@ -146,7 +145,9 @@ clean_inspecs = merge(clean_inspecs, early_inspecs_hours, by = c("mineid", "even
 insp_conflcts = sum(!is.na(clean_inspecs[, "sumtotal_insp_hours.x"]) & (clean_inspecs[, "sumtotal_insp_hours.x"] != clean_inspecs[, "sumtotal_insp_hours.y"])) # 6 observations
 on_site_conflcts = sum(!is.na(clean_inspecs[, "sumtotal_on_site_hours.x"]) & (clean_inspecs[, "sumtotal_on_site_hours.x"] != clean_inspecs[, "sumtotal_on_site_hours.y"])) # 2 observations
 nonNA_conflicts = max(insp_conflcts, on_site_conflcts)
-clean_inspecs = clean_inspecs[(!is.na(clean_inspecs$mergecheck.hrs) & !is.na(clean_inspecs$mergecheck.inspec)), ] # drop 916126 obs
+
+clean_inspecs = clean_inspecs[complete.cases(clean_inspecs$calendaryear),] # 194574 obs, 1934 mines, 52 vars
+#clean_inspecs = clean_inspecs[(!is.na(clean_inspecs$mergecheck.hrs) & !is.na(clean_inspecs$mergecheck.inspec)), ] # drop 916126 obs
 
 # rename duplicate variables
 clean_inspecs = clean_inspecs[, -grep(".y", names(clean_inspecs), fixed = T)]
@@ -154,7 +155,11 @@ names(clean_inspecs)[c(grep(".x", names(clean_inspecs), fixed = TRUE))] = sub(".
 clean_inspecs = clean_inspecs[!(((!is.na(clean_inspecs$controllerid) & clean_inspecs$controllerid == "C11088") | is.na(clean_inspecs$controllerid)) & clean_inspecs$eventno == "4165469"),
                               c(-grep("coal_metal_ind", names(clean_inspecs)), -grep("merge", names(clean_inspecs)))]
 
-# output merged and clean inspections data - 171768 obs, 46 vars, 1884 unique mines
+clean_inspecs$too_new = ifelse(clean_inspecs$calendaryear == 2016 & clean_inspecs$calendarquarter > 1, 1, 0)
+clean_inspecs = clean_inspecs[clean_inspecs$too_new == 0,] # wind up with 194312 obs, 1934 mines
+clean_inspecs = clean_inspecs[, c(-match("too_new", names(clean_inspecs)))] # now we have 46 vars 
+
+# output merged and clean inspections data - 194312 obs, 1934 mines, 46 vars
 saveRDS(clean_inspecs, file = open_data_inspecs_out_file_name)
 
 ######################################################################################################
