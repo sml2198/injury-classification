@@ -13,11 +13,10 @@ data_file_name = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/pred
 ######################################################################################################
 
 # read in data 
-data = readRDS(data_file_name) # 27456 obs, 185 vars
+data = readRDS(data_file_name) # 27456 obs, 165 vars
 
 # drop unnecessary variables
-data$minestatus =
-  data$idesc = 
+data$idesc = 
   data$daysperweek = 
   data$productionshiftsperday =
   data$minesizepoints = 
@@ -47,15 +46,22 @@ for (var in violation_vars) {
 # clear out
 rm(violation_vars, var)
 
-# investigate missing times
-missing_time = data.frame(mineid = character(), 
-                          quarter = numeric())
-for (mine in unique(data$mineid)) {
-  new_info = data[(data$mineid == mine & data$num_insp == 0), c("mineid", "quarter")]
-    missing_time = rbind(missing_time, new_info)
-}
+# investigate quarters with no inspections
+no_insp = data[data$num_insp == 0, c("mineid", "quarter")]
 
-# bye
-rm(mine)
+# how many quarters with no inspections per mine?
+barplot(sort(table(no_insp$mineid)),
+        xaxt = "n",
+        main = "Number of No-Inspection Quarters per Mine", 
+        xlab = "Mine ID",
+        ylab = "Number of No-Inspection Quarters")
 
-hist(missing_time$quarter)
+# mines missing > + >= 10 quarters of data
+unique(no_insp[no_insp$mineid %in% names(which(table(no_insp$mineid) > 10)), "mineid"])
+unique(no_insp[no_insp$mineid %in% names(which(table(no_insp$mineid) == 10)), "mineid"])
+
+# how many non-missing quarters do these mines contribute to data?
+data[data$mineid == "1202423", c("num_insp", "quarter")] # just an ex -- could automate and get info for all of these mines ^^ 
+
+# which quarters are missing inspections
+hist(no_insp$quarter)
