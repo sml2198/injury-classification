@@ -7,6 +7,8 @@
 
 ######################################################################################################
 
+library(zoo)
+
 # input: part-level data
 data_file_name = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_part_level.rds"
 
@@ -27,6 +29,8 @@ data$idesc =
 
 # reformat variables because R is a lil bitch
 names(data)[grep("^[0-9]", names(data))] = paste("p", names(data)[grep("^[0-9]", names(data))], sep = "")
+
+######################################################################################################
 
 # set violation data to NA if there are no inspections
 make_NA = function(var, data, data_name) {
@@ -69,5 +73,15 @@ barplot(table(no_insp$quarter),
         main = "Number of Mines with No Inspections by Quarter", 
         xlab = "Quarter", 
         ylab = "Number of Mines with No Inspections")
+
+######################################################################################################
+
+# investigate non-continuity of data 
+temp = expand.grid(mineid = unique(data$mineid), quarter = unique(data$quarter))
+temp = temp[order(temp$mineid, temp$quarter), ]
+data_all_quarters = merge(data, temp, all.x = TRUE, all.y = TRUE, by = c("mineid", "quarter"))
+
+# bye
+rm(temp)
 
 
