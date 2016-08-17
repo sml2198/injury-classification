@@ -25,14 +25,14 @@ contractor_yearly_employment_out_file_name = "X:/Projects/Mining/NIOSH/analysis/
 
 # READ AND CLEAN QUARTERLY CONTRACTOR EMPLOYMENT DATA, THEN OUTPUT
 
-# read quarterly contractor employment data - 876298 obs, 12 vars
+# read quarterly contractor employment data - 890,744 obs, 12 vars
   # dataset downloaded on 6/24/2016 from http://arlweb.msha.gov/OpenGovernmentData/OGIMSHA.asp
   # this does not contain mineid's; can be merged into violations data by contractorid if and only if the contractor was cited at a mine
 contractor_quarterly_employment = read.table(contractor_quarterly_employment_in_file_name, header = T, sep = "|")
 
 # drop data from environments not of interest
 contractor_quarterly_employment = contractor_quarterly_employment[(contractor_quarterly_employment$SUBUNIT == "UNDERGROUND" & 
-                                                                     contractor_quarterly_employment$COAL_METAL_IND == "C"), ] # drop 847815 obs
+                                                                     contractor_quarterly_employment$COAL_METAL_IND == "C"), ] # 28,818 obs
 
 # drop unnecessary variables
 contractor_quarterly_employment$COAL_METAL_IND = 
@@ -66,20 +66,24 @@ contractor_quarterly_employment$quarter = ifelse(contractor_quarterly_employment
 contractor_quarterly_employment$quarter = as.yearqtr(contractor_quarterly_employment$quarter)
 contractor_quarterly_employment = contractor_quarterly_employment[, c(-grep("year", names(contractor_quarterly_employment)))]
 
-# output clean quarterly contractor employment data - 28479 obs, 5 vars
+# remove observations after our study period
+contractor_quarterly_employment = contractor_quarterly_employment[contractor_quarterly_employment$quarter < "2016 Q2",]
+
+# output clean quarterly contractor employment data - 28,487 obs, 5 vars
 saveRDS(contractor_quarterly_employment, file = contractor_quarterly_employment_out_file_name)
+rm(contractor_quarterly_employment)
 
 ######################################################################################################
 
 # READ AND CLEAN ANNUAL CONTRACTOR EMPLOYMENT DATA, THEN OUTPUT
 
-# read annual contractor employment data - 186295 obs, 10 vars
+# read annual contractor employment data - 187,801 obs, 10 vars
   # dataset downloaded on 6/7/2016 from http://arlweb.msha.gov/OpenGovernmentData/OGIMSHA.asp
 contractor_yearly_employment = read.table(contractor_yearly_employment_in_file_name, header = T, sep = "|")
 
 # drop data from environments not of interest
 contractor_yearly_employment = contractor_yearly_employment[(contractor_yearly_employment$SUBUNIT == "UNDERGROUND" & 
-                                                               contractor_yearly_employment$COAL_METAL_IND == "C"), ] # drop 180920 obs
+                                                               contractor_yearly_employment$COAL_METAL_IND == "C"), ] # 5404 obs
 
 # drop unnecessary variables
 contractor_yearly_employment$COAL_METAL_IND = 
@@ -95,7 +99,8 @@ names(contractor_yearly_employment)[names(contractor_yearly_employment) == "AVG_
 names(contractor_yearly_employment)[names(contractor_yearly_employment) == "ANNUAL_COAL_PRODUCTION"] = "con_coal_prod_yr"
 names(contractor_yearly_employment)[names(contractor_yearly_employment) == "ANNUAL_HOURS"] = "con_hours_yr"
 
-# output clean annual contractor employment data - 5375 obs, 6 vars
+# output clean annual contractor employment data - 5404 obs, 6 vars
 saveRDS(contractor_yearly_employment, file = contractor_yearly_employment_out_file_name)
+rm(contractor_yearly_employment)
 
 ######################################################################################################
