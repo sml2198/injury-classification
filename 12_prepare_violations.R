@@ -28,7 +28,7 @@ mines_accidents_coded_file_name = "X:/Projects/Mining/NIOSH/analysis/data/4_coll
   # input: cleaned mine-quarters as produced in 1_clean_mines.R
 mines_quarters_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_mines.rds"
   # input: cleaned mine-types key produced in produced in 1_clean_mines.R
-mine_types_file_name = "X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_mines_accidents.rds"
+mine_types_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/mine_types.rds"
   
   # output: prediction-ready data containing part-level vars (all relevant and maybe relevant)
 part_data_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_part_level.rds"
