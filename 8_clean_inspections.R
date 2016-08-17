@@ -22,7 +22,7 @@ early_inspecs_hours_file_name = "X:/Projects/Mining/NIOSH/analysis/data/1_conver
   # input: clean mine type data (1_clean_mines)
 mine_types_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/mine_types.rds"
   # output: clean and merged inspections data, uniquely identified by mineid *eventno
-open_data_inspecs_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_Inspections.rds"
+open_data_inspecs_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_inspections.rds"
 
 ######################################################################################################
 
