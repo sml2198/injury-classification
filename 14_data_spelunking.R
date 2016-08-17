@@ -3,11 +3,9 @@
 # File number - File name
   # File description
 
-# Last edit 8/12/16
+# Last edit 8/16/16
 
 ######################################################################################################
-
-library(zoo)
 
 # input: part-level data
 data_file_name = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_part_level.rds"
@@ -47,7 +45,7 @@ for (var in violation_vars) {
   make_NA(var, data, "data")
 }
 
-# clear out
+# bye
 rm(violation_vars, var)
 
 # investigate quarters with no inspections
@@ -80,8 +78,53 @@ barplot(table(no_insp$quarter),
 temp = expand.grid(mineid = unique(data$mineid), quarter = unique(data$quarter))
 temp = temp[order(temp$mineid, temp$quarter), ]
 data_all_quarters = merge(data, temp, all.x = TRUE, all.y = TRUE, by = c("mineid", "quarter"))
+missing_emp = data_all_quarters[is.na(data_all_quarters$employment_qtr), ]
 
 # bye
 rm(temp)
 
+# how many quarters with no employment per mine?
+barplot(sort(table(missing_emp$mineid)),
+        xaxt = "n",
+        main = "Number of Quarters with no Emp by Mine", 
+        xlab = "Mine ID",
+        ylab = "Number of No-Emp Quarters")
+
+# which quarters are missing employment data?
+barplot(table(missing_emp$quarter), 
+        main = "Number of Mines with No Employment by Quarter", 
+        xlab = "Quarter", 
+        ylab = "Number of Mines with No Employment")
+
+# are these quarters on the tail ends of the data we have, or in the middle?
+
+# do these quarters have violations data?
+
+######################################################################################################
+
+# outliers
+plot(as.factor(data$mineid), data$MR)
+
+######################################################################################################
+
+info = data.frame(variable = character(ncol(data)),
+                  variance = numeric(ncol(data)))
+
+info$variable = names(data)
+
+info = info[!(info$variable == "mineid" | info$variable == "quarter"), ]
+
+data2 = data
+
+for (i in 1:nrow(info)) {
+  data2[, info$variable[i]] = scale(data2[, info$variable[i]])
+  info$variance[i] = var(data2[, info$variable[i]], na.rm = TRUE)
+}
+
+info[head(order(info$variance, decreasing = TRUE)), ]
+
+
+plot(info$variance)
+
+length(info$variance)
 
