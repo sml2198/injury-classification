@@ -16,17 +16,17 @@ library(stringr)
 library(zoo)
 
 # define file names
-  # input: clean violations data (6_clean_violations)
+  # input: clean violations data (6_clean_violations.R)
 clean_violations_in_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_violations.rds"
-  # input: clean assessments data (7_clean_assessments)
+  # input: clean assessments data (7_clean_assessments.R)
 clean_assessments_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_assessments.rds" 
-  # input: clean inspections data (8_clean_inspections)
+  # input: clean inspections data (8_clean_inspections.R)
 clean_inspections_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_inspections.rds"
-  # input: quarterly contractor employment data (9_clean_employment)
+  # input: quarterly contractor employment data (9_clean_employment.R)
 contractor_quarterly_employment_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_contractor_employment.rds"
-  # input: annual contractor employment data (9_clean_employment)
+  # input: annual contractor employment data (9_clean_employment.R)
 contractor_yearly_employment_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_contractor_employment_yearly.rds"
-  # input: cfr key data (10_clean_cfr_key)
+  # input: cfr key data (10_clean_cfr_key.R)
 clean_cfr_key_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_cfr_key.rds"
   # output: merged violations data 
 clean_violations_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_violations.rds"
@@ -35,21 +35,17 @@ clean_violations_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/3_merge
 
 # READ AND MERGE ASSESSMENTS DATA AND VIOLATIONS DATA, THEN CLEAN
 
-# read assessments data - 841673 obs, 59 vars
+# read assessments data - 843,818 obs, 59 vars
 clean_assessments = readRDS(clean_assessments_file_name) 
 
-# read violations data - 866357 obs, 62 vars
+# read violations data - 868,722 obs, 62 vars
 clean_violations = readRDS(clean_violations_in_file_name)
 
-# merge assessments data with violations data - 841640 obs, 119 vars
+# merge assessments data with violations data - 843,787 obs, 119 vars
 assessments_violations = merge(clean_violations, clean_assessments, by = c("mineid","violationno"))
 
 # memory
 rm(clean_violations, clean_assessments)
-
-# fill in eventno where missing
-assessments_violations$eventno.x = ifelse((is.na(assessments_violations$eventno.x) & !is.na(assessments_violations$eventno.y)), 
-                                          assessments_violations$eventno.y, assessments_violations$eventno.x)
 
 # drop duplicate variables from merge
 common_varstbs = sub(".x", "", names(assessments_violations)[grep(".x", names(assessments_violations), fixed = T)], fixed = T)
@@ -72,14 +68,14 @@ assessments_violations[, "violator_name"] = tolower(str_trim(assessments_violati
 names(assessments_violations)[names(assessments_violations) == "bill_print_fiscal_yr"] = "billprintfiscalyr"
 names(assessments_violations)[names(assessments_violations) == "good_faith_ind"] = "goodfaithind"
 
-# clean violator name field
+# clean violator name field - this is extremely trivial being that we never use this field!
 string_fun_temp = function(var) {
   assessments_violations[, var] = gsub(",", "", assessments_violations[, var])
   assessments_violations[, var] = gsub("\\.", "", assessments_violations[, var])
   assessments_violations[, var] = gsub("company", "co", assessments_violations[, var])
   assessments_violations[, var] = gsub("comp", "co", assessments_violations[, var])
   assessments_violations[, var] = gsub("incorporated", "inc", assessments_violations[, var])
-  assessments_violations[, var] = gsub("and", "&", assessments_violations[, var])
+  assessments_violations[, var] = gsub(" and", " &", assessments_violations[, var])
   assessments_violations[, var] = gsub("limited", "ltd", assessments_violations[, var])
 }
 assessments_violations$violatorname = string_fun_temp("violatorname")
@@ -102,10 +98,14 @@ assessments_violations[((assessments_violations$violator_name != assessments_vio
 # clean occurrencedate field
 assessments_violations$occurrencedate = as.character(assessments_violations$occurrencedate)
 assessments_violations$violation_occur_dt = as.character(assessments_violations$violation_occur_dt)
-sum(assessments_violations$occurrencedate != assessments_violations$violation_occur_dt, na.rm = TRUE) # 114
+sum((assessments_violations$occurrencedate != assessments_violations$violation_occur_dt), na.rm = TRUE) # 115
+
+# remove these cases - wind up with 843,672 obs
 assessments_violations = assessments_violations[((assessments_violations$occurrencedate == assessments_violations$violation_occur_dt) | 
                                                   is.na(assessments_violations$occurrencedate) | 
                                                   is.na(assessments_violations$violation_occur_dt)), ]
+
+# if missing occurrencedate, fill in violation_occur_dt, then drop so we have just one var
 assessments_violations[is.na(assessments_violations$occurrencedate) & !is.na(assessments_violations$violation_occur_dt), ]$occurrencedate = 
   assessments_violations[is.na(assessments_violations$occurrencedate) & !is.na(assessments_violations$violation_occur_dt), ]$violation_occur_dt
 assessments_violations$violation_occur_dt = NULL
@@ -114,13 +114,13 @@ assessments_violations$violation_occur_dt = NULL
 
 # READ INSPECTIONS DATA, MERGE WITH VIOLATIONS DATA, THEN CLEAN
 
-# read inspections data - 171768 obs, 46 vars
+# read inspections data - 192,639 obs, 47 vars
 clean_inspections = readRDS(clean_inspections_file_name)
 
 # merge inspections data and merged assessments and violations data
 clean_inspections$inspecid = paste("L", clean_inspections$eventno, sep = "")
 assessments_violations$inspecid = paste("L", assessments_violations$eventno, sep = "")
-merged_violations = merge(assessments_violations, clean_inspections, by = c("mineid", "eventno")) # 768427 obs, 151 vars
+merged_violations = merge(assessments_violations, clean_inspections, by = c("mineid", "eventno")) # 836,639 obs, 152 vars
 
 # memory
 rm(clean_inspections, assessments_violations)
@@ -130,7 +130,7 @@ merged_violations$inspecmerge = ifelse((!is.na(merged_violations$inspecid.y) & !
 merged_violations$inspecmerge = ifelse((is.na(merged_violations$inspecid.x) & !is.na(merged_violations$inspecid.y)), 2, merged_violations$inspecmerge)
 merged_violations$inspecmerge = ifelse((is.na(merged_violations$inspecid.y) & !is.na(merged_violations$inspecid.x)), 1, merged_violations$inspecmerge)
 
-# remove duplicate variables
+# remove duplicate variables - get down to 146
 common_varstbs = sub(".x", "", names(merged_violations)[grep(".x", names(merged_violations), fixed = TRUE)], fixed = TRUE)
 for (i in 1:length(common_varstbs)) {
   merged_violations[, paste(common_varstbs[i], ".x", sep = "")] = ifelse(merged_violations[, "inspecmerge"] == 2, merged_violations[, paste(common_varstbs[i], ".y", sep = "")], merged_violations[, paste(common_varstbs[i], ".x", sep = "")])
@@ -138,13 +138,13 @@ for (i in 1:length(common_varstbs)) {
 merged_violations = merged_violations[, -grep(".y", names(merged_violations), fixed = T)]
 names(merged_violations)[grep(".x", names(merged_violations), fixed = T)] = common_varstbs
 
-# drop unnecessary variables
+# drop unnecessary variables - down to 141 vars
 merged_violations$nooftailingponds =
   merged_violations$timevacated =
+  merged_violations$timeterminated =
   merged_violations$minegascategorycode =
   merged_violations$merge =
-  merged_violations$coalcormetalmmine =
-  merged_violations$coalcormetalm = NULL
+  merged_violations$coal_metal_ind = NULL
 
 # format date variables
 datevars = names(merged_violations)[grep("date", names(merged_violations))]
@@ -156,31 +156,32 @@ merged_violations$year = as.yearqtr(merged_violations$dateissued)
 merged_violations$year = as.numeric(format(merged_violations$quarter, "%Y"))
 
 # drop data before study period
-merged_violations = merged_violations[(merged_violations$quarter > "1999 Q4"), ] # drop 27 obs
+merged_violations = merged_violations[(merged_violations$quarter > "1999 Q4"), ] # now 836,612 obs
 
 # format contractorid
 merged_violations$contractorid = sub("^$", NA, merged_violations$contractorid)
-merged_violations$contractorid = ifelse((merged_violations$violatortypecode == "Contractor" & is.na(merged_violations$contractorid)), merged_violations$violator_id, merged_violations$contractorid) # 2 obs
+merged_violations$contractorid = ifelse((merged_violations$violatortypecode == "Contractor" & 
+                                           is.na(merged_violations$contractorid)), merged_violations$violator_id, merged_violations$contractorid) # 2 obs
 
 ######################################################################################################
 
 # READ QUARTERLY AND ANNUAL CONTRACTOR EMPLOYMENT DATA, THEN MERGE WITH VIOLATIONS DATA AND CLEAN
 
-# read quarterly contractor employment data # 28479 obs, 5 vars
+# read quarterly contractor employment data # 28487 obs, 5 vars
 contractor_quarterly_employment = readRDS(contractor_quarterly_employment_file_name)
 
-# read annual contractor employment data # 5375 obs, 6 vars
+# read annual contractor employment data # 5404 obs, 6 vars
 contractor_yearly_employment = readRDS(contractor_yearly_employment_file_name)
 
 # merge contractor employment data an violations data
-merged_violations = merge(merged_violations, contractor_quarterly_employment, by = c("contractorid", "quarter"), all = TRUE) # 776680 obs, 147 vars
-merged_violations = merge(merged_violations, contractor_yearly_employment, by = c("contractorid", "year"), all = TRUE) # 781252 obs, 151 vars
+merged_violations = merge(merged_violations, contractor_quarterly_employment, by = c("contractorid", "quarter"), all = TRUE) # 863384 obs, 146 vars
+merged_violations = merge(merged_violations, contractor_yearly_employment, by = c("contractorid", "year"), all = TRUE) # 867,896 obs, 151 vars
 
 # memory
 rm(contractor_quarterly_employment, contractor_yearly_employment)
 
 # drop contractor data that didn't merge onto violations
-merged_violations = merged_violations[complete.cases(merged_violations$violationno), ] # drop 31449 obs
+merged_violations = merged_violations[complete.cases(merged_violations$violationno), ] # now 836,612 obs, 76,296 unique eventno, 1669 mines
 
 # fill in quarterly variables with annual information if missing  
 merged_violations$con_avg_employee_cnt_qtr = ifelse((is.na(merged_violations$con_avg_employee_cnt_qtr) &
@@ -190,7 +191,7 @@ merged_violations$con_employee_hours_qtr = ifelse((is.na(merged_violations$con_e
 merged_violations$con_coal_prod_qtr = ifelse((is.na(merged_violations$con_coal_prod_qtr) & 
                                                 !is.na(merged_violations$con_coal_prod_yr)), (merged_violations$con_coal_prod_yr / 4), merged_violations$con_coal_prod_qtr)
 
-# drop unnecessary variables
+# drop unnecessary variables - wind up with 104
 merged_violations = merged_violations[, -grep("samples", names(merged_violations))]
 merged_violations$primarymill =
   merged_violations$generatedbyassessmt =
@@ -254,7 +255,7 @@ merged_violations$part_section2 = gsub("\\([0-9]+\\)", "", merged_violations$par
 merged_violations$subsection_code = ifelse((is.na(merged_violations$subsection_code) & !is.na(merged_violations$part_section2)), 
                                            merged_violations$part_section2, merged_violations$subsection_code)
 
-# merge cfr key data and violations data - 751050 obs, 118 vars
+# merge cfr key data and violations data - 837,847 obs, 117 vars
 merged_violations = merge(merged_violations, merged_cfr_key, by = "subsection_code", all = TRUE)
 
 # flag observations merged from each dataset - this is only useful for comparing the merge to Stata output
@@ -279,7 +280,7 @@ names(merged_violations)[grep(".x", names(merged_violations), fixed = TRUE)] = c
 rm(merged_cfr_key)
 
 # drop data that didn't merge onto violations
-merged_violations = merged_violations[complete.cases(merged_violations$violationno), ] # drop 1247 obs
+merged_violations = merged_violations[complete.cases(merged_violations$violationno), ] # now 836,612 obs, 76,296 eventnos, 1669 mines
 
 # condition the per-day vars on positive denominator
   # there are 256 cases of zero inspection days and positive violation counts 6/6/16
@@ -290,10 +291,10 @@ merged_violations$contractor_repeated_viol_cnt = ifelse(merged_violations$violat
 merged_violations$operator_repeated_viol_pInspDay = ifelse((merged_violations$violatortypecode == "Operator" & merged_violations$violator_inspection_day_cnt > 0), 
                                                            merged_violations$violator_repeated_viol_cnt/merged_violations$violator_inspection_day_cnt, NA)
 
-# drop unecessary variables
+# drop unnecessary variables - wind up with 119 vars
 merged_violations = merged_violations[, c(-grep("merge", names(merged_violations)))]
 
-# output merged violations data - 749803 obs, 120 vars
+# output merged violations data - 836,612 obs, 76,296 eventnos, 1669 mines, 119 vars
 saveRDS(merged_violations, file = clean_violations_out_file_name)
 
 ######################################################################################################
