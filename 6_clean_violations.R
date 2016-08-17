@@ -20,18 +20,14 @@ open_data_viols_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleane
 
 # READ AND CLEAN VIOLATIONS DATA, THEN OUTPUT
 
-# read violations data - 2161687 obs, 61 var
-  # dataset downloaded on 4/20/16 from http://arlweb.msha.gov/OpenGovernmentData/OGIMSHA.asp [MSHA open data platform (Violations)]
+# read violations data - 2193591 obs, 61 vars
+  # dataset downloaded on 8/16/16 from http://arlweb.msha.gov/OpenGovernmentData/OGIMSHA.asp [MSHA open data platform (Violations)]
 open_data_viols = read.table(open_data_viols_in_file_name, header = T, sep = "|")
 
 # drop data from environments not of interest
   # facility means a mill/processing location, always above ground, according to April Ramirez @ DOL on 6/6/16
-open_data_viols = open_data_viols[open_data_viols$COAL_METAL_IND == "C", ] # drop 980975 obs
-open_data_viols = open_data_viols[open_data_viols$MINE_TYPE == "Underground", ] # drop 314320 obs
-
-# flag and drop duplicates on violationno
-open_data_viols[, "dup"] = duplicated(open_data_viols$VIOLATION_NO) # 866392
-open_data_viols = open_data_viols[open_data_viols$dup == F, ] # drop 35 obs
+open_data_viols = open_data_viols[open_data_viols$COAL_METAL_IND == "C", ] # down to 1,193,181 obs (4865 mines)
+open_data_viols = open_data_viols[open_data_viols$MINE_TYPE == "Underground", ] # drop 868,757 obs (1685 mines)
 
 # rename variables
 names(open_data_viols)[names(open_data_viols) == "VIOLATION_NO"] = "violationno"
@@ -75,7 +71,11 @@ open_data_viols$mineid = str_pad(open_data_viols$mineid, 7, pad = "0")
 open_data_viols$eventno = str_pad(open_data_viols$eventno, 7, pad = "0")
 open_data_viols$violationno = str_pad(open_data_viols$violationno, 7, pad = "0")
 
-# output clean violations data - 866357 obs, 62 vars, 1688 unique mines
+# flag and drop duplicates on violationno
+open_data_viols[, "dup"] = duplicated(open_data_viols$violationno) # at this point we have 868,757 obs with 35 dups
+open_data_viols = open_data_viols[open_data_viols$dup == F, ] # drop these 35 - dow to 868,711 obs (still 1685 mines)
+
+# output clean violations data - 868,711 obs, 62 vars, 1685 unique mines
 saveRDS(open_data_viols, file = open_data_viols_out_file_name)
 
 ######################################################################################################
