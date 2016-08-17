@@ -25,12 +25,12 @@ open_data_assessments_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_
 
 # READ, CLEAN, AND MERGE ASSESSMENTS DATA AND MINE TYPE DATA, THEN OUTPUT
 
-# read assessments data - 2107492 obs, 58 vars
-  # dataset downloaded on 4/21/16 from http://arlweb.msha.gov/OpenGovernmentData/OGIMSHA.asp [MSHA open data platform (Assessed Violations)]
+# read assessments data - 2137348 obs, 58 vars
+  # dataset downloaded on 8/16/16 from http://arlweb.msha.gov/OpenGovernmentData/OGIMSHA.asp [MSHA open data platform (Assessed Violations)]
 open_data_assessments = read.table(open_data_assessments_in_file_name, header = T, sep = "|")
 
 # drop data from environments not of interest
-open_data_assessments = open_data_assessments[open_data_assessments$COAL_METAL_IND == "C", ] # drop 959176 obs
+open_data_assessments = open_data_assessments[open_data_assessments$COAL_METAL_IND == "C", ] # now have 1,160,380 obs unique on violationno
 
 # rename variables
 names(open_data_assessments)[names(open_data_assessments) == "VIOLATION_NO"] = "violationno"
@@ -74,21 +74,21 @@ open_data_assessments$mineid = str_pad(open_data_assessments$mineid, 7, pad = "0
 open_data_assessments$eventno = str_pad(open_data_assessments$eventno, 7, pad = "0")
 open_data_assessments$violationno = str_pad(open_data_assessments$violationno, 7, pad = "0")
 
-# read mine types data (1_clean_mines) - 86135 obs, 3 vars
+# read mine types data (1_clean_mines) - 86,362 obs, 3 vars
 mine_types = readRDS(mine_types_file_name)
 
-# merge assessments with mine types - 1229627 obs, 60 vars
+# merge assessments with mine types - 1,240,904 obs, 60 vars
 open_data_assessments = merge(open_data_assessments, mine_types, by = c("mineid"), all = T)
-open_data_assessments = open_data_assessments[!is.na(open_data_assessments$eventno), ] # drop 81311 obs
+open_data_assessments = open_data_assessments[!is.na(open_data_assessments$eventno), ] # now 1,160,381 obs
 
 # drop data from environments not of interest
   # facility means a mill/processing location, always above ground, according to April Ramirez @ DOL on 6/6/16
-open_data_assessments = open_data_assessments[open_data_assessments$minetype == "Underground", ] # drop 306643 obs
+open_data_assessments = open_data_assessments[open_data_assessments$minetype == "Underground", ] # now 843,818 obs
 
 # drop unnecessary variables
 open_data_assessments$coalcormetalmmine = NULL
 
-# output clean assessments data - 841673 obs, 59 vars, 1673 unique mines
+# output clean assessments data - 843,818 obs, 59 vars, 1669 unique mines
 saveRDS(open_data_assessments, file = open_data_assessments_out_file_name)
 
 ######################################################################################################
