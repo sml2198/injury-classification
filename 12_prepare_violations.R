@@ -113,9 +113,10 @@ merged_violations = merged_violations[(merged_violations$likelihood != "Unknown"
 
 # REFORMAT VARS TO BE COLLAPSED TO THE MINE-Q LEVEL: PREPARE CATEGORICAL AND PTS VARS 
 
-# translate the gravitypersonpoints back into the counts (number persons potentially affected)
+# translate the numberaffected back into the counts (number persons potentially affected)
 # taken from http://www.ecfr.gov/cgi-bin/text-idx?SID=f563151d4c4ee003f464fc78296bc3a8&node=pt30.1.100&rgn=div
-merged_violations$personsaffected = as.character(merged_violations$gravitypersonspoints)
+names(merged_violations)[names(merged_violations) == "numberaffected"] = "personsaffected"
+
 merged_violations$personsaffected = ifelse(merged_violations$personsaffected == "4", "3", merged_violations$personsaffected)
 merged_violations$personsaffected = ifelse(merged_violations$personsaffected == "6", "4", merged_violations$personsaffected)
 merged_violations$personsaffected = ifelse(merged_violations$personsaffected == "8", "5", merged_violations$personsaffected)
