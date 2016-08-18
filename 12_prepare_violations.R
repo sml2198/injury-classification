@@ -44,9 +44,13 @@ relevant_subsection_data_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data
 #relevant.only.option = "on"
 relevant.only.option = "off"
 
-# Specify whether you want to creare part or subsection-specific data.
+# Specify whether you want to create part or subsection-specific data.
 data.level = "part"
 #data.level = "subsection"
+
+# Specify whether you want to create data for maintenance and repair (MR) or pinning and striking (PS) injuries
+injury.type = "MR"
+#injury.type = "PS"
 
 ######################################################################################################################################
 
@@ -117,6 +121,12 @@ merged_violations = merged_violations[(merged_violations$likelihood != "Unknown"
 # at the violations level. - Sarah L @ 2:15 8/18/16. 
 names(merged_violations)[names(merged_violations) == "numberaffected"] = "personsaffected"
 
+# But, I'm still super skeptical of this variable, soI'm producing another one that is capped at 10 people
+# (which is the limit of categories in the CFR code)
+merged_violations$personsaffected.pts.con = merged_violations$personsaffected
+merged_violations$personsaffected.pts.con = ifelse(merged_violations$personsaffected.pts.con > 10, 
+                                                   10, merged_violations$personsaffected.pts.con)
+
 # rename points vars 
 names(merged_violations)[names(merged_violations) == "gravitypersonspoints"] = "personsaffected.pts"
 names(merged_violations)[names(merged_violations) == "negligencepoints"] = "negligence.pts"
@@ -156,24 +166,36 @@ rm(dum_vars, var)
 # PREPARE TO GENERATE PART AND SUBSECTION SPECIFIC VARIABLES
 
 # For part-specific variable creation
-if (relevant.only.option != "on") {
-  MR_relevant_partcodes = as.list(levels(factor(merged_violations[merged_violations$MR_relevant == 1 | merged_violations$MR_maybe_relevant == 1,]$cfr_part_code)))
-  MR_relevant_subsectcodes = as.list(levels(factor(merged_violations[merged_violations$MR_relevant == 1 | merged_violations$MR_maybe_relevant == 1,]$subsection_code)))
+if (injury.type == "MR") {
+  if (relevant.only.option != "on") {
+    relevant_partcodes = as.list(levels(factor(merged_violations[merged_violations$MR_relevant == 1 | merged_violations$MR_maybe_relevant == 1,]$cfr_part_code)))
+    relevant_subsectcodes = as.list(levels(factor(merged_violations[merged_violations$MR_relevant == 1 | merged_violations$MR_maybe_relevant == 1,]$subsection_code)))
+  }
+  if (relevant.only.option == "on") {
+    relevant_partcodes = as.list(levels(factor(merged_violations[merged_violations$MR_relevant == 1,]$cfr_part_code)))
+    relevant_subsectcodes = as.list(levels(factor(merged_violations[merged_violations$MR_relevant == 1, ]$subsection_code)))
+  }
 }
-if (relevant.only.option == "on") {
-  MR_relevant_partcodes = as.list(levels(factor(merged_violations[merged_violations$MR_relevant == 1,]$cfr_part_code)))
-  MR_relevant_subsectcodes = as.list(levels(factor(merged_violations[merged_violations$MR_relevant == 1, ]$subsection_code)))
+if (injury.type == "PS") {
+  if (relevant.only.option != "on") {
+    relevant_partcodes = as.list(levels(factor(merged_violations[merged_violations$PS_relevant == 1 | merged_violations$PS_maybe_relevant == 1,]$cfr_part_code)))
+    relevant_subsectcodes = as.list(levels(factor(merged_violations[merged_violations$PS_relevant == 1 | merged_violations$PS_maybe_relevant == 1,]$subsection_code)))
+  }
+  if (relevant.only.option == "on") {
+    relevant_partcodes = as.list(levels(factor(merged_violations[merged_violations$PS_relevant == 1,]$cfr_part_code)))
+    relevant_subsectcodes = as.list(levels(factor(merged_violations[merged_violations$PS_relevant == 1, ]$subsection_code)))
+  }
 }
 
 # If the subsectioncode is (maybe-)relevant, AND there are < 15 violations from that subsectioncode, remove
 # that subsectioncode from the relevant lists 
 remove_subcodes = list()
-for (code in MR_relevant_subsectcodes) {
+for (code in relevant_subsectcodes) {
   if (nrow(merged_violations[merged_violations$subsection_code == code, ]) < 15) {
     remove_subcodes = c(remove_subcodes, code)
   }
 }
-MR_relevant_subsectcodes = setdiff(MR_relevant_subsectcodes, remove_subcodes)
+relevant_subsectcodes = setdiff(relevant_subsectcodes, remove_subcodes)
 rm(remove_subcodes)
 
 # Create lists of number of dummies for violation, assessment, and inspection types 
@@ -192,10 +214,10 @@ negligencecodes = seq(1, 5)
 
 # Set the list of cfr parts or subsections to produce dummy vars for
 if (data.level == "part") {
-    cfr_codes = MR_relevant_partcodes
+    cfr_codes = relevant_partcodes
 }
 if (data.level == "subsection") {
-    cfr_codes = MR_relevant_subsectcodes
+    cfr_codes = relevant_subsectcodes
 }
 cfr_codes = unlist(cfr_codes)
     
@@ -214,6 +236,7 @@ for (i in 1:length(cfr_codes)) {
     merged_violations[, paste(cfr_codes[i], "negligence.pts.con", sep = ".")] = apply(cbind(merged_violations[, "negligence.pts.con"], merged_violations[, cfr_codes[i]]), 1, prod)
     merged_violations[, paste(cfr_codes[i], "injuryillness.pts.con", sep = ".")] = apply(cbind(merged_violations[, "injuryillness.pts.con"], merged_violations[, cfr_codes[i]]), 1, prod)
     merged_violations[, paste(cfr_codes[i], "likelihood.pts.con", sep = ".")] = apply(cbind(merged_violations[, "likelihood.pts.con"], merged_violations[, cfr_codes[i]]), 1, prod)
+    merged_violations[, paste(cfr_codes[i], "personsaffected.pts.con", sep = ".")] = apply(cbind(merged_violations[, "personsaffected.pts.con"], merged_violations[, cfr_codes[i]]), 1, prod)
     
     # WE NO LONGER CARE ABOUT THESE VARS  
     #merged_violations[, paste(cfr_codes[i], "penaltypoints", sep = ".")] = apply(cbind(merged_violations[, "penaltypoints"], merged_violations[, cfr_codes[i]]), 1, prod)
