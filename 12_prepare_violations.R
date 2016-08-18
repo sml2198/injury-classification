@@ -109,36 +109,13 @@ merged_violations = merged_violations[(merged_violations$likelihood != "Unknown"
                                        merged_violations$injuryillness != "Unknown" & 
                                        merged_violations$negligence != "Unknown" ),]
 
-######################################################################################################################################
-
-# REFORMAT VARS TO BE COLLAPSED TO THE MINE-Q LEVEL: PREPARE CATEGORICAL AND PTS VARS 
-
-# translate the numberaffected back into the counts (number persons potentially affected)
-# taken from http://www.ecfr.gov/cgi-bin/text-idx?SID=f563151d4c4ee003f464fc78296bc3a8&node=pt30.1.100&rgn=div
+# Our personsaffected var (from the violations data) disagrees with the gravitypersonpoints var (from the assessments data)
+# If we compare how they should map into each other based on the CFR code:
+# http://www.ecfr.gov/cgi-bin/text-idx?SID=f563151d4c4ee003f464fc78296bc3a8&node=pt30.1.100&rgn=div
+# There is no way to check using the mine data retrieval system, or to tell which var is more reliable. I emailed April Ramirez 
+# (DOL) @ 2:02PM on 8/18/16. I'm going to use the violations-data var (numberaffected) for now because it is more complete
+# at the violations level. - Sarah L @ 2:15 8/18/16. 
 names(merged_violations)[names(merged_violations) == "numberaffected"] = "personsaffected"
-
-merged_violations$personsaffected = ifelse(merged_violations$personsaffected == "4", "3", merged_violations$personsaffected)
-merged_violations$personsaffected = ifelse(merged_violations$personsaffected == "6", "4", merged_violations$personsaffected)
-merged_violations$personsaffected = ifelse(merged_violations$personsaffected == "8", "5", merged_violations$personsaffected)
-merged_violations$personsaffected = ifelse(merged_violations$personsaffected == "10", "6", merged_violations$personsaffected)
-merged_violations$personsaffected = ifelse(merged_violations$personsaffected == "12", "7", merged_violations$personsaffected)
-merged_violations$personsaffected = ifelse(merged_violations$personsaffected == "14", "8", merged_violations$personsaffected)
-merged_violations$personsaffected = ifelse(merged_violations$personsaffected == "16", "9", merged_violations$personsaffected)
-
-# if gravitypersonspoints was 18 then number of persons affected is actually 10 OR greater. We have this "numberaffected"
-# var from the violations (but NOT assessments) data. When personsaffected has been coerced to be 10 and numberaffected is 10+,
-# substitute numberaffected
-merged_violations$personsaffected = ifelse((merged_violations$personsaffected == "18" & merged_violations$numberaffected >= 10), 
-                                           merged_violations$numberaffected, merged_violations$personsaffected)
-merged_violations$personsaffected = as.numeric(merged_violations$personsaffected)
-
-# These observations are problems - our personsaffected var (constructed) disagrees with that from the violations data. There is
-# no way to check using the mine data retrieval system, or to tell whether the "gravitypersonspoints" var or the "numberaffected" var
-# was more reliable. I'm going to use our var, because I trust assessments over violations, but I emailed April Ramirez (DOL) @ 2:02PM on
-# 8/18/16. I'm going to delete the numberaffect var so we don't get confused. - Sarah L @ 2:15 8/18/16. 
-# merged_violations$problem = ifelse(merged_violations$numberaffected != merged_violations$personsaffected &
-#  !is.na(merged_violations$numberaffected) & !is.na(merged_violations$personsaffected),1,0)
-merged_violations = merged_violations[,-grep("numberaffected", names(merged_violations))]
 
 # rename points vars 
 names(merged_violations)[names(merged_violations) == "gravitypersonspoints"] = "personsaffected.pts"
