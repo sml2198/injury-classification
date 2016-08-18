@@ -46,12 +46,12 @@ mines_accidents_coded$quarter = as.yearqtr(mines_accidents_coded$accidentdate)
 
 # COLLAPSE TO THE MINE-QUARTER LEVEL, THEN OUTPUT
 
+# Drop accidents from too early 
+mines_accidents_coded = mines_accidents_coded[mines_accidents_coded$quarter > "1999 Q4" & 
+                                                mines_accidents_coded$quarter < "2016 Q2",]
+
 # Create injury indicator so that we can collapse & sum total injuries per mine quarter
 mines_accidents_coded$totalinjuries = 1
-
-######################################################################################################################################
-
-# READ MINE-TYPES DATA, MERGE ONTO ACCIDENTS, DROP OBSERVATIONS NOT RELEVANT TO THE STUDY ENVIRONMENT
 
 # Merge on minetypes to drop non-coal and non-underground observations before saving
 mines_accidents_coded = merge(mines_accidents_coded, mine_types, by = c("mineid"), all = T)
@@ -62,11 +62,7 @@ rm(mine_types)
 
 # Only keep observations from environment we care about
 mines_accidents_coded = mines_accidents_coded[mines_accidents_coded$minetype == "Underground",]
-# mines_accidents_coded = mines_accidents_coded[mines_accidents_coded$subunit == "UNDERGROUND",]
 mines_accidents_coded = mines_accidents_coded[mines_accidents_coded$coalcormetalmmine == "C",]
-
-# Drop observations before our study period
-mines_accidents_coded = mines_accidents_coded[(mines_accidents_coded$quarter > "1999 Q4"),]
 
 ######################################################################################################################################
 
