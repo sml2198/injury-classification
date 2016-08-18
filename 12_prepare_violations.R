@@ -55,6 +55,7 @@ data.level = "part"
 
 ######################################################################################################################################
 
+# read in merged violations-assessments: 836,612 obs, 1669 unique mineids, 119 vars
 merged_violations = readRDS(merged_violations_in_file_name)
 
 # format inspection type
@@ -92,24 +93,47 @@ merged_violations$injuryillness = as.character(merged_violations$injuryillness)
 levels(merged_violations$negligence) = c("Unknown", "HighNegligence", "LowNegligence", "ModNegligence", "NoNegligence", "Reckless")
 merged_violations$negligence = as.character(merged_violations$negligence)
 
-# remove the 3 observations that are missing for likelihood, injuryillness & negligence (from 749803 to 749800 obs)
+# remove the 3 observations that are missing for likelihood, injuryillness & negligence (now 836,609 obs)
 merged_violations = merged_violations[(merged_violations$likelihood != "Unknown" & 
                                        merged_violations$injuryillness != "Unknown" & 
                                        merged_violations$negligence != "Unknown" ),]
 
+######################################################################################################################################
+
+# REFORMAT VARS TO BE COLLAPSED TO THE MINE-Q LEVEL: PREPARE CATEGORICAL AND PTS VARS 
+
 # translate the gravitypersonpoints back into the counts (number persons potentially affected)
-# taken from http://www.ecfr.gov/cgi-bin/text-idx?SID=f563151d4c4ee003f464fc78296bc3a8&node=pt30.1.100&rgn=div5
-merged_violations$gravitypersonspoints = as.character(merged_violations$gravitypersonspoints)
-merged_violations$gravitypersonspoints = ifelse(merged_violations$gravitypersonspoints == "4", "3", merged_violations$gravitypersonspoints)
-merged_violations$gravitypersonspoints = ifelse(merged_violations$gravitypersonspoints == "6", "4", merged_violations$gravitypersonspoints)
-merged_violations$gravitypersonspoints = ifelse(merged_violations$gravitypersonspoints == "8", "5", merged_violations$gravitypersonspoints)
-merged_violations$gravitypersonspoints = ifelse(merged_violations$gravitypersonspoints == "10", "6", merged_violations$gravitypersonspoints)
-merged_violations$gravitypersonspoints = ifelse(merged_violations$gravitypersonspoints == "12", "7", merged_violations$gravitypersonspoints)
-merged_violations$gravitypersonspoints = ifelse(merged_violations$gravitypersonspoints == "14", "8", merged_violations$gravitypersonspoints)
-merged_violations$gravitypersonspoints = ifelse(merged_violations$gravitypersonspoints == "16", "9", merged_violations$gravitypersonspoints)
-merged_violations$gravitypersonspoints = ifelse(merged_violations$gravitypersonspoints == "18", "10", merged_violations$gravitypersonspoints)
-names(merged_violations)[names(merged_violations) == "gravitypersonspoints"] = "personsaffected"
+# taken from http://www.ecfr.gov/cgi-bin/text-idx?SID=f563151d4c4ee003f464fc78296bc3a8&node=pt30.1.100&rgn=div
+merged_violations$personsaffected = as.character(merged_violations$gravitypersonspoints)
+merged_violations$personsaffected = ifelse(merged_violations$personsaffected == "4", "3", merged_violations$personsaffected)
+merged_violations$personsaffected = ifelse(merged_violations$personsaffected == "4", "3", merged_violations$personsaffected)
+merged_violations$personsaffected = ifelse(merged_violations$personsaffected == "6", "4", merged_violations$personsaffected)
+merged_violations$personsaffected = ifelse(merged_violations$personsaffected == "8", "5", merged_violations$personsaffected)
+merged_violations$personsaffected = ifelse(merged_violations$personsaffected == "10", "6", merged_violations$personsaffected)
+merged_violations$personsaffected = ifelse(merged_violations$personsaffected == "12", "7", merged_violations$personsaffected)
+merged_violations$personsaffected = ifelse(merged_violations$personsaffected == "14", "8", merged_violations$personsaffected)
+merged_violations$personsaffected = ifelse(merged_violations$personsaffected == "16", "9", merged_violations$personsaffected)
+
+# if gravitypersonspoints was 18 then number of persons affected is actually 10 OR greater. We have this "numberaffected"
+# var from the violations (but NOT assessments) data. When personsaffected has been coerced to be 10 and numberaffected is 10+,
+# substitute numberaffected
+merged_violations$personsaffected = ifelse((merged_violations$personsaffected == "18" & merged_violations$numberaffected >= 10), 
+                                           merged_violations$numberaffected, merged_violations$personsaffected)
 merged_violations$personsaffected = as.numeric(merged_violations$personsaffected)
+
+# These observations are problems - our personsaffected var (constructed) disagrees with that from the violations data. There is
+# no way to check using the mine data retrieval system, or to tell whether the "gravitypersonspoints" var or the "numberaffected" var
+# was more reliable. I'm going to use our var, because I trust assessments over violations, but I emailed April Ramirez (DOL) @ 2:02PM on
+# 8/18/16. I'm going to delete the numberaffect var so we don't get confused. - Sarah L @ 2:15 8/18/16. 
+# merged_violations$problem = ifelse(merged_violations$numberaffected != merged_violations$personsaffected &
+#  !is.na(merged_violations$numberaffected) & !is.na(merged_violations$personsaffected),1,0)
+merged_violations = merged_violations[,-grep("numberaffected", names(merged_violations))]
+
+# rename points vars 
+names(merged_violations)[names(merged_violations) == "gravitypersonspoints"] = "personsaffectedpts"
+names(merged_violations)[names(merged_violations) == "negligencepoints"] = "negligencepts"
+names(merged_violations)[names(merged_violations) == "gravityinjurypoints"] = "injuryillnesspts"
+names(merged_violations)[names(merged_violations) == "gravitylikelihoodpoints"] = "likelihoodpts"
 
 ######################################################################################################################################
 
@@ -143,120 +167,69 @@ rm(dum_vars, var)
 
 # PREPARE TO GENERATE PART AND SUBSECTION SPECIFIC VARIABLES
 
-# Dummy out CFR codes (at the subpart and subsection levels) only for *relevant types and mark all non-relevant CFR codes
-if (relevant.only.option == "on") {
-    MR_relevant_subsectcodes = levels(factor(merged_violations[merged_violations$MR_relevant == 1, ]$subsection_code))
-}
+# For part-specific variable creation
 if (relevant.only.option != "on") {
-    MR_relevant_subsectcodes = levels(factor(merged_violations[merged_violations$MR_relevant == 1 | merged_violations$MR_maybe_relevant == 1,]$subsection_code))
+  MR_relevant_partcodes = as.list(levels(factor(merged_violations[merged_violations$MR_relevant == 1 | merged_violations$MR_maybe_relevant == 1,]$cfr_part_code)))
+}
+if (relevant.only.option == "on") {
+  MR_relevant_partcodes = as.list(levels(factor(merged_violations[merged_violations$MR_relevant == 1,]$cfr_part_code)))
 }
 
-#  Eventually we can create loop to go through each part (of cfr codes) and create lists of relevent/maybe relevant 
-# subsections within that part (instead of this mess) 
-if (relevant.only.option != "on") {
-    MR_relevant_subsectcodes_47 = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 | 
-                merged_violations$MR_maybe_relevant == 1) & (grepl("47\\.", merged_violations[,"subsection_code"])),]$subsection_code))
-    MR_relevant_subsectcodes_48 = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 | 
-                merged_violations$MR_maybe_relevant == 1) & (grepl("48\\.", merged_violations[,"subsection_code"])),]$subsection_code))
-    MR_relevant_subsectcodes_71 = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 | 
-                merged_violations$MR_maybe_relevant == 1) & (grepl("71\\.", merged_violations[,"subsection_code"])),]$subsection_code))
-    MR_relevant_subsectcodes_72 = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 | 
-                merged_violations$MR_maybe_relevant == 1) & (grepl("72\\.", merged_violations[,"subsection_code"])),]$subsection_code))
-    MR_relevant_subsectcodes_75a = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 | 
-                merged_violations$MR_maybe_relevant == 1) & (grepl("75\\.1[0-3]", merged_violations[,"subsection_code"])),]$subsection_code))
-    MR_relevant_subsectcodes_75b = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 | 
-                merged_violations$MR_maybe_relevant == 1) & (grepl("75\\.14", merged_violations[,"subsection_code"])),]$subsection_code))
-    MR_relevant_subsectcodes_75c = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 | 
-                merged_violations$MR_maybe_relevant == 1) & (grepl("75\\.1[5-9]", merged_violations[,"subsection_code"])),]$subsection_code))
-    MR_relevant_subsectcodes_75d = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 | 
-                merged_violations$MR_maybe_relevant == 1) & (grepl("75\\.[2-4]", merged_violations[,"subsection_code"])),]$subsection_code))
-    MR_relevant_subsectcodes_75e = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 | 
-                merged_violations$MR_maybe_relevant == 1) & (grepl("75\\.5", merged_violations[,"subsection_code"])),]$subsection_code))
-    MR_relevant_subsectcodes_75f = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 | 
-                merged_violations$MR_maybe_relevant == 1) & (grepl("75\\.[6-7]", merged_violations[,"subsection_code"])),]$subsection_code))
-    MR_relevant_subsectcodes_75g = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 | 
-                merged_violations$MR_maybe_relevant == 1) & (grepl("75\\.8", merged_violations[,"subsection_code"])),]$subsection_code))
-    MR_relevant_subsectcodes_75h = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 | 
-                merged_violations$MR_maybe_relevant == 1) & (grepl("75\\.9", merged_violations[,"subsection_code"])),]$subsection_code))
-    MR_relevant_subsectcodes_75 = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 | 
-                merged_violations$MR_maybe_relevant == 1) & (grepl("75\\.", merged_violations[,"subsection_code"])),]$subsection_code))
-    MR_relevant_subsectcodes_77 = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 | 
-                merged_violations$MR_maybe_relevant == 1) & (grepl("77\\.", merged_violations[,"subsection_code"])),]$subsection_code))
-}
+# For seubsection-specific variable creation
 if (relevant.only.option == "on") {
-    MR_relevant_subsectcodes_47 = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 ) 
-            & (grepl("47\\.", merged_violations[,"subsection_code"])),]$subsection_code))
-    MR_relevant_subsectcodes_48 = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 ) 
-            & (grepl("48\\.", merged_violations[,"subsection_code"])),]$subsection_code))
-    MR_relevant_subsectcodes_71 = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 ) 
-            & (grepl("71\\.", merged_violations[,"subsection_code"])),]$subsection_code))
-    MR_relevant_subsectcodes_72 = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 ) 
-            & (grepl("72\\.", merged_violations[,"subsection_code"])),]$subsection_code))
-    MR_relevant_subsectcodes_75 = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 ) 
-            & (grepl("75\\.", merged_violations[,"subsection_code"])),]$subsection_code))
-    MR_relevant_subsectcodes_77 = levels(factor(merged_violations[(merged_violations$MR_relevant == 1 ) 
-            & (grepl("77\\.", merged_violations[,"subsection_code"])),]$subsection_code))
+    MR_relevant_subsectcodes = as.list(levels(factor(merged_violations[merged_violations$MR_relevant == 1, ]$subsection_code)))
+}
+if (relevant.only.option != "on") {
+    MR_relevant_subsectcodes = as.list(levels(factor(merged_violations[merged_violations$MR_relevant == 1 | merged_violations$MR_maybe_relevant == 1,]$subsection_code)))
 }
 
-# Added by Sarah 7/5/2016 - these violations have so few observations (< 15) they are not worth analyzing.
-# Removing them saves memory.
-remove_subcodes = c("75.1431", "75.1436", "75.1438", "75.151", "75.153", "75.155", "75.156", "75.160", "75.1721", "75.1727", "75.1728", 
-                    "75.341", "75.402-2", "75.500-1", "75.502", "75.503-1", "75.505", "75.508-1", "75.510", "75.510-1", "75.511-1", "75.512-1", 
-                    "75.516-1", "75.517-1", "75.517-2", "75.519", "75.522", "75.524", "75.600", "75.601-2", "75.601-3","75.700-1", "75.701-4", 
-                    "75.702", "75.702-1", "75.703-1", "75.703-2", "75.703-4", "75.704", "75.705", "75.705-1", "75.705-2", "75.705-3", "75.705-8", 
-                    "75.800-2", "75.801", "75.803-2", "75.805", "75.806", "75.812", "75.812-2", "75.814", "75.815", "75.817", "75.818", "75.819", 
-                    "75.820", "75.825", "75.827", "75.830", "75.831", "75.832", "75.833", "75.834", "75.900-2", "75.902-1", "75.905", "75.906")
-if (relevant.only.option == "on") {
-  MR_relevant_subsectcodes_75a = setdiff(MR_relevant_subsectcodes_75a, remove_subcodes)
-  MR_relevant_subsectcodes_75b = setdiff(MR_relevant_subsectcodes_75b, remove_subcodes)
-  MR_relevant_subsectcodes_75c = setdiff(MR_relevant_subsectcodes_75c, remove_subcodes)
-  MR_relevant_subsectcodes_75d = setdiff(MR_relevant_subsectcodes_75d, remove_subcodes)
-  MR_relevant_subsectcodes_75e = setdiff(MR_relevant_subsectcodes_75e, remove_subcodes)
-  MR_relevant_subsectcodes_75f = setdiff(MR_relevant_subsectcodes_75f, remove_subcodes)
-  MR_relevant_subsectcodes_75g = setdiff(MR_relevant_subsectcodes_75g, remove_subcodes)
-  MR_relevant_subsectcodes_75h = setdiff(MR_relevant_subsectcodes_75h, remove_subcodes)
+# If the subsectioncode is (maybe-)relevant, AND there are < 15 violations from that subsectioncode, remove
+# that subsectioncode from the relevant lists 
+remove_subcodes = list()
+for (code in MR_relevant_subsectcodes) {
+  if (nrow(merged_violations[merged_violations$subsection_code == code, ]) < 15) {
+    remove_subcodes = c(remove_subcodes, code)
+  }
 }
-MR_relevant_subsectcodes_75 = setdiff(MR_relevant_subsectcodes_75, remove_subcodes)
 MR_relevant_subsectcodes = setdiff(MR_relevant_subsectcodes, remove_subcodes)
+rm(remove_subcodes)
 
 # Create lists of number of dummies for violation, assessment, and inspection types 
-likelihoodcodes = seq(1, 5)
-injuryillnesscodes = seq(1, 4)
-negligencecodes = seq(1, 5)
 violationtypecodes = seq(1, 4)
 assessmenttypecodes = seq(1, 3)
 inspactycodes = seq(1, 5)
 
+# Create lists of number of dummies for likelihood, injuryillness (num persons affected) and negligence codes 
+likelihoodcodes = seq(1, 5)
+injuryillnesscodes = seq(1, 4)
+negligencecodes = seq(1, 5)
+
 ######################################################################################################################################
 
 # LOOPS TO GENERATE PART AND SUBSECTION SPECIFIC VARIABLES
-
-# For CFR part-specific variable creation
-if (relevant.only.option != "on") {
-    MR_relevant_partcodes = levels(factor(merged_violations[merged_violations$MR_relevant == 1 | merged_violations$MR_maybe_relevant == 1,]$cfr_part_code))
-}
-if (relevant.only.option == "on") {
-    MR_relevant_partcodes = levels(factor(merged_violations[merged_violations$MR_relevant == 1,]$cfr_part_code))
-}
 
 # Set the list of cfr parts or subsections to produce dummy vars for
 if (data.level == "part") {
     cfr_codes = MR_relevant_partcodes
 }
 if (data.level == "subsection") {
-  cfr_codes = MR_relevant_subsectcodes
+    cfr_codes = MR_relevant_subsectcodes
 }
+cfr_codes = unlist(cfr_codes)
     
 # This loop creates the part-specific variable-specific dummies (which will later be collapsed to the mine-quarter level).
 for (i in 1:length(cfr_codes)) {
     merged_violations[, cfr_codes[i]] = ifelse(merged_violations$cfr_part_code == cfr_codes[i], 1, 0)
     merged_violations[, paste(cfr_codes[i], "personsaffected", sep = ".")] = apply(cbind(merged_violations[, "personsaffected"], merged_violations[, cfr_codes[i]]), 1, prod)
-  
-    # WE NO LONGER CARE ABOUT THE PTS VARS  
+
+    # PTS VARS FOR ASSESSMENT CHARACTERISTICS     
+    merged_violations[, paste(cfr_codes[i], "negligencepts", sep = ".")] = apply(cbind(merged_violations[, "negligencepts"], merged_violations[, cfr_codes[i]]), 1, prod)
+    merged_violations[, paste(cfr_codes[i], "injuryillnesspts", sep = ".")] = apply(cbind(merged_violations[, "injuryillnesspts"], merged_violations[, cfr_codes[i]]), 1, prod)
+    merged_violations[, paste(cfr_codes[i], "likelihoodpts", sep = ".")] = apply(cbind(merged_violations[, "likelihoodpts"], merged_violations[, cfr_codes[i]]), 1, prod)
+    merged_violations[, paste(cfr_codes[i], "personsaffectedpts", sep = ".")] = apply(cbind(merged_violations[, "personsaffectedpts"], merged_violations[, cfr_codes[i]]), 1, prod)
+     
+    # WE NO LONGER CARE ABOUT THESE PTS VARS  
     #merged_violations[, paste(cfr_codes[i], "penaltypoints", sep = ".")] = apply(cbind(merged_violations[, "penaltypoints"], merged_violations[, cfr_codes[i]]), 1, prod)
-    #merged_violations[, paste(cfr_codes[i], "gravitylikelihoodpoints", sep = ".")] = apply(cbind(merged_violations[, "gravitylikelihoodpoints"], merged_violations[, cfr_codes[i]]), 1, prod)
-    #merged_violations[, paste(cfr_codes[i], "gravityinjurypoints", sep = ".")] = apply(cbind(merged_violations[, "gravityinjurypoints"], merged_violations[, cfr_codes[i]]), 1, prod)
-    #merged_violations[, paste(cfr_codes[i], "negligencepoints", sep = ".")] = apply(cbind(merged_violations[, "negligencepoints"], merged_violations[, cfr_codes[i]]), 1, prod)
     #merged_violations[, paste(cfr_codes[i], "sigandsubdesignation", sep = ".")] = ifelse(merged_violations[, cfr_codes[i]] == 1, merged_violations[, "sigandsubdesignation"], 0)
     #merged_violations[, paste(cfr_codes[i], "contractor_violation_cnt", sep = ".")] = apply(cbind(merged_violations[, "contractor_violation_cnt"], merged_violations[, cfr_codes[i]]), 1, prod)
     #merged_violations[, paste(cfr_codes[i], "operator_violation_pInspDay", sep = ".")] = apply(cbind(merged_violations[, "operator_violation_pInspDay"], merged_violations[, cfr_codes[i]]), 1, prod)
@@ -285,10 +258,9 @@ for (i in 1:length(cfr_codes)) {
 }
 
 # Remove things we won't use again.
-rm(MR_relevant_subsectcodes, MR_relevant_subsectcodes_47, MR_relevant_subsectcodes_48,
-   MR_relevant_subsectcodes_71, MR_relevant_subsectcodes_72, MR_relevant_subsectcodes_75a,
-   MR_relevant_subsectcodes_75b, MR_relevant_subsectcodes_75c, MR_relevant_subsectcodes_75d,
-   MR_relevant_subsectcodes_75e, MR_relevant_subsectcodes_75, MR_relevant_subsectcodes_77) 
+rm(MR_relevant_subsectcodes, MR_relevant_partcodes, cfr_codes,
+  violationtypecodes, assessmenttypecodes, inspactycodes,
+  likelihoodcodes, injuryillnesscodes, negligencecodes)
 
 ######################################################################################################################################
 
@@ -341,7 +313,7 @@ contractor_vars = merged_violations[, c(match("mineid", names(merged_violations)
                                         match("con_avg_employee_cnt_qtr", names(merged_violations)),
                                         match("con_employee_hours_qtr", names(merged_violations)),
                                         match("con_coal_prod_qtr", names(merged_violations)))]
-# Remove obs without contractor ID
+# Remove obs without contractorid
 contractor_vars = contractor_vars[!is.na(contractor_vars$contractorid),]
 
 # Remove obs that never merged with production/employment info
@@ -454,34 +426,42 @@ collapsed_violations$row_id = seq.int(nrow(collapsed_violations))
 
 # MERGE VIOLATIONS DATA ONTO MINES
 
-# Read in data
+# Read in data and drop obs not in study period
 mines_quarters = readRDS(mines_quarters_file_name)
+mines_quarters = mines_quarters[mines_quarters$quarter < "2016 Q2",]
 
-# Merge mine-specific contractor info onto mine quarters
-merged_mines_violations = merge(mines_quarters, contractor_vars, by = c("mineid", "quarter"), all = T)
+# Merge mine-specific contractor info onto mine quarters & drop 140 obs that were added but not merged (there were no nonmissing hours until this)
+merged_quarters_contractors = merge(mines_quarters, contractor_vars, by = c("mineid", "quarter"), all = T)
+merged_quarters_contractors = merged_quarters_contractors[!is.na(merged_quarters_contractors$hours_qtr),] 
 
-# Merge all violation vars onto mine quarters
-merged_mines_violations = merge(mines_quarters, collapsed_violations, by = c("mineid", "quarter"), all = T)
+# Merge all violation vars onto mine quarters & drop obs that were added but not merged from violations data 
+merged_mines_violations = merge(merged_quarters_contractors, collapsed_violations, by = c("mineid", "quarter"), all = T)
+merged_mines_violations = merged_mines_violations[!is.na(merged_mines_violations$hours_qtr),] 
 
 # To save time we save/load all constituent datasets in the prediction data after each of the following merges
 merged_mines_violations = merged_mines_violations[, -grep("row_id", names(merged_mines_violations))]
 merged_mines_violations$row_id = seq.int(nrow(merged_mines_violations))
 
-rm(contractor_vars, collapsed_violations, mines_quarters)
+rm(contractor_vars, collapsed_violations, mines_quarters, merged_quarters_contractors)
 gc()
 
 ######################################################################################################################################
 
 # MERGE ACCIDENTS DATA ONTO VIOLATIONS/PER QUARTER
 
+# read in data and drop obs not in study period
 summed_coded_accidents = readRDS(mines_accidents_coded_file_name)
 
 # Merge violations (now with contractor and mine info) and accidents
 merged_mines_violations_accidents = merge(merged_mines_violations, summed_coded_accidents, by = c("mineid", "quarter"), all = T)
+merged_mines_violations_accidents = merged_mines_violations_accidents[!is.na(merged_mines_violations_accidents$hours_qtr),]
 
-# Replace missings (mine quarters without violations or accidents data) with zeroes
-merged_mines_violations_accidents$totalinjuries = ifelse(is.na(merged_mines_violations_accidents$totalinjuries), 0, merged_mines_violations_accidents$totalinjuries)
-merged_mines_violations_accidents$total_violations = ifelse(is.na(merged_mines_violations_accidents$total_violations), 0, merged_mines_violations_accidents$total_violations)
+# Replace missings (mine quarters without accidents data) with zeroes (see next section for zero violations)
+merged_mines_violations_accidents$totalinjuries = ifelse(is.na(merged_mines_violations_accidents$totalinjuries), 
+                                                         0, merged_mines_violations_accidents$totalinjuries)
+# Replace MR with zero where missing (these all occur in quarters that had zero total accidents)
+merged_mines_violations_accidents$MR = ifelse(is.na(merged_mines_violations_accidents$MR), 
+                                                         0, merged_mines_violations_accidents$MR)
 
 merged_mines_violations_accidents = merged_mines_violations_accidents[, -grep("row_id", names(merged_mines_violations_accidents))]
 merged_mines_violations_accidents$row_id = seq.int(nrow(merged_mines_violations_accidents))
@@ -497,22 +477,22 @@ gc()
 # Merge violations & accidents with remaining inspections data
 prediction_data = merge(merged_mines_violations_accidents, summed_inspcs, by = c("mineid", "quarter"), all = T)
 
+# replace NAs in inspections with zeroes (mine quarters that had no inspections)
+prediction_data$num_insp = ifelse(is.na(prediction_data$num_insp), 0, prediction_data$num_insp)
+
+# Replace missings (mine quarters without violations) with zeroes - BUT only when there were no inspections!!!
+prediction_data$total_violations = ifelse((is.na(prediction_data$total_violations) &
+                                             prediction_data$num_insp > 0), 0, prediction_data$total_violations)
+
 rm(merged_mines_violations_accidents,summed_inspcs)
 gc()
 
-# Same drill here - just a sanity check 
-prediction_data[, "merge3"] = ifelse(!is.na(prediction_data$row_id.y) & !is.na(prediction_data$row_id.x), 3, 0)
-prediction_data[, "merge3"] = ifelse(is.na(prediction_data$row_id.x) & !is.na(prediction_data$row_id.y), 2, prediction_data[, "merge3"])
-prediction_data[, "merge3"] = ifelse(is.na(prediction_data$row_id.y) & !is.na(prediction_data$row_id.x), 1, prediction_data[, "merge3"])
-
 # Remove observations that are missing key variables or are from the wrong environment (there shouldn't be any at this point, but just in case)
-prediction_data = prediction_data[complete.cases(prediction_data$quarter),]
 prediction_data = prediction_data[complete.cases(prediction_data$minetype),]
 prediction_data = prediction_data[prediction_data$minetype == "Underground",]
 prediction_data = prediction_data[prediction_data$coalcormetalmmine == "C",]
-prediction_data = prediction_data[prediction_data$coal_prod_qtr != 0,]
 
-# Drop unnecessary vars - at this point should have 27,456 obs & 201 vars
+# Drop unnecessary vars - at this point should have 30,266 obs & 198 vars
 prediction_data = prediction_data[, c(-grep("merge", names(prediction_data)), -grep("row_id", names(prediction_data)), 
                                       -grep("coalcormetalmmine", names(prediction_data)), -grep("minetype", names(prediction_data)))]
 
@@ -537,19 +517,6 @@ prediction_data$idesc = ifelse(prediction_data$idesc == "Hazard", 1,
 
 ######################################################################################################################################
 
-# MAKE MINE AND QUARTER DUMMIES
-
-# dum_vars = c("mineid", 
-#              "quarter")
-# 
-# for (var in dum_vars) {
-#   datdum(var, prediction_data, "prediction_data")
-# }
-# 
-# rm(dum_vars, var)
-
-######################################################################################################################################
-
 # FILL IN MISSING VALUES OF MINE CHARACTERISTICS BY MINE_ID/QUARTER GROUPS 
 
 # Group data by mines and order the data by mine-quarter
@@ -561,47 +528,18 @@ prediction_data = prediction_data[order(prediction_data[,"mineid"], prediction_d
 # prediction_data$productionshiftsperday = na.locf(prediction_data$productionshiftsperday)
 # prediction_data$idesc = na.locf(prediction_data$idesc)
 
-# Pipe in zeroes to the missing part-specific variables (if nothing merged on a mine-quarter then it should be a zero)
-number_to_zero = prediction_data[, c(grep("^[0-9][0-9]", names(prediction_data)), 
-                                     match("mineid", names(prediction_data)),
-                                     match("quarter", names(prediction_data)), 
-                                     match("terminated", names(prediction_data)),
-                                     match("total_violations", names(prediction_data)), 
-                                     match("totalinjuries", names(prediction_data)), 
-                                     match("MR", names(prediction_data)),
-                                     match("insp_hours_per_qtr", names(prediction_data)), 
-                                     match("onsite_insp_hours_per_qtr", names(prediction_data)),
-                                     match("num_insp", names(prediction_data)))]
-
-# Remove these from the prediction dataset (they'll be merged back in soon once zeroes are inserted)
-prediction_data = prediction_data[, c(-grep("^[0-9][0-9]", names(prediction_data)), 
-                                      -match("terminated", names(prediction_data)),
-                                      -match("total_violations", names(prediction_data)), 
-                                      -match("totalinjuries", names(prediction_data)), 
-                                      -match("MR", names(prediction_data)),
-                                      -match("insp_hours_per_qtr", names(prediction_data)), 
-                                      -match("onsite_insp_hours_per_qtr", names(prediction_data)),
-                                      -match("num_insp", names(prediction_data)))]
-
-# Replace missings in the number-to-zero group with zeroes.
-number_to_zero[is.na(number_to_zero)] = 0
-
-# Merge all vars back together now.
-prediction_data = merge(prediction_data, number_to_zero, by = c("mineid", "quarter"), all = T)
-rm(number_to_zero)
-
-# Now replace any NA's in remaining numeric vars by randomly sampling from the distribution of the column
-var_classes = sapply(prediction_data[,names(prediction_data)], class)
-num_vars = names(var_classes[c(grep("numeric", var_classes), grep("integer", var_classes))])
-ignore_vars = c("productionshiftsperday", "idesc")
-num_vars = setdiff(num_vars, ignore_vars)
-for (i in 1:length(num_vars)) {
-  i_rowsmissing = row.names(prediction_data)[is.na(prediction_data[, num_vars[i]])]
-  while (sum(!complete.cases(prediction_data[, num_vars[i]])) > 0) {
-    replace_rows = sample(setdiff(row.names(prediction_data), i_rowsmissing), length(i_rowsmissing), replace = T)
-    prediction_data[i_rowsmissing, num_vars[i]] = prediction_data[replace_rows, num_vars[i]]
-  }
-}
+# # Now replace any NA's in remaining numeric vars by randomly sampling from the distribution of the column
+# var_classes = sapply(prediction_data[,names(prediction_data)], class)
+# num_vars = names(var_classes[c(grep("numeric", var_classes), grep("integer", var_classes))])
+# ignore_vars = c("productionshiftsperday", "idesc")
+# num_vars = setdiff(num_vars, ignore_vars)
+# for (i in 1:length(num_vars)) {
+#   i_rowsmissing = row.names(prediction_data)[is.na(prediction_data[, num_vars[i]])]
+#   while (sum(!complete.cases(prediction_data[, num_vars[i]])) > 0) {
+#     replace_rows = sample(setdiff(row.names(prediction_data), i_rowsmissing), length(i_rowsmissing), replace = T)
+#     prediction_data[i_rowsmissing, num_vars[i]] = prediction_data[replace_rows, num_vars[i]]
+#   }
+# }
 
 #####################################################################################################################################
 
@@ -671,7 +609,7 @@ nontriv_vars = rownames(var_stats[var_stats$sd > 0,])
 triv_vars = setdiff(names(prediction_data), nontriv_vars)
 rm(var_stats)
 
-# Keeps only nontrivial vars. Warning: This excludes all non-numeric variables - wind up with 27,456 obs with 166 vars
+# Keeps only nontrivial vars. Warning: This excludes all non-numeric variables - wind up with 30,266 obs with 169 vars
 prediction_data = prediction_data[, c(nontriv_vars, "mineid", "quarter")]
 
 # This line will report number of missings per var - should be zero (except lagged vars which will be missing for first quarter)!
@@ -693,7 +631,7 @@ if (relevant.only.option == "off" & data.level == "part") {
   saveRDS(prediction_data, file = part_data_out_file_name)
 }
 
-sink()
+#sink()
 
 ######################################################################################################################################
 
@@ -701,32 +639,32 @@ sink()
 # Here we've tabbed our categorical vars, so we know which value will become which dummy.
 
 #table(merged_violations$inspacty)
-# 103            complaint inspection  fatality inspection      other   regular inspection 
-# 35106                 4397                  424                63493               646383 
+#103 complaint inspection  fatality inspection                other   regular inspection 
+#42364                 5374                  435                66461               721975 
 
 #table(merged_violations$violationtypecode)
-# Citation    Notice     Order Safeguard 
-# 739636         3     10163         1 
+#Citation    Notice     Order Safeguard 
+#825502         3     11103         1 
 
 #table(merged_violations$assessmenttypecode)
-# Regular  Single Special 
-# 549958  187562   12283
+#Regular  Single Special 
+#637724  185957   12928 
 
 #table(merged_violations$likelihood)
-# Highly NoLikelihood     Occurred   Reasonably      Unknown     Unlikely 
-# 5105        19905         1318       249118            3       474354 
+#Highly NoLikelihood     Occurred   Reasonably     Unlikely 
+#5358        23167         1412       268878       537794 
 
 #table(merged_violations$injuryillness)
-# Fatal   LostDays NoLostDays  Permanent    Unknown 
-# 45362     518094     113225      73119          3  
+#Fatal   LostDays NoLostDays  Permanent 
+#56717     577357     119077      83458 
 
 #table(merged_violations$negligence)
-# HighNegligence  LowNegligence  ModNegligence   NoNegligence       Reckless        Unknown 
-# 31360          78828         637709           1019            884              3 
+#HighNegligence  LowNegligence  ModNegligence   NoNegligence       Reckless 
+#35434          97051         701957           1224            943 
 
 #table(merged_violations$personsaffected)
-# 0      1      2      3      4      5      6      7      8      9     10 
-# 10455 397864  54946  14022  10273  12262   7347   4963   8909   5473  23442 
+#0      1      2      3      4      5      6      7      8      9     10 
+#12436 461815  64630  16285  11497  13268   8070   5709  10132   6128  27754 
 
 ######################################################################################################################################
 
