@@ -81,16 +81,27 @@ merged_violations$inspacty = ifelse(grepl("(103|fatality|regular|complaint)", me
 merged_violations$violationtypecode = as.character(merged_violations$violationtypecode)
 merged_violations$assessmenttypecode = as.character(merged_violations$assessmenttypecode)
 
+as.numeric.factor <- function(x) {as.numeric(levels(x))[x]}
+
 # rename likelihood categories and deal with missing values
 levels(merged_violations$likelihood) = c("Unknown", "Highly", "NoLikelihood", "Occurred", "Reasonably", "Unlikely")
+merged_violations$likelihood.pts.con = merged_violations$likelihood
+levels(merged_violations$likelihood.pts.con) = c(5, 3, 0, 4, 2, 1)
+merged_violations$likelihood.pts.con = as.numeric.factor(merged_violations$likelihood.pts.con)
 merged_violations$likelihood = as.character(merged_violations$likelihood)
 
 # rename injuryillness categories and deal with missing values
 levels(merged_violations$injuryillness) = c("Unknown", "Fatal", "LostDays", "NoLostDays", "Permanent")
+merged_violations$injuryillness.pts.con = merged_violations$injuryillness
+levels(merged_violations$injuryillness.pts.con) = c(4, 3, 1, 0, 2)
+merged_violations$injuryillness.pts.con = as.numeric.factor(merged_violations$injuryillness.pts.con)
 merged_violations$injuryillness = as.character(merged_violations$injuryillness)
 
 # rename negligence categories and deal with missing values
 levels(merged_violations$negligence) = c("Unknown", "HighNegligence", "LowNegligence", "ModNegligence", "NoNegligence", "Reckless")
+merged_violations$negligence.pts.con = merged_violations$negligence
+levels(merged_violations$negligence.pts.con) = c(5, 3, 1, 2, 0, 4)
+merged_violations$negligence.pts.con = as.numeric.factor(merged_violations$negligence.pts.con)
 merged_violations$negligence = as.character(merged_violations$negligence)
 
 # remove the 3 observations that are missing for likelihood, injuryillness & negligence (now 836,609 obs)
@@ -130,10 +141,10 @@ merged_violations$personsaffected = as.numeric(merged_violations$personsaffected
 merged_violations = merged_violations[,-grep("numberaffected", names(merged_violations))]
 
 # rename points vars 
-names(merged_violations)[names(merged_violations) == "gravitypersonspoints"] = "personsaffectedpts"
-names(merged_violations)[names(merged_violations) == "negligencepoints"] = "negligencepts"
-names(merged_violations)[names(merged_violations) == "gravityinjurypoints"] = "injuryillnesspts"
-names(merged_violations)[names(merged_violations) == "gravitylikelihoodpoints"] = "likelihoodpts"
+names(merged_violations)[names(merged_violations) == "gravitypersonspoints"] = "personsaffected.pts"
+names(merged_violations)[names(merged_violations) == "negligencepoints"] = "negligence.pts"
+names(merged_violations)[names(merged_violations) == "gravityinjurypoints"] = "injuryillness.pts"
+names(merged_violations)[names(merged_violations) == "gravitylikelihoodpoints"] = "likelihood.pts"
 
 ######################################################################################################################################
 
@@ -170,17 +181,11 @@ rm(dum_vars, var)
 # For part-specific variable creation
 if (relevant.only.option != "on") {
   MR_relevant_partcodes = as.list(levels(factor(merged_violations[merged_violations$MR_relevant == 1 | merged_violations$MR_maybe_relevant == 1,]$cfr_part_code)))
+  MR_relevant_subsectcodes = as.list(levels(factor(merged_violations[merged_violations$MR_relevant == 1 | merged_violations$MR_maybe_relevant == 1,]$subsection_code)))
 }
 if (relevant.only.option == "on") {
   MR_relevant_partcodes = as.list(levels(factor(merged_violations[merged_violations$MR_relevant == 1,]$cfr_part_code)))
-}
-
-# For seubsection-specific variable creation
-if (relevant.only.option == "on") {
-    MR_relevant_subsectcodes = as.list(levels(factor(merged_violations[merged_violations$MR_relevant == 1, ]$subsection_code)))
-}
-if (relevant.only.option != "on") {
-    MR_relevant_subsectcodes = as.list(levels(factor(merged_violations[merged_violations$MR_relevant == 1 | merged_violations$MR_maybe_relevant == 1,]$subsection_code)))
+  MR_relevant_subsectcodes = as.list(levels(factor(merged_violations[merged_violations$MR_relevant == 1, ]$subsection_code)))
 }
 
 # If the subsectioncode is (maybe-)relevant, AND there are < 15 violations from that subsectioncode, remove
@@ -223,19 +228,21 @@ for (i in 1:length(cfr_codes)) {
     merged_violations[, paste(cfr_codes[i], "personsaffected", sep = ".")] = apply(cbind(merged_violations[, "personsaffected"], merged_violations[, cfr_codes[i]]), 1, prod)
 
     # PTS VARS FOR ASSESSMENT CHARACTERISTICS     
-    merged_violations[, paste(cfr_codes[i], "negligencepts", sep = ".")] = apply(cbind(merged_violations[, "negligencepts"], merged_violations[, cfr_codes[i]]), 1, prod)
-    merged_violations[, paste(cfr_codes[i], "injuryillnesspts", sep = ".")] = apply(cbind(merged_violations[, "injuryillnesspts"], merged_violations[, cfr_codes[i]]), 1, prod)
-    merged_violations[, paste(cfr_codes[i], "likelihoodpts", sep = ".")] = apply(cbind(merged_violations[, "likelihoodpts"], merged_violations[, cfr_codes[i]]), 1, prod)
-    merged_violations[, paste(cfr_codes[i], "personsaffectedpts", sep = ".")] = apply(cbind(merged_violations[, "personsaffectedpts"], merged_violations[, cfr_codes[i]]), 1, prod)
-     
-    # WE NO LONGER CARE ABOUT THESE PTS VARS  
+    merged_violations[, paste(cfr_codes[i], "negligence.pts", sep = ".")] = apply(cbind(merged_violations[, "negligence.pts"], merged_violations[, cfr_codes[i]]), 1, prod)
+    merged_violations[, paste(cfr_codes[i], "injuryillness.pts", sep = ".")] = apply(cbind(merged_violations[, "injuryillness.pts"], merged_violations[, cfr_codes[i]]), 1, prod)
+    merged_violations[, paste(cfr_codes[i], "likelihood.pts", sep = ".")] = apply(cbind(merged_violations[, "likelihood.pts"], merged_violations[, cfr_codes[i]]), 1, prod)
+    merged_violations[, paste(cfr_codes[i], "personsaffected.pts", sep = ".")] = apply(cbind(merged_violations[, "personsaffected.pts"], merged_violations[, cfr_codes[i]]), 1, prod)
+    
+    # CONSTRUCTED PTS VARS FOR ASSESSMENT CHARACTERISTICS  
+    merged_violations[, paste(cfr_codes[i], "negligence.pts.con", sep = ".")] = apply(cbind(merged_violations[, "negligence.pts.con"], merged_violations[, cfr_codes[i]]), 1, prod)
+    merged_violations[, paste(cfr_codes[i], "injuryillness.pts.con", sep = ".")] = apply(cbind(merged_violations[, "injuryillness.pts.con"], merged_violations[, cfr_codes[i]]), 1, prod)
+    merged_violations[, paste(cfr_codes[i], "likelihood.pts.con", sep = ".")] = apply(cbind(merged_violations[, "likelihood.pts.con"], merged_violations[, cfr_codes[i]]), 1, prod)
+    
+    # WE NO LONGER CARE ABOUT THESE VARS  
     #merged_violations[, paste(cfr_codes[i], "penaltypoints", sep = ".")] = apply(cbind(merged_violations[, "penaltypoints"], merged_violations[, cfr_codes[i]]), 1, prod)
     #merged_violations[, paste(cfr_codes[i], "sigandsubdesignation", sep = ".")] = ifelse(merged_violations[, cfr_codes[i]] == 1, merged_violations[, "sigandsubdesignation"], 0)
     #merged_violations[, paste(cfr_codes[i], "contractor_violation_cnt", sep = ".")] = apply(cbind(merged_violations[, "contractor_violation_cnt"], merged_violations[, cfr_codes[i]]), 1, prod)
-    #merged_violations[, paste(cfr_codes[i], "operator_violation_pInspDay", sep = ".")] = apply(cbind(merged_violations[, "operator_violation_pInspDay"], merged_violations[, cfr_codes[i]]), 1, prod)
-    #merged_violations[, paste(cfr_codes[i], "contractor_repeated_viol_cnt", sep = ".")] = apply(cbind(merged_violations[, "contractor_repeated_viol_cnt"], merged_violations[, cfr_codes[i]]), 1, prod)
-    #merged_violations[, paste(cfr_codes[i], "operator_repeated_viol_pInspDay", sep = ".")] = apply(cbind(merged_violations[, "operator_repeated_viol_pInspDay"], merged_violations[, cfr_codes[i]]), 1, prod)
-      
+
       # Dummied out categorical vars:
       for (j in 1:length(inspactycodes)) {
         merged_violations[, paste(cfr_codes[i], "inspacty", inspactycodes[j], sep = ".")] = ifelse(merged_violations[, cfr_codes[i]] == 1 & merged_violations[, paste("inspacty", inspactycodes[j], sep = ".")] == 1, 1, 0)
@@ -260,7 +267,7 @@ for (i in 1:length(cfr_codes)) {
 # Remove things we won't use again.
 rm(MR_relevant_subsectcodes, MR_relevant_partcodes, cfr_codes,
   violationtypecodes, assessmenttypecodes, inspactycodes,
-  likelihoodcodes, injuryillnesscodes, negligencecodes)
+  likelihoodcodes, injuryillnesscodes, negligencecodes, i, j, code)
 
 ######################################################################################################################################
 
@@ -564,8 +571,6 @@ prediction_data$num_no_terminations = ifelse(prediction_data$terminated < predic
 # # CREATE LAGGED VARS & COMPOUND LAGGED VARS
 
 # # Create lagged variables of various orders (currently code exists for 6 orders)
-# # Currently we're doing this for part 75 only (the biggest part) and for vars that we believe to be strong predictors, based on model
-# # selection. This includes penalty points, sig and sub designation, violation counts, MR counts, and one subsection (just as a test - randomly selected)
 # prediction_data = as.data.table(prediction_data[order(prediction_data$mineid, prediction_data$quarter, na.last = T),])
 # prediction_data[, c("MR_l1", "MR_l2", "MR_l3", "MR_l4", "MR_l5", "MR_l6", 
 #                     "MR_indicator_l1", "MR_indicator_l2", "MR_indicator_l3", "MR_indicator_l4", "MR_indicator_l5", "MR_indicator_l6",
@@ -577,16 +582,6 @@ prediction_data$num_no_terminations = ifelse(prediction_data$terminated < predic
 # # the last 6 quarters, instead of simply the value of that var 6 quarters ago.
 # prediction_data$sum_75_1_2 = rowSums(prediction_data[,c("75_l1", "75_l2")])
 # prediction_data$sum_75_1_3 = rowSums(prediction_data[,c("75_l1", "75_l2", "75_l3")])
-# prediction_data$sum_75_1_4 = rowSums(prediction_data[,c("75_l1", "75_l2", "75_l3", "75_l4")])
-# prediction_data$sum_75_1_5 = rowSums(prediction_data[,c("75_l1", "75_l2", "75_l3", "75_l4", "75_l5")])
-# prediction_data$sum_75_1_6 = rowSums(prediction_data[,c("75_l1", "75_l2", "75_l3", "75_l4", "75_l5", "75_l6")])
-# 
-# # Same process for the subsection var that we're working with right now.
-# prediction_data$sum_75.1405_1_2 = rowSums(prediction_data[,c("75.1405_l1", "75.1405_l2")])
-# prediction_data$sum_75.1405_1_3 = rowSums(prediction_data[,c("75.1405_l1", "75.1405_l2", "75.1405_l3")])
-# prediction_data$sum_75.1405_1_4 = rowSums(prediction_data[,c("75.1405_l1", "75.1405_l2", "75.1405_l3", "75.1405_l4")])
-# prediction_data$sum_75.1405_1_5 = rowSums(prediction_data[,c("75.1405_l1", "75.1405_l2", "75.1405_l3", "75.1405_l4", "75.1405_l5")])
-# prediction_data$sum_75.1405_1_6 = rowSums(prediction_data[,c("75.1405_l1", "75.1405_l2", "75.1405_l3", "75.1405_l4", "75.1405_l5", "75.1405_l6")])
 
 ######################################################################################################################################
 
