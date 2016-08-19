@@ -28,10 +28,10 @@ open_data_inspecs_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_clea
 
 # read inspections data - 790234 obs, 45 vars
   # dataset downloaded on 8/16/16 from http://arlweb.msha.gov/OpenGovernmentData/OGIMSHA.asp [Inspections]
-open_data_inspecs = read.table(open_data_inspecs_in_file_name, header = T, sep = "|")
+open_data_inspecs = read.table(open_data_inspecs_in_file_name, header = T, sep = "|", na.strings=c("","NA"))
 
 # drop observations for environments not of interest
-open_data_inspecs = open_data_inspecs[open_data_inspecs$COAL_METAL_IND != "M", ] # now we have 327,777 obs
+open_data_inspecs = open_data_inspecs[open_data_inspecs$COAL_METAL_IND == "C", ] # now we have 327,777 obs
 
 # rename variables
 names(open_data_inspecs)[names(open_data_inspecs) == "EVENT_NO"] = "eventno"
@@ -86,8 +86,8 @@ open_data_inspecs$eventno = str_pad(open_data_inspecs$eventno, 7, pad = "0")
 
 # one obs is not unique on eventno - remove these two rows (with the same eventno)
 #open_data_inspecs[, "dup"] = duplicated(open_data_inspecs$eventno)
+#open_data_inspecs = open_data_inspecs[,-grep("dup", names(open_data_inspecs))]
 open_data_inspecs = open_data_inspecs[open_data_inspecs$eventno != 4165469,]
-open_data_inspecs = open_data_inspecs[,-grep("dup", names(open_data_inspecs))]
 
 # memory
 clean_inspecs = open_data_inspecs
@@ -100,7 +100,7 @@ rm(open_data_inspecs)
 # read clean mine type data (1_clean_mines) - 86,362 obs, 3 vars
 mine_types = readRDS(mine_types_file_name)
 
-# merge open source inspections data with mine type data - 403,701 obs, 47 vars
+# merge open source inspections data with mine type data - 408,375 obs, 47 vars
 clean_inspecs = merge(clean_inspecs, mine_types, by = c("mineid"), all = T)
 
 # drop problematic merge observations
