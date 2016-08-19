@@ -131,6 +131,9 @@ names(merged_violations)[names(merged_violations) == "negligencepoints"] = "negl
 names(merged_violations)[names(merged_violations) == "gravityinjurypoints"] = "injuryillness.pts"
 names(merged_violations)[names(merged_violations) == "gravitylikelihoodpoints"] = "likelihood.pts"
 
+# There are 6 obs that have both section_of_act and part_section non-missing (which shouldn't really happen). We don't want these
+#sum(!is.na(merged_violations$section_of_act) & !is.na(merged_violations$part_section)) # 6
+
 ######################################################################################################################################
 
 # function to dummy out variables
@@ -262,19 +265,20 @@ for (i in 1:length(cfr_codes)) {
       }
 }
 
-for 
-
 # Remove things we won't use again.
-rm(MR_relevant_subsectcodes, MR_relevant_partcodes, cfr_codes,
+rm(relevant_subsectcodes, relevant_partcodes, cfr_codes,
   violationtypecodes, assessmenttypecodes, inspactycodes,
-  likelihoodcodes, injuryillnesscodes, negligencecodes, i, j, code)
+  likelihoodcodes, injuryillnesscodes, negligencecodes)
 
 ######################################################################################################################################
 
 # COLLAPSE VIOLATIONS DATA TO THE MINE-QUARTER LEVEL
 
-# Create variables to sum for violation counts, and create indicator for if violation was terminated (all should be terminated)
+# Create variables to sum for total violation counts (always 1) and number of Mine Act violations (only 1 if not missing Mine Act var)
 merged_violations$total_violations = 1
+merged_violations$total_mine_act_violations = ifelse(!is.na(merged_violations$section_of_act), 1, 0) # 4873 positive obs
+
+# Create indicator for if violation was terminated (all should be terminated)
 merged_violations$terminated = ifelse(merged_violations$typeoftermination == "Terminated", 1, 0)
 
 # Reformat vars to be summed so they are all numeric (required for ddply)
@@ -286,6 +290,7 @@ merged_violations$goodfaithind = ifelse(merged_violations$goodfaithind == 2, 1, 
 # Select all variables to sum when we collapse to the mine-quarter lever (the first regex will grab all vars created above)
 violations_to_sum = merged_violations[, c(grep("^[0-9][0-9]", names(merged_violations)), 
                                           match("total_violations", names(merged_violations)),
+                                          match("total_mine_act_violations", names(merged_violations)),
                                           match("excessive_history_ind", names(merged_violations)), 
                                           match("goodfaithind", names(merged_violations)), 
                                           match("terminated", names(merged_violations)),
@@ -295,6 +300,7 @@ violations_to_sum = merged_violations[, c(grep("^[0-9][0-9]", names(merged_viola
 # Collapse the variables that we need to sum
 summed_violations = ddply(violations_to_sum, c("mineid", "quarter"), function(x) colSums(x[, c(grep("^[0-9][0-9]", names(x)), 
                                                                                                match("total_violations", names(x)),
+                                                                                               match("total_mine_act_violations", names(x)),
                                                                                                match("excessive_history_ind", names(x)), 
                                                                                                match("goodfaithind", names(x)), 
                                                                                                match("terminated", names(x)))], na.rm = T))
