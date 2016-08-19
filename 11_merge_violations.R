@@ -36,13 +36,16 @@ clean_violations_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/3_merge
 # READ AND MERGE ASSESSMENTS DATA AND VIOLATIONS DATA, THEN CLEAN
 
 # read assessments data - 843,818 obs, 59 vars
+# THIS CONTAINS cfr_standard_code
 clean_assessments = readRDS(clean_assessments_file_name) 
 
 # read violations data - 868,722 obs, 62 vars
+# THIS CONTAINS section_of_act AND part_section
 clean_violations = readRDS(clean_violations_in_file_name)
 
 # merge assessments data with violations data (adding eventno to the merge doesn't change result) - 843,787 obs, 119 vars
 assessments_violations = merge(clean_violations, clean_assessments, by = c("mineid","violationno"))
+# sum(!is.na(clean_violations$section_of_act) & !is.na(clean_violations$part_section)) # 6
 
 # memory
 rm(clean_violations, clean_assessments)
@@ -236,8 +239,6 @@ merged_violations$primarymill =
 
 # READ CFR CODE DATA AND MERGE WITH VIOLATIONS DATA, THEN CLEAN AND OUTPUT
 
-merged_violations=merged_violations2
-
 # Read cfr code data - 2026 obs, 11 vars
 merged_cfr_key = readRDS(clean_cfr_key_file_name)
 
@@ -273,10 +274,6 @@ merged_violations = merged_violations[,-match("part_section2", names(merged_viol
 # prove the predictive power of these types of violations. - Sarah L. 8/19/2016 @ 1:02 PM. 
 #sum(is.na(merged_violations$section_of_act) & is.na(merged_violations$subsection_code))
 
-######################################################################################################
-
-# MERGE ON THE CFR KEY 
-
 # Merge cfr key data and violations data 
 merged_violations = merge(merged_violations, merged_cfr_key, by = "subsection_code", all = TRUE)
 
@@ -302,7 +299,7 @@ names(merged_violations)[grep(".x", names(merged_violations), fixed = TRUE)] = c
 rm(merged_cfr_key)
 
 # drop data that didn't merge onto violations
-merged_violations = merged_violations[complete.cases(merged_violations$violationno), ] # now 836,612 obs, 76,296 eventnos, 1669 mines
+merged_violations = merged_violations[complete.cases(merged_violations$violationno), ] # now 836,612 obs, 76,296 eventnos, 1669 mines, 115 vars
 
 # condition the per-day vars on positive denominator
   # there are 256 cases of zero inspection days and positive violation counts 6/6/16
