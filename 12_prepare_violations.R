@@ -85,33 +85,31 @@ merged_violations$inspacty = ifelse(grepl("(103|fatality|regular|complaint)", me
 merged_violations$violationtypecode = as.character(merged_violations$violationtypecode)
 merged_violations$assessmenttypecode = as.character(merged_violations$assessmenttypecode)
 
+# specify function for making the pts vars into numeric vars (from their current factor state)
 as.numeric.factor <- function(x) {as.numeric(levels(x))[x]}
 
+# remove the 3 observations that are missing for likelihood, injuryillness & negligence (now 836,609 obs)
+merged_violations = merged_violations[(!is.na(merged_violations$likelihood) & 
+                                       !is.na(merged_violations$injuryillness) & 
+                                       !is.na(merged_violations$negligence)),]
+
 # rename likelihood categories and deal with missing values
-levels(merged_violations$likelihood) = c("Unknown", "Highly", "NoLikelihood", "Occurred", "Reasonably", "Unlikely")
 merged_violations$likelihood.pts.con = merged_violations$likelihood
-levels(merged_violations$likelihood.pts.con) = c(5, 3, 0, 4, 2, 1)
+levels(merged_violations$likelihood.pts.con) = c(3, 0, 4, 2, 1)
 merged_violations$likelihood.pts.con = as.numeric.factor(merged_violations$likelihood.pts.con)
 merged_violations$likelihood = as.character(merged_violations$likelihood)
 
 # rename injuryillness categories and deal with missing values
-levels(merged_violations$injuryillness) = c("Unknown", "Fatal", "LostDays", "NoLostDays", "Permanent")
 merged_violations$injuryillness.pts.con = merged_violations$injuryillness
-levels(merged_violations$injuryillness.pts.con) = c(4, 3, 1, 0, 2)
+levels(merged_violations$injuryillness.pts.con) = c(3, 1, 0, 2)
 merged_violations$injuryillness.pts.con = as.numeric.factor(merged_violations$injuryillness.pts.con)
 merged_violations$injuryillness = as.character(merged_violations$injuryillness)
 
 # rename negligence categories and deal with missing values
-levels(merged_violations$negligence) = c("Unknown", "HighNegligence", "LowNegligence", "ModNegligence", "NoNegligence", "Reckless")
 merged_violations$negligence.pts.con = merged_violations$negligence
-levels(merged_violations$negligence.pts.con) = c(5, 3, 1, 2, 0, 4)
+levels(merged_violations$negligence.pts.con) = c(3, 1, 2, 0, 4)
 merged_violations$negligence.pts.con = as.numeric.factor(merged_violations$negligence.pts.con)
 merged_violations$negligence = as.character(merged_violations$negligence)
-
-# remove the 3 observations that are missing for likelihood, injuryillness & negligence (now 836,609 obs)
-merged_violations = merged_violations[(merged_violations$likelihood != "Unknown" & 
-                                       merged_violations$injuryillness != "Unknown" & 
-                                       merged_violations$negligence != "Unknown" ),]
 
 # Sarah emailed April Ramirez (DOL) @ 2:02PM on 8/18/16 to ask why our personsaffected var (from the violations data) disagrees 
 # with the gravitypersonpoints var (from the assessments data) if we compare how they should map into each other based on the CFR 
