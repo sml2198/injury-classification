@@ -113,12 +113,12 @@ merged_violations = merged_violations[(merged_violations$likelihood != "Unknown"
                                        merged_violations$injuryillness != "Unknown" & 
                                        merged_violations$negligence != "Unknown" ),]
 
-# Our personsaffected var (from the violations data) disagrees with the gravitypersonpoints var (from the assessments data)
-# If we compare how they should map into each other based on the CFR code:
-# http://www.ecfr.gov/cgi-bin/text-idx?SID=f563151d4c4ee003f464fc78296bc3a8&node=pt30.1.100&rgn=div
-# There is no way to check using the mine data retrieval system, or to tell which var is more reliable. I emailed April Ramirez 
-# (DOL) @ 2:02PM on 8/18/16. I'm going to use the violations-data var (numberaffected) for now because it is more complete
-# at the violations level. - Sarah L @ 2:15 8/18/16. 
+# Sarah emailed April Ramirez (DOL) @ 2:02PM on 8/18/16 to ask why our personsaffected var (from the violations data) disagrees 
+# with the gravitypersonpoints var (from the assessments data) if we compare how they should map into each other based on the CFR 
+# code, from here: http://www.ecfr.gov/cgi-bin/text-idx?SID=f563151d4c4ee003f464fc78296bc3a8&node=pt30.1.100&rgn=div
+# She explained that in 2000 the point values (for personsaffected) were different than they are today; she also confirmed this with 
+# Melanie Garris, Chief, Civil Penalty and Compliance Office. We use the personsaffected var from the violations data without concern.
+# She also shared that a decrease in the expected number of gravity person points could be the result of a court decision.
 names(merged_violations)[names(merged_violations) == "numberaffected"] = "personsaffected"
 
 # But, I'm still super skeptical of this variable, soI'm producing another one that is capped at 10 people
