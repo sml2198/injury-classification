@@ -22,7 +22,7 @@ open_data_viols_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleane
 
 # read violations data - 2193591 obs, 61 vars
   # dataset downloaded on 8/16/16 from http://arlweb.msha.gov/OpenGovernmentData/OGIMSHA.asp [MSHA open data platform (Violations)]
-open_data_viols = read.table(open_data_viols_in_file_name, header = T, sep = "|")
+open_data_viols = read.table(open_data_viols_in_file_name, header = T, sep = "|", na.strings=c("","NA"))
 
 # drop data from environments not of interest
   # facility means a mill/processing location, always above ground, according to April Ramirez @ DOL on 6/6/16
