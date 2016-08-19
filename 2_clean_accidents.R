@@ -95,9 +95,6 @@ names(acc_2000_16)[names(acc_2000_16) == "UG_MINING_METHOD_CD"] = "ugminingmetho
 #acc_2000_16$datasource = "opendata" 
 
 # format variables to facilitate merging
-acc_2000_16$mineid = sprintf("%07s", acc_2000_16$mineid)
-acc_2000_16$documentno = sprintf("%12s", acc_2000_16$documentno)
-acc_2000_16$documentno = as.character(acc_2000_16$documentno)
 acc_2000_16$oldoccupationcode = ""
 acc_2000_16$subunit = tolower(acc_2000_16$subunit)
 
@@ -150,10 +147,13 @@ acc_2000_16 = acc_2000_16[,-match("drop", names(acc_2000_16))]
 
 # LET'S JUST USE OPEN DATA FOR NOW. 
 accidents = acc_2000_16 # this leaves us with 75,016 obs 
+rm(acc_2000_16)
 
 # format variables
-accidents$mineid = sprintf("%07s", accidents$mineid)
-accidents$documentno = sprintf("%12s", accidents$documentno)
+accidents$mineid = as.character(as.numeric(accidents$mineid))
+accidents$documentno = as.character(as.numeric(accidents$documentno))
+accidents$mineid = str_pad(accidents$mineid, 7, pad = "0")
+accidents$documentno = str_pad(accidents$documentno, 12, pad = "0")
 
 # format variables
 names(accidents)[names(accidents) == "narrativemodified"] = "narrative"
@@ -170,7 +170,7 @@ accidents$equipmanufacturer = tolower(accidents$equipmanufacturer)
 accidents$accidentclassification = tolower(accidents$accidentclassification)
 accidents$occupation = tolower(accidents$occupation)
 
-# output clean and merged accidents data - 284,109 obs unique on documentno, 5592 unique mines
+# output clean and merged accidents data - 75,016 obs unique on documentno, 1,469 unique mines
 saveRDS(accidents, file = accidents_file_name)
 rm(list = ls())
 gc()
