@@ -264,6 +264,8 @@ for (i in 1:length(cfr_codes)) {
       }
 }
 
+for 
+
 # Remove things we won't use again.
 rm(MR_relevant_subsectcodes, MR_relevant_partcodes, cfr_codes,
   violationtypecodes, assessmenttypecodes, inspactycodes,
