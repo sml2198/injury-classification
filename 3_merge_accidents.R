@@ -22,8 +22,8 @@ mines_accidents_file_name = "X:/Projects/Mining/NIOSH/analysis/data/3_merged/mer
 # MERGE MINES AND ACCIDENTS DATA, THEN OUTPUT
 
 # read data files
-accidents = readRDS(accidents_file_name) #284,109 obs, 58 vars, 5592 unique mineids
-mines_quarters = readRDS(mines_file_name) #50,890 obs, 68 vars, 14,508 unique mineids
+accidents = readRDS(accidents_file_name) # 75,016 obs, 56 vars, 1,469 unique mineids
+mines_quarters = readRDS(mines_file_name) # 50,993 obs, 68 vars, 14,503 unique mineids
 
 # collapse mines data to the mine level (no quarters required) - these are already mine-level vars
 temp = mines_quarters[, c("mineid", 
@@ -42,7 +42,7 @@ temp = mines_quarters[, c("mineid",
                           "daysperweek",
                           "productionshiftsperday")]
 
-# average vars that are quarter-specific - wind up with 1587 observations (equal to number of unique mines, as it should be)
+# average vars that are quarter-specific - wind up with 14,503 observations (equal to number of unique mineids, as it should be)
 vars_to_avrg = ddply(mines_quarters[, c("hours_qtr",
                                           "employment_qtr", 
                                           "coal_prod_qtr", 
@@ -56,9 +56,10 @@ names(vars_to_avrg)[names(vars_to_avrg) == "hours_qtr"] = "avg_hours_qtr"
 names(vars_to_avrg)[names(vars_to_avrg) == "employment_qtr"] = "avg_employment_qtr"
 names(vars_to_avrg)[names(vars_to_avrg) == "coal_prod_qtr"] = "avg_coal_prod_qtr"
 
-mines = merge(vars_to_avrg, temp, by = "mineid") # should have 50,890 observations, 18 vars, 14,508 unique mineids
+# merge the collapsed data with mine-level data
+mines = merge(vars_to_avrg, temp, by = "mineid") # should have 50,993 observations, 18 vars, 14,503 unique mineids
 
-# keep unique mine info for 14,508 unique mines
+# keep unique mine info for 14,503 unique mines - get rid of quarterly info
 mines = mines[!duplicated(mines$mineid), ]
 
 # now remove useless datasets
