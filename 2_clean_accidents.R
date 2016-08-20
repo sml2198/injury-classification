@@ -10,6 +10,8 @@
 
 ######################################################################################################
 
+library(stringr)
+
 # define file names
   # input: open source accidents data (post-2000)
 acc_2000_16_file_name = "X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA/open_data/Accidents.txt" 
