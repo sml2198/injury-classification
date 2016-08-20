@@ -1,9 +1,8 @@
 # NIOSH Project 2014-N-15776
 
-# File number - File name
-  # File description
+# 14 - Data Spelunking
 
-# Last edit 8/16/16
+# Last edit 8/18/16
 
 ######################################################################################################
 
@@ -25,12 +24,14 @@ data$idesc =
   data$productionshiftsperday =
   data$minesizepoints = 
   data$terminated = 
-  data$MR_proportion = 
-  data$num_no_terminations = NULL
+  data$MR_proportion = NULL
 
 # reformat variables because R is a lil bitch
 names(data)[grep("^[0-9]", names(data))] = paste("p", names(data)[grep("^[0-9]", names(data))], sep = "")
+data$mineid = as.character(data$mineid)
+data$MR_indicator = as.factor(data$MR_indicator)
 data$quarter = as.numeric(data$quarter)
+data$no_terminations = as.factor(data$no_terminations)
 
 ######################################################################################################
 
@@ -109,12 +110,12 @@ barplot(table(orphans$quarter),
 # do these quarters have violations data?
 
 # get missing quarters using fixed min/max
-temp = expand.grid(mineid = unique(data$mineid), quarter = unique(data$quarter))
-temp = temp[order(temp$mineid, temp$quarter), ]
-data_all_quarters_bigger = merge(data, temp, all.x = TRUE, all.y = TRUE, by = c("mineid", "quarter"))
+# temp = expand.grid(mineid = unique(data$mineid), quarter = unique(data$quarter))
+# temp = temp[order(temp$mineid, temp$quarter), ]
+# data_all_quarters_bigger = merge(data, temp, all.x = TRUE, all.y = TRUE, by = c("mineid", "quarter"))
 
 # bye
-rm(temp)
+# rm(temp)
 
 ######################################################################################################
 
@@ -123,7 +124,7 @@ rm(temp)
 # take avgs by mine
 mine_avgs = aggregate(data_all_quarters[, -match("quarter", names(data_all_quarters))], 
                        list(data_all_quarters$mineid), 
-                       FUN = function(x) mean(as.numeric(as.character(x)), na.rm = TRUE))
+                       FUN = function(x) mean(as.numeric(x), na.rm = TRUE))
 
 variables = c("p47", 
               "p47.likelihood.pts", "p47.likelihood.pts.con",
@@ -160,6 +161,18 @@ for (var in variables) {
 # bye 
 rm(var, variables)
 
+# I'm hilarious
+fit = lm(as.numeric(mine_avgs$MR) ~ as.numeric(mine_avgs$mineid))
+summary(fit)
+plot(as.numeric(mine_avgs$mineid), mine_avgs$MR, 
+     main = "Does Mine ID (numeric) Predict Accidents?",
+     xlab = "Mine ID (NOT A FACTOR)", 
+     ylab = "# of Accidents")
+abline(fit, col = "red")
+
+# bye
+rm(fit)
+
 ######################################################################################################
 
 # TIME TRENDS
@@ -167,7 +180,7 @@ rm(var, variables)
 # take avgs by quarter
 q_avgs = aggregate(data_all_quarters[, -match("mineid", names(data_all_quarters))], 
                    list(as.character(data_all_quarters$quarter)), 
-                   FUN = function(x) mean(as.numeric(as.character(x)), na.rm = TRUE))
+                   FUN = function(x) mean(as.numeric(x), na.rm = TRUE))
 
 variables = c("p47", 
               "p47.likelihood.pts", "p47.likelihood.pts.con",
@@ -232,38 +245,115 @@ lines(q_avgs_big$quarter, q_avgs_small$total_violations, col = "blue")
 data_all_quarters$quarter = as.yearqtr(data_all_quarters$quarter)
 UBB = data_all_quarters[data_all_quarters$mineid == "4608436", c("quarter", "MR", "totalinjuries")]
 UBB = ts(UBB$MR, start = c(2000, 1), end = c(2012, 2), frequency = 4)
-plot(UBB)
+# plot(UBB)
+
+# clean up yo mess
+data_all_quarters$quarter = as.numeric(data_all_quarters$quarter)
 
 ######################################################################################################
 
 # INFO IN EACH COLUMN
 
-info = data.frame(variable = character(ncol(data)),
-                  variance = numeric(ncol(data)))
+# plot all variables
+variables = names(data_all_quarters)
+variables = variables[-match(c("quarter", "mineid", "MR", "MR_indicator"), variables)]
 
-info$variable = names(data)
-
-info = info[!(info$variable == "mineid" | info$variable == "quarter"), ]
-
-# variance 
-for (i in 1:nrow(info)) {
-  variable = as.numeric(data[, info$variable[i]])
-  variable = (variable - min(variable, na.rm = TRUE)) / (max(variable, na.rm = TRUE) - min(variable, na.rm = TRUE)) # normalize
-  info$variance[i] = var(variable, na.rm = TRUE)
+for (var in variables) {
+  plot(sort(data_all_quarters[, var]), 
+       main = paste("Sorted", var, sep = " "), 
+       ylab = var)
 }
 
 # bye
-rm(i, variable)
+rm(var)
 
-info[order(info$variance, decreasing = TRUE)[1:10], ]
+# create normalized dataset
+data_all_quarters_norm = data_all_quarters
 
-plot(info$variance, 
+data_all_quarters_norm$mineid = 
+  data_all_quarters_norm$quarter = 
+  data_all_quarters_norm$MR = 
+  data_all_quarters_norm$MR_indicator =  NULL
+
+for (j in 1:ncol(data_all_quarters_norm)) {
+  var = as.numeric(data_all_quarters_norm[, j])
+  var = (var - min(var, na.rm = TRUE)) / (max(var, na.rm = TRUE) - min(var, na.rm = TRUE)) # normalize
+  data_all_quarters_norm[, j] = var
+}
+
+# bye
+rm(j, var)
+
+# variance of each variable
+var_var = data.frame(variable = character(ncol(data_all_quarters_norm)),
+                     variance = numeric(ncol(data_all_quarters_norm)))
+
+var_var$variable = names(data_all_quarters_norm)
+
+for (i in 1:nrow(var_var)) {
+  variable = var_var$variable[i]
+  variance = var(as.numeric(data_all_quarters_norm[, variable]), na.rm = TRUE)
+  var_var$variance[i] = variance
+}
+
+var_var[order(var_var$variance, decreasing = TRUE)[1:10], ]
+
+plot(var_var$variance, 
      main = "Normalized Variance",
      xlab = "Variable Index",
      ylab = "Normalized Variance")
 
+# bye
+rm(i, variable, variance)
+
+# correlation between all variables
+data_all_quarters$no_terminations = as.numeric(data_all_quarters$no_terminations)
+variables = names(data_all_quarters)
+variables = variables[-match(c("quarter", "mineid", "MR_indicator"), variables)]
+cor_mat = cor(data_all_quarters[, variables], use = "complete.obs")
+
+# bye
+rm(variables)
+
+# top correlations with MR
+sort(cor_mat[, "MR"], decreasing = TRUE)[1:10]
+
+# find big correlations
+find_big_cor = function(df, cor_mat, r) {
+  pairs = which(abs(cor_mat) > r, arr.ind = TRUE)
+  
+  for (i in 1:nrow(pairs)) {
+    var1 = rownames(cor_mat)[pairs[i, ][1]]
+    var2 = rownames(cor_mat)[pairs[i, ][2]]
+    
+    newrow = data.frame(var1, var2, cor_mat[var1, var2])
+    df = rbind(df, newrow)
+  }
+  
+  for (j in 1:nrow(df)) {
+    df[j, 1:2] = sort(df[j, 1:2])
+  }
+  df = df[! duplicated(df[1:2]),]
+  
+  names(df) = c("var1", "var2", "r")
+  
+  df = df[df$r != 1, ]
+  
+  return(df)
+}
+
+big_cor = data.frame(var1 = character(), 
+                     var2 = character(),
+                     r = numeric())
+
+big_cor = find_big_cor(big_cor, cor_mat, 0.5)
+big_cor = big_cor[order(big_cor$r, decreasing = TRUE), ]
+
 # maximal information coefficient
-mic = mine(data[, -match(c("mineid", "quarter", "MR"), names(data))], y = data$MR, alpha = 0.7, na.rm = TRUE)
+variables = names(data_all_quarters)
+variables = variables[-match(c("quarter", "mineid", "MR_indicator", "MR"), variables)]
+
+mic = mine(data_all_quarters[, variables], y = data_all_quarters$MR, alpha = 0.7, na.rm = TRUE)
 
 # this code from: https://www.r-bloggers.com/maximal-information-coefficient-part-ii/
 res = data.frame(MIC = c(mic$MIC))
@@ -272,16 +362,13 @@ res$MIC_Rank = nrow(res) - rank(res$MIC, ties.method="first") + 1
 res = res[order(res$MIC_Rank),]
 res
 
-# oops, do I need to normalize first?
-data_norm = data
-data_norm$mineid = data_norm$quarter = NULL
+# I'll fix it on Monday
+mic_norm = mine(data_all_quarters_norm[, variables], y = data_all_quarters_norm$MR, alpha = 0.7, na.rm = TRUE)
 
-for (j in 1:ncol(data_norm)) {
-  variable = as.numeric(data_norm[, j])
-  variable = (variable - min(variable, na.rm = TRUE)) / (max(variable, na.rm = TRUE) - min(variable, na.rm = TRUE)) # normalize
-  data_norm[, j] = variable
-}
-
-mic_norm = mine(data_norm[, -match("MR", names(data_norm))], y = data_norm$MR, alpha = 0.7, na.rm = TRUE)
+res_norm = data.frame(MIC = c(mic_norm$MIC))
+rownames(res_norm) = rownames(mic_norm$MIC)
+res_norm$MIC_Rank = nrow(res_norm) - rank(res_norm$MIC, ties.method="first") + 1
+res_norm = res_norm[order(res_norm$MIC_Rank),]
+res_norm
 
 ######################################################################################################
