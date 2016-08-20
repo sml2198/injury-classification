@@ -143,7 +143,7 @@ saveRDS(yearly_employment, file = yearly_employment_out_file_name)
 
 # read mines data
   # dataset downloaded on 4/20/16 from http://arlweb.msha.gov/OpenGovernmentData/OGIMSHA.asp - 86,362 obs unique on mineid, 59 vars
-open_data_mines = read.table(open_data_mines_file_name, header = T, sep = "|")
+open_data_mines = read.table(open_data_mines_file_name, header = T, sep = "|", na.strings=c("","NA"))
 
 # re-name variables
 names(open_data_mines)[names(open_data_mines) == "MINE_ID"] = "mineid"
@@ -208,11 +208,15 @@ open_data_mines$mineid = str_pad(open_data_mines$mineid, 7, pad = "0")
 mine_types = open_data_mines[, c(match("mineid", names(open_data_mines)), 
                                      match("minetype", names(open_data_mines)),
                                      match("coalcormetalmmine", names(open_data_mines)))]
-saveRDS(mine_types, file = mine_types_file_name) #86,362 obs unique on mineid, 60 vars
+saveRDS(mine_types, file = mine_types_file_name) #86,362 obs unique on mineid, 3 vars
 
 ######################################################################################################
 
 # MERGE MINES AND EMPLOYMENT/PRODUCTION DATA, THEN CLEAN
+
+# drop data not from environment of interest - down to 14,705 obs
+open_data_mines = open_data_mines[open_data_mines$coalcormetalmmine == "C",]
+open_data_mines = open_data_mines[open_data_mines$minetype == "Underground",]
 
 # merge mines and employment/production data on mineid, year, and quarter - wind up with 125692 obs, 73 vars, 86135 unique mines
 # drop observations missing for coalcormetalmmine
@@ -226,7 +230,7 @@ mines_quarters = mines_quarters[!is.na(mines_quarters$coalcormetalmmine), ] # st
 mines_quarters = merge(mines_quarters, underreporting_employment, by = c("mineid", "year", "quarter"), all = T)
 mines_quarters = mines_quarters[!is.na(mines_quarters$coalcormetalmmine), ] # still 126,313 obs (unique on mineid-year-quarter)
 
-# drop data from environments not of interest - wind up with 50,993 obsunique on mine-year-quarter, 73 vars, 14,503 unique mines
+# drop data from environments not of interest - wind up with 51,195 obs unique on mine-year-quarter, 73 vars, 14,503 unique mines
   # (facility means a mill/processing location, always above ground, according to April Ramirez @ DOL on 6/6/16)
 mines_quarters = mines_quarters[mines_quarters$coalcormetalmmine == "C", ]
 mines_quarters = mines_quarters[mines_quarters$minetype == "Underground", ]
