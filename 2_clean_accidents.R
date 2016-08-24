@@ -15,8 +15,6 @@ library(stringr)
 # define file names
   # input: open source accidents data (post-2000)
 acc_2000_16_file_name = "X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA/open_data/Accidents.txt" 
-  # input: non-open source accidents data (1983-2013)
-#acc_83_13_file_name = "X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA/rec_2015_06_02/Accidents_1983_2013/Accidents_1983_2013.csv" 
   # output: clean and merged accidents data
 accidents_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_accidents.rds" 
 
@@ -93,9 +91,6 @@ names(acc_2000_16)[names(acc_2000_16) == "UG_LOCATION_CD"] = "uglocationcode"
 names(acc_2000_16)[names(acc_2000_16) == "UG_MINING_METHOD"] = "ugminingmethod"
 names(acc_2000_16)[names(acc_2000_16) == "UG_MINING_METHOD_CD"] = "ugminingmethodcode"
 
-# create new variable to track data source
-#acc_2000_16$datasource = "opendata" 
-
 # format variables to facilitate merging
 acc_2000_16$oldoccupationcode = ""
 acc_2000_16$subunit = tolower(acc_2000_16$subunit)
@@ -104,46 +99,6 @@ acc_2000_16$subunit = tolower(acc_2000_16$subunit)
 acc_2000_16$drop = ifelse((acc_2000_16$calendaryear == 2016 & acc_2000_16$calendarquarter > 1), 1, 0)
 acc_2000_16 = acc_2000_16[acc_2000_16$drop == 0,] # now 75,016 obs, 1469 unique mineids
 acc_2000_16 = acc_2000_16[,-match("drop", names(acc_2000_16))]
-
-######################################################################################################
-
-# # READ AND CLEAN NON-OPEN SOURCE ACCIDENTS DATA (1983-2013)
-# 
-# # read non-open source accidents data (1983-2013)
-# # originally a .txt file, converted to .csv format in Stata
-# acc_83_13 = read.csv(acc_83_13_file_name, header = TRUE, sep = ",",  stringsAsFactors = FALSE) # 656,373 obs unique on documentno, 22,593 unique mines
-# 
-# # drop data from times and environments not of interest, wind up with 209,095 obs unique on documentno, 4738 unique mines
-# acc_83_13 = acc_83_13[acc_83_13$calendaryear >= 2000, ]
-# acc_83_13 = acc_83_13[acc_83_13$subunit == "UNDERGROUND", ]
-# 
-# # track data source
-# acc_83_13$datasource = "msha"
-# 
-# # format variables to facilitate merging
-# acc_83_13$mineid = sprintf("%07s", acc_83_13$mineid)
-# acc_83_13$documentno = sprintf("%12s", acc_83_13$documentno)
-# acc_83_13$documentno = as.character(acc_83_13$documentno)
-# acc_83_13$subunit = tolower(acc_83_13$subunit)
-# acc_83_13$controllername = ""
-# acc_83_13$operatorname = ""
-# acc_83_13$fiscalquarter = ""
-# acc_83_13$fiscalyear = ""
-# acc_83_13$investigationbegindate = ""
-#
-# # MERGE OPEN SOURCE ACCIDENTS DATA (post-2000) AND NON-OPEN SOURCE ACCIDENTS DATA (1983-2013), THEN OUTPUT
-# accidents = rbind(acc_83_13, acc_2000_16) # 284,111 obs unique on documentno, 5,593 unique mines
-#
-# # remove problematic observations identified from previous analysis in Stata:
-# accidents$problem = ifelse((accidents$documentno == "220052270088" | accidents$documentno == "220133400002" |
-#                               accidents$documentno == "220140070002" | accidents$documentno == "220153560029" |
-#                               accidents$documentno == "220153240004" | accidents$documentno == "220152580041" |
-#                               accidents$documentno == "220151480037" | accidents$documentno == "220151520023" |
-#                               accidents$documentno == "220151910032" | accidents$documentno == "220151970035" |
-#                               accidents$documentno == "220152260215" | accidents$documentno == "220152260218" |
-#                               accidents$documentno == "220153080004" | accidents$documentno == "220160040025" |
-#                               accidents$documentno == "220160680001"), 1, 0)
-# accidents = accidents[accidents$problem == 0,] # now 284,103 obs
 
 ######################################################################################################
 
