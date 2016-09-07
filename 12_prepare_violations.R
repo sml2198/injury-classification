@@ -169,21 +169,21 @@ rm(dum_vars, var)
 # For part-specific variable creation
 if (injury.type == "MR") {
   if (relevant.only.option != "on") {
-    relevant_partcodes = as.list(levels(factor(merged_violations[merged_violations$MR_relevant == 1 | merged_violations$MR_maybe_relevant == 1,]$cfr_part_code)))
-    relevant_subsectcodes = as.list(levels(factor(merged_violations[merged_violations$MR_relevant == 1 | merged_violations$MR_maybe_relevant == 1,]$subsection_code)))
+    relevant_partcodes = as.list(levels(factor(merged_violations[merged_violations$MR_relevant == 1 | merged_violations$MR_maybe_relevant == 1, ]$cfr_part_code)))
+    relevant_subsectcodes = as.list(levels(factor(merged_violations[merged_violations$MR_relevant == 1 | merged_violations$MR_maybe_relevant == 1, ]$subsection_code)))
   }
   if (relevant.only.option == "on") {
-    relevant_partcodes = as.list(levels(factor(merged_violations[merged_violations$MR_relevant == 1,]$cfr_part_code)))
+    relevant_partcodes = as.list(levels(factor(merged_violations[merged_violations$MR_relevant == 1, ]$cfr_part_code)))
     relevant_subsectcodes = as.list(levels(factor(merged_violations[merged_violations$MR_relevant == 1, ]$subsection_code)))
   }
 }
 if (injury.type == "PS") {
   if (relevant.only.option != "on") {
-    relevant_partcodes = as.list(levels(factor(merged_violations[merged_violations$PS_relevant == 1 | merged_violations$PS_maybe_relevant == 1,]$cfr_part_code)))
-    relevant_subsectcodes = as.list(levels(factor(merged_violations[merged_violations$PS_relevant == 1 | merged_violations$PS_maybe_relevant == 1,]$subsection_code)))
+    relevant_partcodes = as.list(levels(factor(merged_violations[merged_violations$PS_relevant == 1 | merged_violations$PS_maybe_relevant == 1, ]$cfr_part_code)))
+    relevant_subsectcodes = as.list(levels(factor(merged_violations[merged_violations$PS_relevant == 1 | merged_violations$PS_maybe_relevant == 1, ]$subsection_code)))
   }
   if (relevant.only.option == "on") {
-    relevant_partcodes = as.list(levels(factor(merged_violations[merged_violations$PS_relevant == 1,]$cfr_part_code)))
+    relevant_partcodes = as.list(levels(factor(merged_violations[merged_violations$PS_relevant == 1, ]$cfr_part_code)))
     relevant_subsectcodes = as.list(levels(factor(merged_violations[merged_violations$PS_relevant == 1, ]$subsection_code)))
   }
 }
@@ -267,25 +267,28 @@ rm(relevant_subsectcodes, relevant_partcodes, cfr_codes,
 
 ######################################################################################################################################
 
-# MAKE PART-LEVEL VARS ONLY CONTAIN DATA FOR OBS THAT ARE RELEVANT OR MAYBE-RELEVANT
-# Currently, part-level vars contain information for all observations in an part with any relevant
+# MAKE PART-LEVEL VARS ONLY CONTAIN DATA FOR OBVS THAT ARE RELEVANT OR MAYBE-RELEVANT
+
+# Currently, part-level vars contain information for all observations in any part with any relevant
 # subsections. We only want our part-level vars to reflect information about observations that are
-# relevant or maybe relevant, before we collapse to the mine-quarter level.
+# relevant or maybe relevant (at the subsection level), before we collapse to the mine-quarter level.
 
 varlist = names(merged_violations[, grep("^[0-9][0-9].", names(merged_violations))])
 
-if (injury.type == "MR") {
+if (injury.type == "MR" & relevant.only.option = "off") {
   merged_violations$relevant = ifelse((merged_violations$MR_relevant == 1 |
                                         merged_violations$MR_maybe_relevant == 1), 1, 0)
 }
-if (injury.type == "PS") {
+
+if (injury.type == "PS" & relevant.only.option = "off") {
   merged_violations$relevant = ifelse((merged_violations$PS_relevant == 1 |
                                          merged_violations$PS_maybe_relevant == 1), 1, 0)
 }
 
+# This problem only affects the part-level data preparation. Subsection-level data is already (obviously) subsection specific.
 if (data.level == "part") {
   for (j in 1:length(varlist)) {
-      merged_violations$varlist[j] = ifelse(merged_violations$relevant == 1, 0, merged_violations$varlist[j])
+      merged_violations[, varlist[j]] = ifelse(merged_violations$relevant == 1, 0, merged_violations[, varlist[j]])
   }
 }
 
