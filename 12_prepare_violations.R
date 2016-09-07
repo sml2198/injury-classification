@@ -222,7 +222,7 @@ if (data.level == "subsection") {
 }
 cfr_codes = unlist(cfr_codes)
     
-# This loop creates the part-specific variable-specific dummies (which will later be collapsed to the mine-quarter level).
+# This loop creates the part-specific variable-specific vars/dummies (which will later be collapsed to the mine-quarter level).
 for (i in 1:length(cfr_codes)) {
     merged_violations[, cfr_codes[i]] = ifelse(merged_violations$cfr_part_code == cfr_codes[i], 1, 0)
     merged_violations[, paste(cfr_codes[i], "personsaffected", sep = ".")] = apply(cbind(merged_violations[, "personsaffected"], merged_violations[, cfr_codes[i]]), 1, prod)
@@ -238,11 +238,6 @@ for (i in 1:length(cfr_codes)) {
     merged_violations[, paste(cfr_codes[i], "injuryillness.pts.con", sep = ".")] = apply(cbind(merged_violations[, "injuryillness.pts.con"], merged_violations[, cfr_codes[i]]), 1, prod)
     merged_violations[, paste(cfr_codes[i], "likelihood.pts.con", sep = ".")] = apply(cbind(merged_violations[, "likelihood.pts.con"], merged_violations[, cfr_codes[i]]), 1, prod)
     merged_violations[, paste(cfr_codes[i], "personsaffected.pts.con", sep = ".")] = apply(cbind(merged_violations[, "personsaffected.pts.con"], merged_violations[, cfr_codes[i]]), 1, prod)
-    
-    # WE NO LONGER CARE ABOUT THESE VARS  
-    #merged_violations[, paste(cfr_codes[i], "penaltypoints", sep = ".")] = apply(cbind(merged_violations[, "penaltypoints"], merged_violations[, cfr_codes[i]]), 1, prod)
-    #merged_violations[, paste(cfr_codes[i], "sigandsubdesignation", sep = ".")] = ifelse(merged_violations[, cfr_codes[i]] == 1, merged_violations[, "sigandsubdesignation"], 0)
-    #merged_violations[, paste(cfr_codes[i], "contractor_violation_cnt", sep = ".")] = apply(cbind(merged_violations[, "contractor_violation_cnt"], merged_violations[, cfr_codes[i]]), 1, prod)
 
       # Dummied out categorical vars:
       for (j in 1:length(inspactycodes)) {
@@ -269,6 +264,30 @@ for (i in 1:length(cfr_codes)) {
 rm(relevant_subsectcodes, relevant_partcodes, cfr_codes,
   violationtypecodes, assessmenttypecodes, inspactycodes,
   likelihoodcodes, injuryillnesscodes, negligencecodes)
+
+######################################################################################################################################
+
+# MAKE PART-LEVEL VARS ONLY CONTAIN DATA FOR OBS THAT ARE RELEVANT OR MAYBE-RELEVANT
+# Currently, part-level vars contain information for all observations in an part with any relevant
+# subsections. We only want our part-level vars to reflect information about observations that are
+# relevant or maybe relevant, before we collapse to the mine-quarter level.
+
+varlist = names(merged_violations[, grep("^[0-9][0-9].", names(merged_violations))])
+
+if (injury.type == "MR") {
+  merged_violations$relevant = ifelse((merged_violations$MR_relevant == 1 |
+                                        merged_violations$MR_maybe_relevant == 1), 1, 0)
+}
+if (injury.type == "PS") {
+  merged_violations$relevant = ifelse((merged_violations$PS_relevant == 1 |
+                                         merged_violations$PS_maybe_relevant == 1), 1, 0)
+}
+
+if (data.level == "part") {
+  for (j in 1:length(varlist)) {
+      merged_violations$varlist[j] = ifelse(merged_violations$relevant == 1, 0, merged_violations$varlist[j])
+  }
+}
 
 ######################################################################################################################################
 
@@ -515,10 +534,6 @@ prediction_data = prediction_data[, c(-grep("merge", names(prediction_data)), -g
 
 # Replace categorical variables with numeric levels
 prediction_data$year = factor(prediction_data$year)
-# prediction_data$minestatus = ifelse(prediction_data$minestatus == "Active", 1, 
-#                                     ifelse(prediction_data$minestatus == "NonProducing", 2, 
-#                                            ifelse(prediction_data$minestatus == "Temporarily Idled", 3, 
-#                                                   ifelse(prediction_data$minestatus == "Unknown", 4, NA))))
 
 prediction_data$idesc = ifelse(prediction_data$idesc == "Hazard", 1, 
                                ifelse(prediction_data$idesc == "Ignition or Explosion", 2, 
@@ -530,33 +545,10 @@ prediction_data$idesc = ifelse(prediction_data$idesc == "Hazard", 1,
 
 ######################################################################################################################################
 
-# FILL IN MISSING VALUES OF MINE CHARACTERISTICS BY MINE_ID/QUARTER GROUPS 
+# FINAL VARIABLE CLEANING AND PREP
 
 # Group data by mines and order the data by mine-quarter
 prediction_data = prediction_data[order(prediction_data[,"mineid"], prediction_data[,"quarter"]),]
-
-# # The mines that are missing productionshiftsperday (1311) and idesc(5) are missing it for all quarters, so the loops wouldn't do anything
-# # THIS IS OLD CODE 
-# # na.locf pipes the first non-missing value into NA's by mine-quarter group
-# prediction_data$productionshiftsperday = na.locf(prediction_data$productionshiftsperday)
-# prediction_data$idesc = na.locf(prediction_data$idesc)
-
-# # Now replace any NA's in remaining numeric vars by randomly sampling from the distribution of the column
-# var_classes = sapply(prediction_data[,names(prediction_data)], class)
-# num_vars = names(var_classes[c(grep("numeric", var_classes), grep("integer", var_classes))])
-# ignore_vars = c("productionshiftsperday", "idesc")
-# num_vars = setdiff(num_vars, ignore_vars)
-# for (i in 1:length(num_vars)) {
-#   i_rowsmissing = row.names(prediction_data)[is.na(prediction_data[, num_vars[i]])]
-#   while (sum(!complete.cases(prediction_data[, num_vars[i]])) > 0) {
-#     replace_rows = sample(setdiff(row.names(prediction_data), i_rowsmissing), length(i_rowsmissing), replace = T)
-#     prediction_data[i_rowsmissing, num_vars[i]] = prediction_data[replace_rows, num_vars[i]]
-#   }
-# }
-
-#####################################################################################################################################
-
-# FINAL VARIABLE CLEANING AND PREP
 
 # Add variables for binary and proportional dependent vars
 prediction_data$MR_indicator = ifelse(prediction_data$MR > 0, 1, 0)
@@ -571,23 +563,6 @@ prediction_data$no_terminations = ifelse(prediction_data$terminated < prediction
 # This var is the number of non-terminated violations in a mine quarter. Probably can't be used due to collinearity, but not sure. 
 prediction_data$num_no_terminations = ifelse(prediction_data$terminated < prediction_data$total_violations, 
                                              prediction_data$total_violations-prediction_data$terminated, 0)
-
-#####################################################################################################################################
-
-# # CREATE LAGGED VARS & COMPOUND LAGGED VARS
-
-# # Create lagged variables of various orders (currently code exists for 6 orders)
-# prediction_data = as.data.table(prediction_data[order(prediction_data$mineid, prediction_data$quarter, na.last = T),])
-# prediction_data[, c("MR_l1", "MR_l2", "MR_l3", "MR_l4", "MR_l5", "MR_l6", 
-#                     "MR_indicator_l1", "MR_indicator_l2", "MR_indicator_l3", "MR_indicator_l4", "MR_indicator_l5", "MR_indicator_l6",
-#                     "MR_proportion_l1", "MR_proportion_l2", "MR_proportion_l3", "MR_proportion_l4","MR_proportion_l5","MR_proportion_l6") := shift(.SD, 1:6), 
-#                 by = mineid, .SDcols = c("MR", "MR_indicator", "MR_proportion")]
-# prediction_data = as.data.frame(prediction_data)
-#
-# # Create compound lagged vars: in this formulation, order 6 will be the sum of all violations (or other lagged var) over 
-# # the last 6 quarters, instead of simply the value of that var 6 quarters ago.
-# prediction_data$sum_75_1_2 = rowSums(prediction_data[,c("75_l1", "75_l2")])
-# prediction_data$sum_75_1_3 = rowSums(prediction_data[,c("75_l1", "75_l2", "75_l3")])
 
 ######################################################################################################################################
 
