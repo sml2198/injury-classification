@@ -70,8 +70,7 @@ mr.fatalities = read.csv(fatalities_data_file_name, header = TRUE, sep = ",", nr
 
 # load in real accidents data for classification
 if (data.type == "real accidents data") {
-  #accidents.data = read.csv("C:/Users/slevine2/Dropbox (Stanford Law School)/R-code/prepped_mines_accidents.csv", header = TRUE, sep = ",", stringsAsFactors = FALSE)
-  accidents.data = readRDS(accidents_data_file_name) # 199,019 obs unique on documentno, 4829 unique mineids
+  accidents.data = readRDS(accidents_data_file_name) # 75,016 obs unique on documentno, 1469 unique mineids
 }
 
 ######################################################################################################
@@ -968,7 +967,7 @@ if (data.type == "real accidents data") {
                                       -grep("working.on", names(accidents.data)), -grep("wrench", names(accidents.data)))]
     
   write.csv(accidents.data, file = classified_accidents_file_name, row.names = FALSE)
-  # still 199019 obs, 35187 MR injuries, 162966 non-MR injuries.
+  # still 75,016 obs, 14,978 MR injuries, 59,704 non-MR injuries.
 }
 rm(list = ls())
 gc()
