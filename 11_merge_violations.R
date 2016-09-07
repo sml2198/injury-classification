@@ -277,6 +277,19 @@ merged_violations = merged_violations[,-match("part_section2", names(merged_viol
 # Merge cfr key data and violations data 
 merged_violations = merge(merged_violations, merged_cfr_key, by = "subsection_code", all = TRUE)
 
+
+# Some observations do not have relevant/mayeb relevant designations mapped onto them (are missing for these vars).
+# This happens in two cases: (1) if there is a subsection that we have NOT marked in terms of relevance in the cfr
+# key. This only happens for subsections codes lower than 40. In our meeting with NIOSH we strictly considered parts
+# 40 and above, and (2) if subsection_code is code, which happens in cases of violations of the Mine Act. These
+# observations are never missing mineactsectioncode. Here, we make all relevance vars equal to zero if missing.
+
+varlist = names(merged_violations[, grep("relevant", names(merged_violations))])
+  
+for (j in 1:length(varlist)) {
+   merged_violations[, varlist[j]] = ifelse(is.na(merged_violations[, varlist[j]]), 0, merged_violations[, varlist[j]])
+}
+                              
 # Flag observations merged from each dataset - this is only useful for comparing the merge to Stata output
 merged_violations[, "merge"] = ifelse(!is.na(merged_violations$subsection_code_marker.y) 
                                       & !is.na(merged_violations$subsection_code_marker.x), 3, 0)
