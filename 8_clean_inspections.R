@@ -1,6 +1,6 @@
 # NIOSH Project 2014-N-15776
 
-# 8 - Clean Inspections
+# 8 - Clean Inspections Data
   # Reads and cleans inspections data 
   # Reads clean mine type data (1_clean_mines)
   # Merges and cleans inspections data and mine type data
