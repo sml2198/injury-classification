@@ -36,7 +36,7 @@ fatalities_data_file_name = "X:/Projects/Mining/NIOSH/analysis/data/4_coded/code
   # input: all accidents data, unclassified, cleaned in 2_clean_accidents.R and merged on mines in 3_merge_accidents.R
 accidents_data_file_name = "X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_mines_accidents.rds"
   # output: all accidents, now classified after algorithm
-classified_accidents_file_name = "C:/Users/slevine2/Dropbox (Stanford Law School)/R-code/accidents_with_predictions.csv"
+classified_accidents_file_name = "X:/Projects/Mining/NIOSH/analysis/data/4_coded/accidents_with_predictions.csv"
 
 ######################################################################################################
 
