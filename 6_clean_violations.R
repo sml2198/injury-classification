@@ -1,6 +1,6 @@
 # NIOSH Project 2014-N-15776
 
-# 6 - Clean Violations
+# 6 - Clean Violations Data
   # Reads, cleans, then outputs violations data
 
 # Last edit 8/3/16
