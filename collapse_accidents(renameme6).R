@@ -17,7 +17,7 @@ library(zoo)
 # input: coded accidents data (contains MR indicator - no PS indicator yet) produced in 5_analyze_MR.R
 mines_accidents_coded_in_file_name = "X:/Projects/Mining/NIOSH/analysis/data/4_coded/accidents_with_predictions.csv"
   # output: collapsed coded accidents data 
-mines_accidents_coded_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/4_collapsed/collapsed_accidents.rds"
+mines_accidents_coded_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/4_collapsed/collapsed_MR_accidents.rds"
   # input: cleaned mine-types key produced in produced in 1_clean_mines.R
 mine_types_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/mine_types.rds"
 
