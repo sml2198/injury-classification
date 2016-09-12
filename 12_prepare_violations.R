@@ -18,35 +18,32 @@ library(stats)
 library(stringr)
 library(withr)
 library(psych)
-#library(data.table)
 
 # define file names
   # input: merged violations data produced in 11_merge_violations.R
 merged_violations_in_file_name = "X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_violations.rds"
-  # input: collapsed coded accidents data (contains MR indicator - no PS indicator yet) produced in 6_collapse_accidents.R
-mines_accidents_coded_file_name = "X:/Projects/Mining/NIOSH/analysis/data/4_collapsed/collapsed_accidents.rds"
+  # input: collapsed coded MR accidents data produced in 6_collapse_accidents.R
+MR_accidents_coded_file_name = "X:/Projects/Mining/NIOSH/analysis/data/4_collapsed/collapsed_MR_accidents.rds"
+  # input: collapsed coded PS accidents data produced in 6_collapse_accidents.R - DOES NOT EXIST YET
+PS_accidents_coded_file_name = "X:/Projects/Mining/NIOSH/analysis/data/4_collapsed/collapsed_PS_accidents.rds"
   # input: cleaned mine-quarters as produced in 1_clean_mines.R
 mines_quarters_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_mines.rds"
   # input: cleaned mine-types key produced in produced in 1_clean_mines.R
 mine_types_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/mine_types.rds"
   
-  # output: prediction-ready data containing part-level vars (all relevant and maybe relevant)
-part_data_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_part_level.rds"
-  # output: prediction-ready data containing subsection-level vars (all relevant and maybe relevant)
-subsection_data_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_subsection_level.rds"
-  # output: prediction-ready data containing part-level vars (only relevant) 
-relevant_part_data_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_part_level_relevant.rds"
-  # output: prediction-ready data containing part-level vars (only relevant) 
-relevant_subsection_data_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_subsection_level_relevant.rds"
+  # output: prediction-ready data containing part-level vars (all relevant and maybe relevant) - MR
+MR_prediction_data_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/MR_prediction_data.rds"
+  # output: prediction-ready data containing part-level vars (only relevant) - MR
+MR_relevant_prediction_data_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/MR_prediction_data_relevant.rds"
+# output: prediction-ready data containing part-level vars (all relevant and maybe relevant) - PS
+PS_prediction_data_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/PS_prediction_data.rds"
+# output: prediction-ready data containing part-level vars (only relevant) - PS
+PS_relevant_prediction_data_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/PS_prediction_data_relevant.rds"
 
 # When relevant-only option is set to "on" (not commented out) only CFR subsections marked as "relevant" will be used for creating
 # vars. Otherwise, "relevant" and "maybe relevant subsections" will be used.
 #relevant.only.option = "on"
 relevant.only.option = "off"
-
-# Specify whether you want to create part or subsection-specific data.
-data.level = "part"
-#data.level = "subsection"
 
 # Specify whether you want to create data for maintenance and repair (MR) or pinning and striking (PS) injuries
 injury.type = "MR"
@@ -213,53 +210,51 @@ negligencecodes = seq(1, 5)
 
 # LOOPS TO GENERATE PART AND SUBSECTION SPECIFIC VARIABLES
 
-# Set the list of cfr parts or subsections to produce dummy vars for
-if (data.level == "part") {
-    cfr_codes = relevant_partcodes
-}
-if (data.level == "subsection") {
-    cfr_codes = relevant_subsectcodes
-}
-cfr_codes = unlist(cfr_codes)
+# Set the list of cfr parts for which to produce dummy vars
+cfr_codes = unlist(relevant_partcodes)
     
 # This loop creates the part-specific variable-specific vars/dummies (which will later be collapsed to the mine-quarter level).
 for (i in 1:length(cfr_codes)) {
     merged_violations[, cfr_codes[i]] = ifelse(merged_violations$cfr_part_code == cfr_codes[i], 1, 0)
-    merged_violations[, paste(cfr_codes[i], "personsaffected", sep = ".")] = apply(cbind(merged_violations[, "personsaffected"], merged_violations[, cfr_codes[i]]), 1, prod)
-
-    # PTS VARS FOR ASSESSMENT CHARACTERISTICS     
-    merged_violations[, paste(cfr_codes[i], "negligence.pts", sep = ".")] = apply(cbind(merged_violations[, "negligence.pts"], merged_violations[, cfr_codes[i]]), 1, prod)
-    merged_violations[, paste(cfr_codes[i], "injuryillness.pts", sep = ".")] = apply(cbind(merged_violations[, "injuryillness.pts"], merged_violations[, cfr_codes[i]]), 1, prod)
-    merged_violations[, paste(cfr_codes[i], "likelihood.pts", sep = ".")] = apply(cbind(merged_violations[, "likelihood.pts"], merged_violations[, cfr_codes[i]]), 1, prod)
-    merged_violations[, paste(cfr_codes[i], "personsaffected.pts", sep = ".")] = apply(cbind(merged_violations[, "personsaffected.pts"], merged_violations[, cfr_codes[i]]), 1, prod)
-    
-    # CONSTRUCTED PTS VARS FOR ASSESSMENT CHARACTERISTICS  
-    merged_violations[, paste(cfr_codes[i], "negligence.pts.con", sep = ".")] = apply(cbind(merged_violations[, "negligence.pts.con"], merged_violations[, cfr_codes[i]]), 1, prod)
-    merged_violations[, paste(cfr_codes[i], "injuryillness.pts.con", sep = ".")] = apply(cbind(merged_violations[, "injuryillness.pts.con"], merged_violations[, cfr_codes[i]]), 1, prod)
-    merged_violations[, paste(cfr_codes[i], "likelihood.pts.con", sep = ".")] = apply(cbind(merged_violations[, "likelihood.pts.con"], merged_violations[, cfr_codes[i]]), 1, prod)
-    merged_violations[, paste(cfr_codes[i], "personsaffected.pts.con", sep = ".")] = apply(cbind(merged_violations[, "personsaffected.pts.con"], merged_violations[, cfr_codes[i]]), 1, prod)
-
-      # Dummied out categorical vars:
-      for (j in 1:length(inspactycodes)) {
-        merged_violations[, paste(cfr_codes[i], "inspacty", inspactycodes[j], sep = ".")] = ifelse(merged_violations[, cfr_codes[i]] == 1 & merged_violations[, paste("inspacty", inspactycodes[j], sep = ".")] == 1, 1, 0)
-      }
-      for (j in 1:length(violationtypecodes)) {
-        merged_violations[, paste(cfr_codes[i], "violationtypecode", violationtypecodes[j], sep = ".")] = ifelse(merged_violations[, cfr_codes[i]] == 1 & merged_violations[, paste("violationtypecode", violationtypecodes[j], sep = ".")] == 1, 1, 0)
-      }
-      for (j in 1:length(assessmenttypecodes)) {
-        merged_violations[, paste(cfr_codes[i], "assessmenttypecode", assessmenttypecodes[j], sep = ".")] = ifelse(merged_violations[, cfr_codes[i]] == 1 & merged_violations[, paste("assessmenttypecode", assessmenttypecodes[j], sep = ".")] == 1, 1, 0)
-      }
-      for (j in 1:length(likelihoodcodes)) {
-        merged_violations[, paste(cfr_codes[i], "likelihood", likelihoodcodes[j], sep = ".")] = ifelse(merged_violations[, cfr_codes[i]] == 1 & merged_violations[, paste("likelihood", likelihoodcodes[j], sep = ".")] == 1, 1, 0)
-      }
-      for (j in 1:length(injuryillnesscodes)) {
-        merged_violations[, paste(cfr_codes[i], "injuryillness", injuryillnesscodes[j], sep = ".")] = ifelse(merged_violations[, cfr_codes[i]] == 1 & merged_violations[, paste("injuryillness", injuryillnesscodes[j], sep = ".")] == 1, 1, 0)
-      }
-      for (j in 1:length(negligencecodes)) {
-        merged_violations[, paste(cfr_codes[i], "negligence", negligencecodes[j], sep = ".")] = ifelse(merged_violations[, cfr_codes[i]] == 1 & merged_violations[, paste("negligence", negligencecodes[j], sep = ".")] == 1, 1, 0)
-      }
+# 
+#     # PTS VARS FOR ASSESSMENT CHARACTERISTICS & CONSTRUCTED PTS VARS FOR ASSESSMENT CHARACTERISTICS  
+#     merged_violations[, paste(cfr_codes[i], "negligence.pts", sep = ".")] = apply(cbind(merged_violations[, "negligence.pts"], merged_violations[, cfr_codes[i]]), 1, prod)
+#     merged_violations[, paste(cfr_codes[i], "injuryillness.pts", sep = ".")] = apply(cbind(merged_violations[, "injuryillness.pts"], merged_violations[, cfr_codes[i]]), 1, prod)
+#     merged_violations[, paste(cfr_codes[i], "likelihood.pts", sep = ".")] = apply(cbind(merged_violations[, "likelihood.pts"], merged_violations[, cfr_codes[i]]), 1, prod)
+#     merged_violations[, paste(cfr_codes[i], "personsaffected.pts", sep = ".")] = apply(cbind(merged_violations[, "personsaffected.pts"], merged_violations[, cfr_codes[i]]), 1, prod)
+#     merged_violations[, paste(cfr_codes[i], "negligence.pts.con", sep = ".")] = apply(cbind(merged_violations[, "negligence.pts.con"], merged_violations[, cfr_codes[i]]), 1, prod)
+#     merged_violations[, paste(cfr_codes[i], "injuryillness.pts.con", sep = ".")] = apply(cbind(merged_violations[, "injuryillness.pts.con"], merged_violations[, cfr_codes[i]]), 1, prod)
+#     merged_violations[, paste(cfr_codes[i], "likelihood.pts.con", sep = ".")] = apply(cbind(merged_violations[, "likelihood.pts.con"], merged_violations[, cfr_codes[i]]), 1, prod)
+#     merged_violations[, paste(cfr_codes[i], "personsaffected.pts.con", sep = ".")] = apply(cbind(merged_violations[, "personsaffected.pts.con"], merged_violations[, cfr_codes[i]]), 1, prod)
+#     merged_violations[, paste(cfr_codes[i], "personsaffected", sep = ".")] = apply(cbind(merged_violations[, "personsaffected"], merged_violations[, cfr_codes[i]]), 1, prod)
+# 
+#       # Dummied out categorical vars:
+#       for (j in 1:length(inspactycodes)) {
+#         merged_violations[, paste(cfr_codes[i], "inspacty", inspactycodes[j], sep = ".")] = ifelse(merged_violations[, cfr_codes[i]] == 1 & merged_violations[, paste("inspacty", inspactycodes[j], sep = ".")] == 1, 1, 0)
+#       }
+#       for (j in 1:length(violationtypecodes)) {
+#         merged_violations[, paste(cfr_codes[i], "violationtypecode", violationtypecodes[j], sep = ".")] = ifelse(merged_violations[, cfr_codes[i]] == 1 & merged_violations[, paste("violationtypecode", violationtypecodes[j], sep = ".")] == 1, 1, 0)
+#       }
+#       for (j in 1:length(assessmenttypecodes)) {
+#         merged_violations[, paste(cfr_codes[i], "assessmenttypecode", assessmenttypecodes[j], sep = ".")] = ifelse(merged_violations[, cfr_codes[i]] == 1 & merged_violations[, paste("assessmenttypecode", assessmenttypecodes[j], sep = ".")] == 1, 1, 0)
+#       }
+#       for (j in 1:length(likelihoodcodes)) {
+#         merged_violations[, paste(cfr_codes[i], "likelihood", likelihoodcodes[j], sep = ".")] = ifelse(merged_violations[, cfr_codes[i]] == 1 & merged_violations[, paste("likelihood", likelihoodcodes[j], sep = ".")] == 1, 1, 0)
+#       }
+#       for (j in 1:length(injuryillnesscodes)) {
+#         merged_violations[, paste(cfr_codes[i], "injuryillness", injuryillnesscodes[j], sep = ".")] = ifelse(merged_violations[, cfr_codes[i]] == 1 & merged_violations[, paste("injuryillness", injuryillnesscodes[j], sep = ".")] == 1, 1, 0)
+#       }
+#       for (j in 1:length(negligencecodes)) {
+#         merged_violations[, paste(cfr_codes[i], "negligence", negligencecodes[j], sep = ".")] = ifelse(merged_violations[, cfr_codes[i]] == 1 & merged_violations[, paste("negligence", negligencecodes[j], sep = ".")] == 1, 1, 0)
+#       }
 }
 
+# NOW IT'S TIME TO PRODUCE THE SUBSECTION-LEVEL VARIABLES 
+cfr_codes = unlist(relevant_subsectcodes)
+for (i in 1:length(cfr_codes)) {
+  merged_violations[, cfr_codes[i]] = ifelse(merged_violations$cfr_part_code == cfr_codes[i], 1, 0)
+}
+  
 # Remove things we won't use again.
 rm(relevant_subsectcodes, relevant_partcodes, cfr_codes,
   violationtypecodes, assessmenttypecodes, inspactycodes,
@@ -286,11 +281,9 @@ if (injury.type == "PS" & relevant.only.option = "off") {
 }
 
 # This problem only affects the part-level data preparation. Subsection-level data is already (obviously) subsection specific.
-if (data.level == "part") {
   for (j in 1:length(varlist)) {
       merged_violations[, varlist[j]] = ifelse(merged_violations$relevant == 1, 0, merged_violations[, varlist[j]])
   }
-}
 
 ######################################################################################################################################
 
@@ -484,8 +477,14 @@ gc()
 
 # MERGE ACCIDENTS DATA ONTO VIOLATIONS/PER QUARTER
 
-# read in data and drop obs not in study period
-summed_coded_accidents = readRDS(mines_accidents_coded_file_name)
+# read in data (either PS or MR) and drop obs not in study period
+
+if (injury.type == "MR"){
+  summed_coded_accidents = readRDS(MR_accidents_coded_file_name)
+}
+if (injury.type == "PS"){
+  summed_coded_accidents = readRDS(PS_accidents_coded_file_name)
+}
 
 # Merge violations (now with contractor and mine info) and accidents
 merged_mines_violations_accidents = merge(merged_mines_violations, summed_coded_accidents, by = c("mineid", "quarter"), all = T)
@@ -575,6 +574,8 @@ prediction_data$num_no_terminations = ifelse(prediction_data$terminated < predic
 var_stats = describe(prediction_data[, c(-match("mineid", names(prediction_data)), 
                                          -match("quarter", names(prediction_data)), 
                                          -match("year", names(prediction_data)),
+                                         -match("daysperweek", names(prediction_data)),
+                                         -match("productionshiftsperday", names(prediction_data)),
                                          -match("minename", names(prediction_data)), 
                                          -match("minestatus", names(prediction_data)), 
                                          -match("minestatusdate", names(prediction_data)), 
@@ -597,17 +598,17 @@ apply(is.na(prediction_data),2,sum)
 ######################################################################################################################################
 
 # Set the file name (if part-specific).
-if (relevant.only.option == "on" & data.level == "subsection") {
-  saveRDS(prediction_data, file = relevant_subsection_data_out_file_name)
+if (relevant.only.option == "on" & injury.type = "MR") {
+  saveRDS(prediction_data, file = MR_relevant_prediction_data_out_file_name)
 }
-if (relevant.only.option == "on" & data.level == "part") {
-  saveRDS(prediction_data, file = relevant_part_data_out_file_name)
+if (relevant.only.option == "off" & injury.type = "MR") {
+  saveRDS(prediction_data, file = MR_prediction_data_out_file_name)
 }
-if (relevant.only.option == "off" & data.level == "subsection") {
-  saveRDS(prediction_data, file = subsection_data_out_file_name)
+if (relevant.only.option == "on" & injury.type = "PS") {
+  saveRDS(prediction_data, file = MR_relevant_prediction_data_out_file_name)
 }
-if (relevant.only.option == "off" & data.level == "part") {
-  saveRDS(prediction_data, file = part_data_out_file_name)
+if (relevant.only.option == "off" & injury.type = "PS") {
+  saveRDS(prediction_data, file = MR_prediction_data_out_file_name)
 }
 
 #sink()
