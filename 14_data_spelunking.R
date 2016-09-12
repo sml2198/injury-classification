@@ -69,7 +69,7 @@ barplot(sort(table(no_insp$mineid)),
 mineid_5plus_missing = unique(no_insp[no_insp$mineid %in% names(which(table(no_insp$mineid) >= 5)), "mineid"]) # 27 mines
 
 # how many (non-missing) quarters do these mines contribute to data?
-dim(data[(data$mineid %in% mineid_5plus_missing & data$num_insp > 0), ]) # 603 obs
+dim(data[(data$mineid %in% mineid_5plus_missing & data$num_insp > 0), ]) # 2228 obs
 
 # which quarters are missing inspections
 barplot(table(no_insp$quarter), 
