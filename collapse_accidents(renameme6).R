@@ -15,19 +15,19 @@ library(zoo)
 
 # define file names
 # input: coded accidents data (contains MR indicator - no PS indicator yet) produced in 5_analyze_MR.R
-mines_accidents_coded.in.file.name = "X:/Projects/Mining/NIOSH/analysis/data/4_coded/accidents_with_predictions.csv"
+mines_accidents_coded_in_file_name = "X:/Projects/Mining/NIOSH/analysis/data/4_coded/accidents_with_predictions.csv"
   # output: collapsed coded accidents data 
-mines_accidents_coded.out.file.name = "X:/Projects/Mining/NIOSH/analysis/data/4_collapsed/collapsed_accidents.rds"
+mines_accidents_coded_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/4_collapsed/collapsed_accidents.rds"
   # input: cleaned mine-types key produced in produced in 1_clean_mines.R
-mine.types.file.name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/mine_types.rds"
+mine_types_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/mine_types.rds"
 
 ######################################################################################################################################
 
 # LOAD IN CODED ACCIDENTS DATA AND FORMAT VARIABLES FOR MERGE
 
 # Read in data
-mine_types = readRDS(mine.types.file.name)
-mines_accidents_coded = read.csv(mines_accidents_coded.in.file.name)
+mine_types = readRDS(mine_types_file_name)
+mines_accidents_coded = read.csv(mines_accidents_coded_in_file_name)
 
 # Remove unecessary vars
 mines_accidents_coded = mines_accidents_coded[, c(match("mineid", names(mines_accidents_coded)),
@@ -76,7 +76,7 @@ summed_coded_accidents = ddply(mines_accidents_coded[, c(grep("totalinjuries", n
 ######################################################################################################################################
 
 # Save and clear workspace
-saveRDS(summed_coded_accidents, mines_accidents_coded.out.file.name)
+saveRDS(summed_coded_accidents, mines_accidents_coded_out_file_name)
 
 rm(list = ls())
 gc()
