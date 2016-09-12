@@ -11,7 +11,7 @@ library(minerva)
 library(zoo)
 
 # input: part-level data
-data_file_name = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/prediction_data_part_level.rds"
+data_file_name = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/MR_prediction_data.rds"
 
 ######################################################################################################
 
