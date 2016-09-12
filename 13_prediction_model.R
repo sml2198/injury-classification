@@ -16,12 +16,9 @@ library(stats)
 library(glarma)
 library(pglm)
 library(psych)
-library(dplyr)
-library(zoo)
 library(glmnet)
 library(randomForest)
 library(MASS)
-library(data.table)
 
 # define file names
   # input: prediction data produced in 11_prepare_violations.R
@@ -268,11 +265,34 @@ for (i in 1:3) {
   print(a)
 }
 
+100 * (sum(prediction_data[, "_num_insp"] == 0) / nrow(prediction_data))
+
+temp = prediction_data[which(prediction_data[, "_num_insp"] == 0), ]
+wow = temp[which(temp[, "_total_violations"] != 0), ]
+
+
 # Least Absolute Shrinkage and Selection Operator (LASSO)
-lasso_results = glmnet(as.matrix(prediction_data[, grep("^[0-9][0-9]\\.[0-9]+\\.penaltypoints", names(prediction_data))]), 
+lr2 = glmnet::cv.glmnet(as.matrix(prediction_data[, 1:100]), as.vector(prediction_data[, "_MR"]), family = "gaussian")
+hi = coef(lr2, s = "lambda.1se")
+
+lr2 = cv.glmnet(as.matrix(prediction_data[, 1:100]), as.vector(prediction_data[, "_MR"]), family = "gaussian")
+
+
+c<-coef(lr2,s='lambda.min',exact=TRUE)
+inds<-which(c!=0)
+variables<-row.names(c)[inds]
+
+\
+
+print(lr2)
+predict(lr2, type = "coeff")
+
+lasso_results = glmnet(as.matrix(prediction_data[, grep("^_[0-9][0-9]\\_[0-9]+\\_penaltypoints", names(prediction_data))]), 
                        as.vector(prediction_data$MR), family = "gaussian")
 print(lasso_results)
 plot(lasso_results)
+
+prediction_data[, grep("^_[0-9][0-9]\\_[0-9]+\\_penaltypoints", names(prediction_data))]
 
 # Argument passed to "coef" is the lambda value at which LASSO coefficients are obtained
 lasso_coefs = coef(lasso_results, s = 0.05)[,1]
@@ -552,6 +572,7 @@ test_pred = glarma(Y, X, type = "NegBin", phiLags = c(1, 2), thetaLags = c(1, 2)
 # For some reason, unable to use usual formula abbreviations in this command
 names(prediction_data)[match("47.41", names(prediction_data))] = "subsection_47.41"
 test_pred_2 = pglm(MR ~  subsection_47.41 + penaltypoints_47.41 + totalinjuries ,
-                   prediction_data, na.action = na.omit, family = "negbin", effect = "time", model = "within")
+                   prediction_data, na.action = na.omit, family = "negbin", effec
+                   t = "time", model = "within")
 
 ######################################################################################################################################
