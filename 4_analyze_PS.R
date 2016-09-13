@@ -39,6 +39,10 @@ classified_accidents_file_name = "X:/Projects/Mining/NIOSH/analysis/data/4_coded
 
 # SET PREFERENCES 
 
+# Set preferences - data type - either training data for model selection, or real accidents data for classification
+#data.type = "training data"
+data.type = "real accidents data"
+
 # Specify imputation method
 imputation_method = 3
 
@@ -49,6 +53,13 @@ strict = T
 
 # LOAD DATA
 ps_data = read.csv(coded_training_set_file_name)
+
+# load in real accidents data for classification
+if (data.type == "real accidents data") {
+  accidents.data = readRDS(accidents_data_file_name)
+}
+
+##################################################################################################
 
 # drop anything missing mineid
 ps_data = ps_data[!is.na(ps_data$mineid),]
@@ -536,12 +547,18 @@ ps_data$accident.only = ifelse((ps_data$degreeofinjury == "accident only" |
 
 # GENERATE KEYWORD FLAGS
 
-ps_data$keyword = ifelse((ps_data$pin == 1 | ps_data$strike == 1 | 
-                          ps_data$pos_roofbolt == 1 | ps_data$trap == 1 | 
-                          ps_data$collided == 1 | ps_data$hit == 1 | 
-                          ps_data$dropped == 1 | ps_data$ranover == 1 | 
-                          ps_data$bumped == 1 | ps_data$caught == 1 |
-                          ps_data$rolled == 1 | ps_data$between == 1 | 
+ps_data$keyword = ifelse((ps_data$pin == 1 | 
+                          ps_data$strike == 1 | 
+                          ps_data$pos_roofbolt == 1 | 
+                          ps_data$trap == 1 | 
+                          ps_data$collided == 1 | 
+                          ps_data$hit == 1 | 
+                          ps_data$dropped == 1 | 
+                          ps_data$ranover == 1 | 
+                          ps_data$bumped == 1 | 
+                          ps_data$caught == 1 |
+                          ps_data$rolled == 1 | 
+                          ps_data$between == 1 | 
                           ps_data$wheel == 1) &
                          (ps_data$falling.accident == 0), 1, 0)
 
@@ -617,7 +634,7 @@ ps_data$uncertain_type = ifelse((ps_data$accidenttype == "struck against station
                                  ps_data$accidenttype == "no value found" |
                                  ps_data$accidenttype == "not elsewhere classified"), 1, 0)
 
-ps_data$maybs_type = ifelse((ps_data$accidenttype == "acc type, without injuries" |
+ps_data$maybe_type = ifelse((ps_data$accidenttype == "acc type, without injuries" |
                              ps_data$accidenttype == "struck against stationary obj" |
                              ps_data$accidenttype == "fall frm mach, vehicle, equip" |
                              ps_data$accidenttype == "struck by falling object" |
@@ -731,14 +748,22 @@ ps_data[, "likely_actvty"] = ifelse((grepl("operate", ps_data$mineractivity) |
 ps_data[, "maybe_likely_actvty"] = ifelse(grepl("move/reel", ps_data$mineractivity) | 
                                           grepl("handling supplies/materials", ps_data$mineractivity), 1, 0)
 
-ps_data$unlikely_activity = ifelse((ps_data$activitycode == "009" | ps_data$activitycode == "016" | 
-                                    ps_data$activitycode == "020" | ps_data$activitycode == "022" | 
-                                    ps_data$activitycode == "025" | ps_data$activitycode == "026" |
-                                    ps_data$activitycode == "027" | ps_data$activitycode == "029" | 
-                                    ps_data$activitycode == "030" | ps_data$activitycode == "032" | 
-                                    ps_data$activitycode == "034" | ps_data$activitycode == "036" |
-                                    ps_data$activitycode == "075" | ps_data$activitycode == "066" | 
-                                    ps_data$activitycode == "065" | ps_data$activitycode == "056"), 1, 0)
+ps_data$unlikely_activity = ifelse((ps_data$activitycode == "009" | 
+                                    ps_data$activitycode == "016" | 
+                                    ps_data$activitycode == "020" | 
+                                    ps_data$activitycode == "022" | 
+                                    ps_data$activitycode == "025" | 
+                                    ps_data$activitycode == "026" |
+                                    ps_data$activitycode == "027" | 
+                                    ps_data$activitycode == "029" | 
+                                    ps_data$activitycode == "030" | 
+                                    ps_data$activitycode == "032" | 
+                                    ps_data$activitycode == "034" | 
+                                    ps_data$activitycode == "036" |
+                                    ps_data$activitycode == "075" | 
+                                    ps_data$activitycode == "066" | 
+                                    ps_data$activitycode == "065" | 
+                                    ps_data$activitycode == "056"), 1, 0)
 
 # Not sure this is mutually exclusive AND exhaustive
 ps_data$uncertain_activity = ifelse((ps_data$likely_actvty == 0 & 
@@ -800,16 +825,16 @@ ps_data[, "int_obj_strike"] = ifelse((grepl("( )(block|rock|cho(c)*k|chunk|rail|
                                       grepl("PINNED/STRUCK", ps_data[, "narrative"]) &
                                       grepl("(tr(a)*m(m)*[^ ]{0,3}|op(e)*r(a)*t[^ ]{0,3}|back(in|ed).{1,10}VEHICLE|VEHICLE.{1,10}back(in|ed)|r(a|u)n|makin(g)*( )*(a)*( )*tu(r)*n|remote.{1,5}control|driv|pull)", ps_data[, "narrative"]) &
                                       grepl("(steering |(hand )*knob).{1,20}(PINNED/STRUCK).{1,20}(BODY|PERSON)", ps_data[, "narrative"]) &
-                                      (ps_data$accidenttypecode %in% c(8, 5)) & 
-                                       ps_data$falling.accident == 0 & 
-                                       ps_data$operating == 0), 1, 0)
+                                     (ps_data$accidenttypecode %in% c(8, 5)) & 
+                                      ps_data$falling.accident == 0 & 
+                                      ps_data$operating == 0), 1, 0)
 
 ##################################################################################################
 
 # VARIOUS SIMPLE ALGORITHMS
 
 ps_data[, "holistic"] = ifelse((((ps_data$likely_type == 1) | 
-                                 (ps_data$maybs_type == 1)) & 
+                                 (ps_data$maybe_type == 1)) & 
                                  (ps_data$likely_actvty == 1 | 
                                   ps_data$maybe_likely_actvty == 1) & 
                                  (ps_data$likely_class == 1) & 
@@ -892,9 +917,7 @@ ps_data = ps_data[, c(-match("accidenttime", names(ps_data)),
                       -match("degreeofinjurycode", names(ps_data)), 
                       -match("directionstominemodified", names(ps_data)),
                       -match("district", names(ps_data)),
-                      -match("fipscountycode", names(ps_data)),
-                      -match("fipscountyname", names(ps_data)),
-                      -match("fipsstatecode", names(ps_data)),
+                      -grep("^fips", names(ps_data)),
                       -match("highwallminerindicator", names(ps_data)),
                       -match("hourspershift", names(ps_data)),
                       -match("i", names(ps_data)), 
@@ -917,43 +940,26 @@ ps_data = ps_data[, c(-match("accidenttime", names(ps_data)),
                       -match("narrative", names(ps_data)), 
                       -match("natureofinjurycode", names(ps_data)),
                       -match("nearesttown", names(ps_data)), 
-                      -match("noofnonproducingpits", names(ps_data)),
-                      -match("noofproducingpits", names(ps_data)),
-                      -match("nooftailingponds", names(ps_data)), 
+                      -grep("noof", names(ps_data)),
                       -match("numbertypo", names(ps_data)),
                       -match("numberofemployees", names(ps_data)),
-                      -match("officecode", names(ps_data)),
-                      -match("officename", names(ps_data)),
+                      -grep("office", names(ps_data)),
                       -match("old_narrative", names(ps_data)),
                       -match("oldoccupationcode", names(ps_data)),
                       -match("operatorid", names(ps_data)),
                       -match("operatorname", names(ps_data)),
-                      -match("portablefipsstatecode", names(ps_data)),
-                      -match("portableoperationindicator", names(ps_data)),
-                      -match("primarycanvasscodedesc", names(ps_data)), 
-                      -match("primarycanvasscode", names(ps_data)), 
-                      -match("primarysicdesc", names(ps_data)),
-                      -match("primarysiccode", names(ps_data)), 
-                      -match("primarysiccodegroup", names(ps_data)), 
-                      -match("primarysiccodesuffix", names(ps_data)),
+                      -grep("portable", names(ps_data)),
+                      -grep("primary", names(ps_data)), 
                       -match("productionshiftsperday", names(ps_data)),
                       -match("roomandpillarindicator", names(ps_data)), 
                       -match("safetycommitteeindicator", names(ps_data)),  
                       -match("schedulechargedays", names(ps_data)),  
-                      -match("secondarysiccode", names(ps_data)), 
-                      -match("secondarysicdesc", names(ps_data)),
-                      -match("secondarysiccodegroup", names(ps_data)), 
-                      -match("secondarysiccodesuffix", names(ps_data)), 
-                      -match("secondarycanvasscode", names(ps_data)),
-                      -match("secondarycanvasscodedesc", names(ps_data)), 
+                      -grep("secondary", names(ps_data)), 
                       -match("shiftbeginningtime", names(ps_data)),
                       -match("stateabbreviation", names(ps_data)),
                       -match("subunitcode", names(ps_data)),
                       -match("transferredorterminated", names(ps_data)),
-                      -match("uglocation", names(ps_data)), 
-                      -match("uglocationcode", names(ps_data)), 
-                      -match("ugminingmethod", names(ps_data)),
-                      -match("ugminingmethodcode", names(ps_data)))]
+                      -grep("^ug(l|m)", names(ps_data)))]
 
 # Drop date vars (now irrelevant)
 ps_data = ps_data[, c(-grep("date", names(ps_data)))]
@@ -971,10 +977,9 @@ for (i in 1:length(varlist)) {
 # now pick out the character vars and make sure they're the right type
 charac_vars = (c("subunit", "degreeofinjury", "accidentclassification", 
                  "accidenttype", "documentno", "mineid", 
-                 "contractorid", "mineractivity", "sourceofinjury", 
+                 "mineractivity", "sourceofinjury", "controllername",
                  "natureofinjury", "bodypart", "controllerid", 
-                 "typeofequipment", "equipmanufacturer", "occupation", 
-                 "controllername"))
+                 "typeofequipment", "equipmanufacturer", "occupation"))
 for (i in 1:length(charac_vars)) {
   ps_data[, charac_vars[i]] = as.character(ps_data[, charac_vars[i]])
 }
@@ -982,11 +987,11 @@ for (i in 1:length(charac_vars)) {
 # same thing for vars that should be numeric
 num_vars = (c("numberofinjuries", "totalexperience", "jobexperience", 
               "dayslost", "num.vehicles", "num.pinstrike", 
-              "num.person", "num.body num_unique_vehcl", "keyword_pts",
-              "neg_keyword_pts", "pos_pts", "neg_pts"))
-
+              "num.person", "num.body", "num_unique_vehcl", 
+              "keyword_pts", "neg_keyword_pts", "pos_pts", 
+              "neg_pts"))
 for (i in 1:length(num_vars)) {
-  ps_data[, charac_vars[i]] = as.character(ps_data[, charac_vars[i]])
+  ps_data[, num_vars[i]] = as.numeric(ps_data[, num_vars[i]])
 }
 
 # We don't use date vars as of yet so no need to store a list of their names, "logical" class vars are missing all obsvtns
@@ -1048,121 +1053,102 @@ if (imputation_method == 1 | imputation_method == 2) {
 
 # PRODUCE DATASETS WITH ONLY VARS OF INTEREST FOR RF/BOOSTING ANALYSIS 
 
-simple.data.grouped = ps_data[, c(match("documentno", names(ps_data)), 
-                                  match("PS", names(ps_data)), 
-                                  match("pin", names(ps_data)),
-                                  match("strike", names(ps_data)), 
-                                  match("strikerib", names(ps_data)), 
-                                  grep("maybs_", names(ps_data)),
-                                  match("trap", names(ps_data)),  
-                                  match("collided", names(ps_data)), 
-                                  match("neg_wrench", names(ps_data)),
-                                  match("hit", names(ps_data)), 
-                                  match("ranover", names(ps_data)), 
-                                  match("num_unique_vehcl", names(ps_data)),
-                                  match("rolled", names(ps_data)), 
-                                  match("caught", names(ps_data)), 
-                                  match("shuttlecar_or_rbolter", names(ps_data)),
-                                  match("between", names(ps_data)), 
-                                  match("by", names(ps_data)), 
-                                  match("int_obj_strike", names(ps_data)),
-                                  match("jarring", names(ps_data)), 
-                                  match("bounced", names(ps_data)), 
-                                  match("rock", names(ps_data)),                                    
-                                  match("digit", names(ps_data)), 
-                                  match("derail", names(ps_data)), 
-                                  match("brokensteel", names(ps_data)), 
-                                  match("roofbolt", names(ps_data)), 
-                                  match("drillsteel", names(ps_data)), 
-                                  match("entrapment", names(ps_data)), 
-                                  match("passenger", names(ps_data)), 
-                                  match("wrench", names(ps_data)), 
-                                  match("cable", names(ps_data)),
-                                  match("controls", names(ps_data)), 
-                                  match("resin", names(ps_data)), 
-                                  match("bent", names(ps_data)), 
-                                  match("atrs", names(ps_data)), 
-                                  match("flew", names(ps_data)), 
-                                   match("trolleypole", names(ps_data)),
-                                   match("loose", names(ps_data)), 
-                                   match("broke", names(ps_data)), 
-                                   match("strap", names(ps_data)), 
-                                   match("canopy", names(ps_data)), 
-                                   match("bodyseat", names(ps_data)), 
-                                   match("steering", names(ps_data)), 
-                                   match("headroof", names(ps_data)), 
-                                   match("hole", names(ps_data)), 
-                                   match("tool_break", names(ps_data)), 
-                                   match("outsidevehicle", names(ps_data)), 
-                                   match("headcanopy", names(ps_data)),
-                                   match("keyword", names(ps_data)), 
-                                   match("false_keyword", names(ps_data)), 
-                                   match("unevenbottom", names(ps_data)),
-                                   match("maybe_false_keyword", names(ps_data)), 
-                                   match("dropped", names(ps_data)), 
-                                   match("v_to_v", names(ps_data)), 
-                                   match("v_to_p", names(ps_data)),                                    
-                                   match("no_vehcl", names(ps_data)), 
-                                   match("bumped", names(ps_data)),
-                                   match("num.vehicles", names(ps_data)), 
-                                   match("potential_ps", names(ps_data)), 
-                                   match("num.pinstrike", names(ps_data)), 
-                                   match("likely_ps", names(ps_data)), 
-                                   match("num.person", names(ps_data)), 
-                                   match("num.body", names(ps_data)), 
-                                   match("mult_vehcl", names(ps_data)), 
-                                   match("operating", names(ps_data)),
-                                   match("keyword_pts", names(ps_data)), 
-                                   match("in_vehicle", names(ps_data)), 
-                                   match("dif_vehicle", names(ps_data)),
-                                   match("neg_keyword_pts", names(ps_data)), 
-                                   match("pos_roofbolt", names(ps_data)), 
-                                   match("neg_roofbolt", names(ps_data)),
-                                   match("pos_pts", names(ps_data)), 
-                                   match("neg_pts", names(ps_data)), 
-                                   match("vcomp_test", names(ps_data)), 
-                                   match("psobject_test", names(ps_data)), 
-                                   match("loose_rbolting", names(ps_data)), 
-                                   match("drill_action", names(ps_data)),
-                                   match("likely_equip", names(ps_data)), 
-                                   match("unlikely_equip", names(ps_data)),
-                                  match("likely_class", names(ps_data)), 
-                                  match("likely_type", names(ps_data)), 
-                                  match("unlikely_type", names(ps_data)),
-                                  match("likely_source", names(ps_data)),                          
-                                  match("unlikely_source", names(ps_data)), 
-                                  match("likely_actvty", names(ps_data)), 
-                                  match("unlikely_activity", names(ps_data)), 
-                                  match("uncertain_activity", names(ps_data)),
-                                  match("uncertain_class", names(ps_data)),
-                                  match("unlikely_body", names(ps_data)), 
-                                  match("uncertain_type", names(ps_data)),
-                                  match("uncertain_equip", names(ps_data)), 
-                                  match("uncertain_source", names(ps_data)),
-                                  match("uncertain_nature", names(ps_data)),
-                                  match("falling.accident", names(ps_data)), 
-                                  match("accident.only", names(ps_data)))]
+simple.data = ps_data[, c(grep("maybe_", names(ps_data)),
+                          grep("likely_", names(ps_data)),
+                          grep("keyword", names(ps_data)),
+                          grep("uncertain", names(ps_data)),
+                          match("accident.only", names(ps_data)),
+                          match("atrs", names(ps_data)),
+                          match("bent", names(ps_data)),
+                          match("between", names(ps_data)), 
+                          match("bodyseat", names(ps_data)), 
+                          match("bounced", names(ps_data)), 
+                          match("broke", names(ps_data)), 
+                          match("brokensteel", names(ps_data)), 
+                          match("bumped", names(ps_data)),
+                          match("by", names(ps_data)), 
+                          match("cable", names(ps_data)),
+                          match("canopy", names(ps_data)), 
+                          match("caught", names(ps_data)), 
+                          match("collided", names(ps_data)),
+                          match("controls", names(ps_data)), 
+                          match("derail", names(ps_data)),
+                          match("dif_vehicle", names(ps_data)),
+                          match("digit", names(ps_data)), 
+                          match("documentno", names(ps_data)), 
+                          match("drill_action", names(ps_data)),
+                          match("drillsteel", names(ps_data)), 
+                          match("dropped", names(ps_data)), 
+                          match("entrapment", names(ps_data)), 
+                          match("falling.accident", names(ps_data)),
+                          match("flew", names(ps_data)), 
+                          match("headcanopy", names(ps_data)),
+                          match("headroof", names(ps_data)), 
+                          match("hit", names(ps_data)), 
+                          match("hole", names(ps_data)), 
+                          match("in_vehicle", names(ps_data)),
+                          match("int_obj_strike", names(ps_data)),
+                          match("jarring", names(ps_data)), 
+                          match("loose", names(ps_data)),
+                          match("loose_rbolting", names(ps_data)), 
+                          match("moving_vehcl", names(ps_data)),
+                          match("mult_vehcl", names(ps_data)),
+                          match("neg_pts", names(ps_data)),
+                          match("neg_roofbolt", names(ps_data)),
+                          match("neg_wrench", names(ps_data)),
+                          match("no_vehcl", names(ps_data)),
+                          match("num.pinstrike", names(ps_data)), 
+                          match("num.person", names(ps_data)), 
+                          match("num.body", names(ps_data)), 
+                          match("num_unique_vehcl", names(ps_data)),
+                          match("num.vehicles", names(ps_data)),
+                          match("operating", names(ps_data)),
+                          match("outsidevehicle", names(ps_data)), 
+                          match("passenger", names(ps_data)), 
+                          match("pin", names(ps_data)),
+                          match("pos_pts", names(ps_data)), 
+                          match("pos_roofbolt", names(ps_data)), 
+                          match("potential_ps", names(ps_data)), 
+                          match("PS", names(ps_data)),
+                          match("psobject_test", names(ps_data)), 
+                          match("ranover", names(ps_data)), 
+                          match("resin", names(ps_data)), 
+                          match("rock", names(ps_data)),                                    
+                          match("rolled", names(ps_data)), 
+                          match("roofbolt", names(ps_data)), 
+                          match("shuttlecar_or_rbolter", names(ps_data)),
+                          match("steering", names(ps_data)), 
+                          match("strap", names(ps_data)), 
+                          match("strike", names(ps_data)), 
+                          match("strikerib", names(ps_data)), 
+                          match("tool_break", names(ps_data)), 
+                          match("trap", names(ps_data)),
+                          match("trolleypole", names(ps_data)), 
+                          match("unevenbottom", names(ps_data)),
+                          match("vcomp_test", names(ps_data)), 
+                          match("v_to_v", names(ps_data)), 
+                          match("v_to_p", names(ps_data)),                                    
+                          match("wheel", names(ps_data)),
+                          match("wrench", names(ps_data)))]
 
 # Enforce factor storage
 if (strict) {
-  var_classes = sapply(ps_data[,names(simple.data.grouped)], class)
+  var_classes = sapply(simple.data[,names(simple.data)], class)
   num_vars = names(var_classes[grep("numeric", var_classes)])
   for (i in 1:length(num_vars)) {
-    simple.data.grouped[, num_vars[i]] = factor(simple.data.grouped[, num_vars[i]])
+    simple.data[, num_vars[i]] = factor(simple.data[, num_vars[i]])
   }
 }
 
 ##################################################################################################
 
-  # ALGORITHM
-  
+if (data.type == "training" ) {
+
   # Randomly sort data (it was ordered in stata before this)
-  simple.data = simple.data.grouped
   set.seed(625)
   rand <- runif(nrow(simple.data))
   simple.ps <- simple.data[order(rand),]
   remove(rand)
-  # just to find out which col # PS is
   # which( colnames(simple.ps)=="PS" )
   
   # CART
@@ -1184,104 +1170,107 @@ if (strict) {
   # BOOSTING
   #ps.adaboost = boosting(PS ~ . -documentno, data = simple.ps[1:600,], boos = T, mfinal = 100, coeflearn = 'Freund')
   #simple.adaboost.pred = predict.boosting(ps.adaboost, newdata = simple.ps[601:1000,])
-
-##################################################################################################
-
-# COMPOSITE ALGORITHM
-
-#splitIndex = createDataPartition(simple.ps$PS, p =.50, list = FALSE, times = 1)
-#smote.trainx = simple.ps[splitIndex,]
-#smote.test = simple.ps[-splitIndex,]
-set.seed(625)
-smote.trainx = simple.ps[1:600,]
-smote.test = simple.ps[601:1000,]
-
-# STEP ONE: PRE-PROCESSING
-
-# Use smote to oversample data
-smote.ps <- SMOTE(PS ~ ., smote.trainx, perc.over = 600,perc.under=100)
-table(smote.ps$PS)
-
-# Weed out obs that are definitely not ps
-num_vars = num_vars[-grep("documentno", num_vars)]
-if (strict) {
-  for (i in 1:length(num_vars)) {
-    smote.ps[, num_vars[i]] = as.numeric(smote.ps[, num_vars[i]])
-    smote.trainx[, num_vars[i]] = as.numeric(smote.trainx[, num_vars[i]])
-    smote.test[, num_vars[i]] = as.numeric(smote.test[, num_vars[i]])
-    smote.test[, "predict"] = ifelse((smote.test$falling.accident == 1), 1, 0)
-  }
-} else {
-    smote.test[, "predict"] = ifelse((smote.test$falling.accident == 0), 1, 0)
 }
 
-# STEP TWO: MODEL
+if (data.type == "real accidents data") {
+  
+  # COMPOSITE ALGORITHM
+  
+  #splitIndex = createDataPartition(simple.ps$PS, p =.50, list = FALSE, times = 1)
+  #smote.trainx = simple.ps[splitIndex,]
+  #smote.test = simple.ps[-splitIndex,]
+  set.seed(625)
+  smote.trainx = simple.ps[1:600,]
+  smote.test = simple.ps[601:1000,]
+  
+  # STEP ONE: PRE-PROCESSING
+  
+  # Use smote to oversample data
+  smote.ps <- SMOTE(PS ~ ., smote.trainx, perc.over = 600,perc.under=100)
+  table(smote.ps$PS)
+  
+  # Weed out obs that are definitely not ps
+  num_vars = num_vars[-grep("documentno", num_vars)]
+  if (strict) {
+    for (i in 1:length(num_vars)) {
+      smote.ps[, num_vars[i]] = as.numeric(smote.ps[, num_vars[i]])
+      smote.trainx[, num_vars[i]] = as.numeric(smote.trainx[, num_vars[i]])
+      smote.test[, num_vars[i]] = as.numeric(smote.test[, num_vars[i]])
+      smote.test[, "predict"] = ifelse((smote.test$falling.accident == 1), 1, 0)
+    }
+  } else {
+      smote.test[, "predict"] = ifelse((smote.test$falling.accident == 0), 1, 0)
+  }
+  
+  # STEP TWO: MODEL
+  
+  # Now do a random forest on the smoted data
+  rf.smote <- randomForest(PS ~ . -documentno, data = smote.ps, mtry = 15, ntree = 1000)
+  rf.smote
+  
+  # predict
+  rf.smote.pred = predict(rf.smote, smote.test[smote.test$predict == 1,], type="class")
+  table(smote.test[smote.test$predict == 1,]$PS, predicted = rf.smote.pred)
+  
+  # merge on predictions
+  smote.test.aux = cbind(smote.test[smote.test$predict == 1,], rf.smote.pred)
+  post.smote.test = merge(smote.test, smote.test.aux, by = "documentno", all = T)
+  post.smote.test = post.smote.test[, c(-grep("\\.y", names(post.smote.test)))]
+  names(post.smote.test) = gsub("\\.[x|y]", "", names(post.smote.test))
+  
+  post.smote.test[, "smote_pred"] = ifelse(is.na(post.smote.test$rf.smote.pred), 1, post.smote.test$rf.smote.pred)
+  
+  # STEP THREE: RUN ANOTHER MODEL TO TRY AND CLASSIFY MORE FALSE NEGATIVES
+  
+  # Run boosting on observations classified "no" by the random forest
+  ps.adaboost = boosting(PS ~ . -documentno, data = smote.trainx, boos = T, mfinal = 1000, coeflearn = 'Freund')
+  
+  adaboost.pred = predict.boosting(ps.adaboost, newdata = post.smote.test[post.smote.test$predict==1 & 
+                                                                          post.smote.test$rf.smote.pred=="NO",
+                                                                        c(-grep("rf.smote.pred",names(post.smote.test)), 
+                                                                          -grep("predict",names(post.smote.test)))])
+  
+  # Generate variable with final predictions
+  boost.test.aux = cbind(post.smote.test[post.smote.test$predict == 1 & 
+                         post.smote.test$rf.smote.pred == "NO",], adaboost.pred$class)
+  post.smote.test = merge(post.smote.test, boost.test.aux, by = "documentno", all = T)
+  post.smote.test = post.smote.test[, c(-grep("\\.y", names(post.smote.test)))]
+  names(post.smote.test) = gsub("\\.[x|y]", "", names(post.smote.test))
+  
+  post.smote.test[, "smote_pred"] = ifelse((post.smote.test$`adaboost.pred$class` == "YES" | 
+                                            post.smote.test$rf.smote.pred == "YES"), "YES", "NO")
+  table(post.smote.test$smote_pred, post.smote.test$PS)
+  
+  ##################################################################################################
+  
+  # PERFORMANCE OF ALL MODELS 
+  
+  # cart alone
+  table(simple.ps[601:1000,2], predicted = cart.predictions)
+  
+  # random forest alone
+  table(simple.ps[601:1000,2], predicted = rf.predictions)
+  
+  # random forest with smote  
+  table(simple.ps[601:1000,2], predicted = rf.smo.pred)
+  
+  # adaboost alone
+  simple.adaboost.pred$confusion
+  
+  # random forest then adaboost
+  table(post.smote.test$smote_pred, post.smote.test$PS)
+  
+  # BEST PREDICTION SO FAR
+  #NO YES
+  #NO  240  20
+  #YES  16  85
+  
+  View(post.smote.test[post.smote.test$PS=="NO" & post.smote.test$smote_pred =="YES",]$documentno)
+  
+  # Save
+  saveRDS(accidents.data, file = classified_accidents_file_name)
+}
 
-# Now do a random forest on the smoted data
-rf.smote <- randomForest(PS ~ . -documentno, data = smote.ps, mtry = 15, ntree = 1000)
-rf.smote
-
-# predict
-rf.smote.pred = predict(rf.smote, smote.test[smote.test$predict == 1,], type="class")
-table(smote.test[smote.test$predict == 1,]$PS, predicted = rf.smote.pred)
-
-# merge on predictions
-smote.test.aux = cbind(smote.test[smote.test$predict == 1,], rf.smote.pred)
-post.smote.test = merge(smote.test, smote.test.aux, by = "documentno", all = T)
-post.smote.test = post.smote.test[, c(-grep("\\.y", names(post.smote.test)))]
-names(post.smote.test) = gsub("\\.[x|y]", "", names(post.smote.test))
-
-post.smote.test[, "smote_pred"] = ifelse(is.na(post.smote.test$rf.smote.pred), 1, post.smote.test$rf.smote.pred)
-
-# STEP THREE: RUN ANOTHER MODEL TO TRY AND CLASSIFY MORE FALSE NEGATIVES
-
-# Run boosting on observations classified "no" by the random forest
-ps.adaboost = boosting(PS ~ . -documentno, data = smote.trainx, boos = T, mfinal = 1000, coeflearn = 'Freund')
-
-adaboost.pred = predict.boosting(ps.adaboost, newdata = post.smote.test[post.smote.test$predict==1 & 
-                                                                        post.smote.test$rf.smote.pred=="NO",
-                                                                      c(-grep("rf.smote.pred",names(post.smote.test)), 
-                                                                        -grep("predict",names(post.smote.test)))])
-
-# Generate variable with final predictions
-boost.test.aux = cbind(post.smote.test[post.smote.test$predict == 1 & 
-                       post.smote.test$rf.smote.pred == "NO",], adaboost.pred$class)
-post.smote.test = merge(post.smote.test, boost.test.aux, by = "documentno", all = T)
-post.smote.test = post.smote.test[, c(-grep("\\.y", names(post.smote.test)))]
-names(post.smote.test) = gsub("\\.[x|y]", "", names(post.smote.test))
-
-post.smote.test[, "smote_pred"] = ifelse((post.smote.test$`adaboost.pred$class` == "YES" | 
-                                          post.smote.test$rf.smote.pred == "YES"), "YES", "NO")
-table(post.smote.test$smote_pred, post.smote.test$PS)
-
-##################################################################################################
-
-# PERFORMANCE OF ALL MODELS 
-
-# cart alone
-table(simple.ps[601:1000,2], predicted = cart.predictions)
-
-# random forest alone
-table(simple.ps[601:1000,2], predicted = rf.predictions)
-
-# random forest with smote  
-table(simple.ps[601:1000,2], predicted = rf.smo.pred)
-
-# adaboost alone
-simple.adaboost.pred$confusion
-
-# random forest then adaboost
-table(post.smote.test$smote_pred, post.smote.test$PS)
-
-# BEST PREDICTION SO FAR
-#NO YES
-#NO  240  20
-#YES  16  85
-
-View(post.smote.test[post.smote.test$PS=="NO" & post.smote.test$smote_pred =="YES",]$documentno)
-
-# Save
-saveRDS(accidents.data, file = classified_accidents_file_name)
 rm(list = ls())
 gc()
 
