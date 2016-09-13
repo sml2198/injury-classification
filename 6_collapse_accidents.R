@@ -5,7 +5,7 @@
 # Loads and merges minetype data and drops observations not relevant to the study environment
 # Collapses to the mine-quarter level, the outputs
 
-# Last edit 7/29/16
+# Last edit 9/13/16
 
 #####################################################################################################
 
