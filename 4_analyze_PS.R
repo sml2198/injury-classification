@@ -33,7 +33,7 @@ coded_training_set_file_name = "X:/Projects/Mining/NIOSH/analysis/data/training/
   # input: all accidents data, unclassified, cleaned in 2_clean_accidents.R and merged on mines in 3_merge_accidents.R
 accidents_data_file_name = "X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_mines_accidents.rds"
   # output: all accidents, now classified as PS after algorithm
-classified_accidents_file_name = "X:/Projects/Mining/NIOSH/analysis/data/4_coded/PS_accidents_with_predictions.csv"
+classified_accidents_file_name = "X:/Projects/Mining/NIOSH/analysis/data/4_coded/PS_accidents_with_predictions.rds"
 
 ######################################################################################################
 
@@ -107,6 +107,9 @@ ps_data[, "X"] = factor(ifelse(ps_data[, "X"] == 1, "YES", "NO"))
 names(ps_data)[names(ps_data) == "X"] = "PS"
 
 # Recoded in light of Miguel's 5/27/16 response to our questions
+ps_data$PS[ps_data$documentno=="219891280164"] = "YES"
+ps_data$PS[ps_data$documentno=="219852170075"] = "YES"
+ps_data$PS[ps_data$documentno=="219901620109"] = "YES"
 ps_data$PS[ps_data$documentno=="220011070020"] = "NO"
 ps_data$PS[ps_data$documentno=="219892570061"] = "NO"
 ps_data$PS[ps_data$documentno=="219893100251"] = "NO"
@@ -117,11 +120,9 @@ ps_data$PS[ps_data$documentno=="219830320021"] = "NO"
 ps_data$PS[ps_data$documentno=="219912970040"] = "NO"
 ps_data$PS[ps_data$documentno=="219942900032"] = "NO"
 ps_data$PS[ps_data$documentno=="219982380025"] = "NO"
-ps_data$PS[ps_data$documentno=="219891280164"] = "YES"
-ps_data$PS[ps_data$documentno=="219852170075"] = "YES"
-ps_data$PS[ps_data$documentno=="219901620109"] = "YES"
 
 # Recoded in light of Miguel's 6/7/16 response to our questions
+ps_data$PS[ps_data$documentno=="219912970040"] = "YES"
 ps_data$PS[ps_data$documentno=="219871460076"] = "NO"
 ps_data$PS[ps_data$documentno=="219861280065"] = "NO"
 ps_data$PS[ps_data$documentno=="220000310115"] = "NO"
@@ -129,7 +130,20 @@ ps_data$PS[ps_data$documentno=="220001180052"] = "NO"
 ps_data$PS[ps_data$documentno=="219831430047"] = "NO"
 ps_data$PS[ps_data$documentno=="219943180016"] = "NO"
 ps_data$PS[ps_data$documentno=="220112090013"] = "NO"
-ps_data$PS[ps_data$documentno=="219912970040"] = "YES"
+
+# Recoded on 9/13/2016 in light of Miguel's lack of response to our questions
+ps_data$PS[ps_data$documentno=="220090630033"] = "YES"
+ps_data$PS[ps_data$documentno=="220050800006"] = "YES"
+ps_data$PS[ps_data$documentno=="219892210062"] = "YES"
+ps_data$PS[ps_data$documentno=="219950870035"] = "YES"
+ps_data$PS[ps_data$documentno=="219972890025"] = "YES"
+ps_data$PS[ps_data$documentno=="219930390025"] = "NO"
+ps_data$PS[ps_data$documentno=="219992320012"] = "NO"
+ps_data$PS[ps_data$documentno=="219853190080"] = "NO"
+ps_data$PS[ps_data$documentno=="219973490121"] = "NO"
+ps_data$PS[ps_data$documentno=="219852050003"] = "NO"
+ps_data$PS[ps_data$documentno=="219891140147"] = "NO"
+ps_data$PS[ps_data$documentno=="220020100051"] = "NO"
 
 # How to destring a variable
 ps_data[,grep("numberofemployees", names(ps_data))] = gsub(pattern = ",",replacement =  "", ps_data[,grep("numberofemployees", names(ps_data))])
@@ -1202,5 +1216,10 @@ table(post.smote.test$smote_pred, post.smote.test$PS)
 #YES  16  85
 
 View(post.smote.test[post.smote.test$PS=="NO" & post.smote.test$smote_pred =="YES",]$documentno)
+
+# Save
+saveRDS(accidents.data, file = classified_accidents_file_name)
+rm(list = ls())
+gc()
 
 ##################################################################################################
