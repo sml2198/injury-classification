@@ -1,6 +1,6 @@
 # NIOSH Project 2014-N-15776
 
-# 10 - Clean CFR Key
+# 11 - Clean CFR Key
     # Marks all CFR subsection codes as either relevent or maybe relevant to each injury subtype (PS/MR)
       # codes not flagged as "relevant" or "maybe relevant" can be regarded as irrelevant
       # codings from a meeting between Alison Morantz, Nikhil Saifullah, and Sarah Levine at NIOSH in Pittsburgh in 2/12/16
