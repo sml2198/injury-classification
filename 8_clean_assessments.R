@@ -6,7 +6,7 @@
   # Merges assessment data and mine types data to drop environments not of interest
   # Outputs clean assessments data
 
-# Last edit 8/3/16
+# Last edit 9/13/16
 
 ######################################################################################################
 
