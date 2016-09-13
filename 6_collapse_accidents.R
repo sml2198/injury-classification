@@ -94,13 +94,15 @@ mines_accidents_coded = mines_accidents_coded[mines_accidents_coded$coalcormetal
 
 ######################################################################################################################################
 
-# Collapse mines_accidents data here.
+# Collapse mines_accidents data here, and then save and clear workspace
 if (injury.type == "PS"){
   summed_coded_accidents = ddply(mines_accidents_coded[, c(grep("total_injuries", names(mines_accidents_coded)), 
                                                            grep("PS", names(mines_accidents_coded)),
                                                            match("mineid", names(mines_accidents_coded)), 
                                                            match("quarter", names(mines_accidents_coded)))], c("mineid", "quarter"), 
                                  function(x) colSums(x[, c(grep("total_injuries", names(x)), grep("PS", names(x)))], na.rm = T))
+  
+  saveRDS(summed_coded_accidents, PS_accidents_coded_out_file_name)
 }
 if (injury.type == "MR"){
   summed_coded_accidents = ddply(mines_accidents_coded[, c(grep("total_injuries", names(mines_accidents_coded)), 
@@ -108,15 +110,7 @@ if (injury.type == "MR"){
                                                            match("mineid", names(mines_accidents_coded)), 
                                                            match("quarter", names(mines_accidents_coded)))], c("mineid", "quarter"), 
                                  function(x) colSums(x[, c(grep("total_injuries", names(x)), grep("MR", names(x)))], na.rm = T))
-}
-
-######################################################################################################################################
-
-# Save and clear workspace
-if (injury.type == "PS"){
-  saveRDS(summed_coded_accidents, PS_accidents_coded_out_file_name)
-}
-if (injury.type == "MR"){
+  
   saveRDS(summed_coded_accidents, MR_accidents_coded_out_file_name)
 }
 
