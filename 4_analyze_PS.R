@@ -3,7 +3,7 @@
 # 4 - Analyze PS (Pinning and Striking Injuries)
   # Loads accidents training set, creates keywords and various predictors, implements various classification algorithms.
 
-# Last edit 7/19/16
+# Last edit 9/13/16
 
 # This file loads the training set sent to us by Miguel Reyes on January 29th, 2016 for use in constructing our 
 # Pinning & Striking injury classification algorithm. We clean and format the variables, conduct narrative analysis
