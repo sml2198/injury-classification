@@ -3,7 +3,7 @@
 # 5 - Analyze MR (Maintenance and Repair Injuries)
   # Loads accidents training set, creates keywords and various predictors, implements various classification algorithms.
 
-# Last edit 7/19/16
+# Last edit 9/13/16
 
 # This code pulls in 1000 observations from the manually coded training set for maintenance and repair (MR)
 # injuries. It then appends 23 MR fatalities that were scraped from MSHA: http://arlweb.msha.gov/fatals/coal/2014/
