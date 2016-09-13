@@ -45,6 +45,12 @@ history$controller_end_dt = as.Date(as.character(history$operator_start_dt), "%m
 history$operator_start_dt = as.Date(as.character(history$operator_start_dt), "%m/%d/%Y")
 history$operator_end_dt = as.Date(as.character(history$operator_start_dt), "%m/%d/%Y")
 
-history = history[, c(-grep("_dt", names(history)))]
+# create quarter vars
+history$operator_start_qtr = as.yearqtr(history$operator_start_dt)
+history$operator_end_qtr = as.yearqtr(history$operator_end_dt)
+history$controller_start_qtr = as.yearqtr(history$controller_start_dt)
+history$controller_end_qtr = as.yearqtr(history$controller_end_dt)
+
+
 
 ######################################################################################################
