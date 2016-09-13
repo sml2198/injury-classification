@@ -36,7 +36,7 @@ fatalities_data_file_name = "X:/Projects/Mining/NIOSH/analysis/data/4_coded/code
   # input: all accidents data, unclassified, cleaned in 2_clean_accidents.R and merged on mines in 3_merge_accidents.R
 accidents_data_file_name = "X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_mines_accidents.rds"
   # output: all accidents, now classified by MR after algorithm
-classified_accidents_file_name = "X:/Projects/Mining/NIOSH/analysis/data/4_coded/MR_accidents_with_predictions.csv"
+classified_accidents_file_name = "X:/Projects/Mining/NIOSH/analysis/data/4_coded/MR_accidents_with_predictions.rds"
 
 ######################################################################################################
 
@@ -1092,7 +1092,7 @@ if (data.type == "real accidents data") {
                                         -grep("working.on", names(accidents.data)), 
                                         -grep("wrench", names(accidents.data)))]
     
-  write.csv(accidents.data, file = classified_accidents_file_name, row.names = FALSE)
+    saveRDS(accidents.data, file = classified_accidents_file_name)
   # still 75,016 obs, 14,978 MR injuries, 59,704 non-MR injuries.
 }
 rm(list = ls())
