@@ -18,20 +18,16 @@ data_file_name = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/MR_p
 # read in data 
 data = readRDS(data_file_name)
 
-# drop unnecessary variables
-data$idesc = 
-  data$daysperweek = 
-  data$productionshiftsperday =
-  data$minesizepoints = 
-  data$terminated = 
-  data$MR_proportion = NULL
-
 # reformat variables because R is a lil bitch
 names(data)[grep("^[0-9]", names(data))] = paste("p", names(data)[grep("^[0-9]", names(data))], sep = "")
 data$mineid = as.character(data$mineid)
 data$MR_indicator = as.factor(data$MR_indicator)
 data$quarter = as.numeric(data$quarter)
 data$no_terminations = as.factor(data$no_terminations)
+
+# group variables
+
+
 
 ######################################################################################################
 
