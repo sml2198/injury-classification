@@ -1,6 +1,6 @@
 # NIOSH Project 2014-N-15776
 
-# 11 - Merge Violations, Assessments, Inspections, and Employment Data
+# 12 - Merge Violations, Assessments, Inspections, and Employment Data
   # Reads, merges, cleans, then outputs cleaned 
     # violations (6_clean_violations), 
     # assessments (7_clean_assessments), 
