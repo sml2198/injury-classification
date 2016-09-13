@@ -1,6 +1,6 @@
 # NIOSH Project 2014-N-15776
 
-# 10 - Collapse Accidents 
+# 6 - Collapse Accidents Data
 # Loads in coded accidents data from 5_analyze_MR_R.R and formats variables for merge
 # Loads and merges minetype data and drops observations not relevant to the study environment
 # Collapses to the mine-quarter level, the outputs
