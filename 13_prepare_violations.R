@@ -9,7 +9,7 @@
     # Loads accidents data from "6_collapse_accidents.R"
     # Merges mine-quarter level violations with inspections and accidents
 
-# Last edit 8/10/16
+# Last edit 9/13/16
 
 ######################################################################################################
 
