@@ -501,8 +501,8 @@ merged_mines_violations_accidents = merge(merged_mines_violations, summed_coded_
 merged_mines_violations_accidents = merged_mines_violations_accidents[!is.na(merged_mines_violations_accidents$hours_qtr),]
 
 # Replace missings (mine quarters without accidents data) with zeroes (see next section for zero violations)
-merged_mines_violations_accidents$totalinjuries = ifelse(is.na(merged_mines_violations_accidents$totalinjuries), 
-                                                         0, merged_mines_violations_accidents$totalinjuries)
+merged_mines_violations_accidents$total_injuries = ifelse(is.na(merged_mines_violations_accidents$total_injuries), 
+                                                         0, merged_mines_violations_accidents$total_injuries)
 # Replace MR with zero where missing (these all occur in quarters that had zero total accidents)
 merged_mines_violations_accidents$MR = ifelse(is.na(merged_mines_violations_accidents$MR), 
                                                          0, merged_mines_violations_accidents$MR)
@@ -537,23 +537,26 @@ prediction_data = prediction_data[prediction_data$minetype == "Underground",]
 prediction_data = prediction_data[prediction_data$coalcormetalmmine == "C",]
 
 # Drop unnecessary vars - at this point should have 30,266 obs & 198 vars
-prediction_data = prediction_data[, c(-grep("merge", names(prediction_data)), -grep("row_id", names(prediction_data)), 
-                                      -grep("coalcormetalmmine", names(prediction_data)), -grep("minetype", names(prediction_data)))]
-
-######################################################################################################################################
-
-# FINAL VARIABLE CLEANING AND PREP
-
-# Replace categorical variables with numeric levels
-prediction_data$year = factor(prediction_data$year)
-
-prediction_data$idesc = ifelse(prediction_data$idesc == "Hazard", 1, 
-                               ifelse(prediction_data$idesc == "Ignition or Explosion", 2, 
-                                      ifelse(prediction_data$idesc == "Inspect Once Every 10-days", 3, 
-                                             ifelse(prediction_data$idesc == "Inspect Once Every 15-days", 4,
-                                                    ifelse(prediction_data$idesc == "Inspect Once Every 5-days", 5,
-                                                           ifelse(prediction_data$idesc == "Never Had 103I Status", 6, 
-                                                                  ifelse(prediction_data$idesc == "Removed From 103I Status", 7, NA)))))))
+prediction_data = prediction_data[, c(-grep("merge", names(prediction_data)), 
+                                      -grep("row_id", names(prediction_data)), 
+                                      -grep("coalcormetalmmine", names(prediction_data)), 
+                                      -grep("minetype", names(prediction_data)),
+                                      -grep("daysperweek", names(prediction_data)), 
+                                      -grep("productionshiftsperday", names(prediction_data)),
+                                      -grep("idesc", names(prediction_data)), 
+                                      -grep("idate", names(prediction_data)), 
+                                      -grep("year", names(prediction_data)), 
+                                      -grep("exlate_interest_amt", names(prediction_data)),
+                                      -grep("minesizepoints", names(prediction_data)), 
+                                      -grep("con_", names(prediction_data)),
+                                      -match("insp_hours_per_qtr", names(prediction_data)), 
+                                      -grep("excessive_history_ind", names(prediction_data)),
+                                      -match("minename", names(prediction_data)), 
+                                      -match("minestatus", names(prediction_data)), 
+                                      -match("minestatusdate", names(prediction_data)), 
+                                      -match("operatorid", names(prediction_data)),
+                                      -match("operatorname", names(prediction_data)), 
+                                      -match("stateabbreviation", names(prediction_data)))]
 
 ######################################################################################################################################
 
@@ -564,17 +567,17 @@ prediction_data = prediction_data[order(prediction_data[,"mineid"], prediction_d
 
 # Add variables for binary and proportional dependent vars
 prediction_data$MR_indicator = ifelse(prediction_data$MR > 0, 1, 0)
-prediction_data$MR_proportion = prediction_data$MR / prediction_data$totalinjuries
 
 # All violations should be terminated, meaning the issue has been abated by the violator. A violation that has not been terminated is
 # therefore an indication of mine/operator negligence. Rather than include the number of terminations as a variable in our models
 # (which would yield collinearity because the # of terminations closely tracks the # of violations), we create an indicator for mine
 # quarters that have any non-terminated violations.  
-prediction_data$no_terminations = ifelse(prediction_data$terminated < prediction_data$total_violations, 1, 0)
-
+# prediction_data$no_terminations = ifelse(prediction_data$terminated < prediction_data$total_violations, 1, 0)
 # This var is the number of non-terminated violations in a mine quarter. Probably can't be used due to collinearity, but not sure. 
 prediction_data$num_no_terminations = ifelse(prediction_data$terminated < prediction_data$total_violations, 
                                              prediction_data$total_violations-prediction_data$terminated, 0)
+
+prediction_data = prediction_data[, c(-match("terminated", names(prediction_data)))]
 
 ######################################################################################################################################
 
@@ -582,17 +585,7 @@ prediction_data$num_no_terminations = ifelse(prediction_data$terminated < predic
 
 # Pare away variables with zero variation before model selection and prediction stages
 var_stats = describe(prediction_data[, c(-match("mineid", names(prediction_data)), 
-                                         -match("quarter", names(prediction_data)), 
-                                         -match("year", names(prediction_data)),
-                                         -match("daysperweek", names(prediction_data)),
-                                         -match("productionshiftsperday", names(prediction_data)),
-                                         -match("minename", names(prediction_data)), 
-                                         -match("minestatus", names(prediction_data)), 
-                                         -match("minestatusdate", names(prediction_data)), 
-                                         -match("operatorid", names(prediction_data)),
-                                         -match("operatorname", names(prediction_data)), 
-                                         -match("stateabbreviation", names(prediction_data)), 
-                                         -match("idate", names(prediction_data)))])
+                                         -match("quarter", names(prediction_data)))])
 
 # Variables are nontrivial (worth keeping) if their standard deviation is greater than zero 
 nontriv_vars = rownames(var_stats[var_stats$sd > 0,])
