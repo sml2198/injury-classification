@@ -886,9 +886,19 @@ ps_data = ps_data[, c(-match("accidenttime", names(ps_data)),
                       -match("bomstatecode", names(ps_data)),
                       -match("classificationcode", names(ps_data)),
                       -match("coalcormetalmmine", names(ps_data)),
+                      -match("contractorid", names(ps_data)),
+                      -match("daysperweek", names(ps_data)), 
+                      -match("daysrestrictedduty", names(ps_data)), 
                       -match("degreeofinjurycode", names(ps_data)), 
                       -match("directionstominemodified", names(ps_data)),
+                      -match("district", names(ps_data)),
+                      -match("fipscountycode", names(ps_data)),
+                      -match("fipscountyname", names(ps_data)),
+                      -match("fipsstatecode", names(ps_data)),
                       -match("highwallminerindicator", names(ps_data)),
+                      -match("hourspershift", names(ps_data)),
+                      -match("i", names(ps_data)), 
+                      -match("idesc", names(ps_data)), 
                       -match("immediatenotificationcode", names(ps_data)), 
                       -match("immediatenotificationclass", names(ps_data)), 
                       -match("injurysourcecode", names(ps_data)),
@@ -916,6 +926,8 @@ ps_data = ps_data[, c(-match("accidenttime", names(ps_data)),
                       -match("officename", names(ps_data)),
                       -match("old_narrative", names(ps_data)),
                       -match("oldoccupationcode", names(ps_data)),
+                      -match("operatorid", names(ps_data)),
+                      -match("operatorname", names(ps_data)),
                       -match("portablefipsstatecode", names(ps_data)),
                       -match("portableoperationindicator", names(ps_data)),
                       -match("primarycanvasscodedesc", names(ps_data)), 
@@ -938,33 +950,49 @@ ps_data = ps_data[, c(-match("accidenttime", names(ps_data)),
                       -match("stateabbreviation", names(ps_data)),
                       -match("subunitcode", names(ps_data)),
                       -match("transferredorterminated", names(ps_data)),
+                      -match("uglocation", names(ps_data)), 
                       -match("uglocationcode", names(ps_data)), 
+                      -match("ugminingmethod", names(ps_data)),
                       -match("ugminingmethodcode", names(ps_data)))]
 
-# Drop totally irrelevant variables, but keeping document number to reference prediction results with narrative fields downstream
+# Drop date vars (now irrelevant)
 ps_data = ps_data[, c(-grep("date", names(ps_data)))]
-
-
-# Drop variables we are confused about
-ps_data = ps_data[, c(-match("i", names(ps_data)), 
-                      -match("idesc", names(ps_data)), 
-                      -match("oldoccupationcode", names(ps_data)),
-                      -match("equip", names(ps_data)), 
-                      -match("ai_acty_cd_old", names(ps_data)), 
-                      -match("ai_dt_old", names(ps_data)),
-                      -match("ai_time_old", names(ps_data)))]
 
 ##################################################################################################
 
 # MISSING VALUE IMPUTATION
 
+# make everything a factor var
+varlist = names(ps_data)
+for (i in 1:length(varlist)) {
+  ps_data[, varlist[i]] = as.factor(ps_data[, varlist[i]])
+}
+
+# now pick out the character vars and make sure they're the right type
+charac_vars = (c("subunit", "degreeofinjury", "accidentclassification", 
+                 "accidenttype", "documentno", "mineid", 
+                 "contractorid", "mineractivity", "sourceofinjury", 
+                 "natureofinjury", "bodypart", "controllerid", 
+                 "typeofequipment", "equipmanufacturer", "occupation", 
+                 "controllername"))
+for (i in 1:length(charac_vars)) {
+  ps_data[, charac_vars[i]] = as.character(ps_data[, charac_vars[i]])
+}
+
+# same thing for vars that should be numeric
+num_vars = (c("numberofinjuries", "totalexperience", "jobexperience", 
+              "dayslost", "num.vehicles", "num.pinstrike", 
+              "num.person", "num.body num_unique_vehcl", "keyword_pts",
+              "neg_keyword_pts", "pos_pts", "neg_pts"))
+
+for (i in 1:length(num_vars)) {
+  ps_data[, charac_vars[i]] = as.character(ps_data[, charac_vars[i]])
+}
+
 # We don't use date vars as of yet so no need to store a list of their names, "logical" class vars are missing all obsvtns
 var_classes = sapply(ps_data[,names(ps_data)], class)
 charac_vars = names(var_classes[c(grep("character", var_classes), 
                                   grep("factor", var_classes))])
-num_vars = names(var_classes[c(grep("numeric", var_classes), 
-                               grep("integer", var_classes))])
-ps_data = ps_data[, -grep("logical", var_classes)]
 
 for (i in 1:length(charac_vars)) {
   ps_data[, charac_vars[i]] = ifelse((ps_data[,charac_vars[i]] == "NO VALUE FOUND" | 
