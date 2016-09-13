@@ -27,7 +27,6 @@ library(caret)
 library(dummies)
 library(stringr)
 
-
 # define file names
   # input: coded PS training set - sent to us by NIOSH on 8/28/2015
 coded_training_set_file_name = "X:/Projects/Mining/NIOSH/analysis/data/training/coded_sets/Training_Set_Pinning_And_Striking_Accidents-January-29-2016.csv"
