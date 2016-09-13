@@ -6,7 +6,7 @@
       # codings from a meeting between Alison Morantz, Nikhil Saifullah, and Sarah Levine at NIOSH in Pittsburgh in 2/12/16
     # Outputs a CFR key to be merged onto violations data
 
-# Last edit 8/2/16
+# Last edit 9/13/16
 
 ######################################################################################################
 
