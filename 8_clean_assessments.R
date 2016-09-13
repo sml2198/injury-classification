@@ -1,6 +1,6 @@
 # NIOSH Project 2014-N-15776
 
-# 7 - Clean Assessments
+# 8 - Clean Assessments
   # Reads and cleans assessments data
   # Reads clean mine types data (1_clean_mines)
   # Merges assessment data and mine types data to drop environments not of interest
