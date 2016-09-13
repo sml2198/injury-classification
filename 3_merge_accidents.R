@@ -3,7 +3,7 @@
 # 3 - Merge Accidents and Mines Data
   # Reads, merges, then outputs cleaned mines (1_clean_mines) and accidents data (2_clean_accidents)
 
-# Last edit 8/1/16
+# Last edit 9/13/16
 
 ######################################################################################################
 
