@@ -17,9 +17,9 @@ library(zoo)
   # input: cleaned mine-types key produced in produced in 1_clean_mines.R
 mine_types_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/mine_types.rds"
   # input: coded MR accidents data produced in 5_analyze_MR.R
-MR_accidents_coded_in_file_name = "X:/Projects/Mining/NIOSH/analysis/data/4_coded/MR_accidents_with_predictions.csv"
+MR_accidents_coded_in_file_name = "X:/Projects/Mining/NIOSH/analysis/data/4_coded/MR_accidents_with_predictions.rds"
   # input: coded PS accidents data produced in 4_analyze_PS.R
-PS_accidents_coded_in_file_name = "X:/Projects/Mining/NIOSH/analysis/data/4_coded/PS_accidents_with_predictions.csv"
+PS_accidents_coded_in_file_name = "X:/Projects/Mining/NIOSH/analysis/data/4_coded/PS_accidents_with_predictions.rds"
 
   # output: collapsed coded accidents data 
 MR_accidents_coded_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/4_collapsed/collapsed_MR_accidents.rds"
@@ -41,7 +41,7 @@ PS_accidents_coded_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/4_col
 mine_types = readRDS(mine_types_file_name)
 
 if (injury.type == "PS"){
-  mines_accidents_coded = read.csv(PS_accidents_coded_in_file_name)
+  mines_accidents_coded = readRDS(PS_accidents_coded_in_file_name)
   
   # Remove unecessary vars
   mines_accidents_coded = mines_accidents_coded[, c(match("mineid", names(mines_accidents_coded)),
@@ -49,7 +49,7 @@ if (injury.type == "PS"){
                                                     match("PS", names(mines_accidents_coded)))]
 }
 if (injury.type == "MR"){
-  mines_accidents_coded = read.csv(MR_accidents_coded_in_file_name)
+  mines_accidents_coded = readRDS(MR_accidents_coded_in_file_name)
   
   # Remove unecessary vars
   mines_accidents_coded = mines_accidents_coded[, c(match("mineid", names(mines_accidents_coded)),
