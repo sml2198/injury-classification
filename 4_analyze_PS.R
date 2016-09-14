@@ -61,10 +61,12 @@ if (data.type == "real accidents data") {
 
 ##################################################################################################
 
-# drop anything missing mineid
+# RENAME AND FORMAT VARS
+
+# Drop anything missing mineid
 ps_data = ps_data[!is.na(ps_data$mineid),]
 
-# MAKE ALL STRING VARIABLES LOWERCASE
+# Make all string variables lowercase
 names(ps_data)[names(ps_data) == 'narrativemodified'] = 'narrative'
 ps_data[, "narrative"] = tolower(ps_data[, "narrative"])
 ps_data$mineractivity = tolower(ps_data$mineractivity)
@@ -79,7 +81,7 @@ ps_data$typeofequipment = tolower(ps_data$typeofequipment)
 ps_data$occupation = tolower(ps_data$occupation)
 ps_data$mineractivity = tolower(ps_data$mineractivity)
 
-# format fields as characters
+# Format fields as characters
 ps_data[, "narrative"] = as.character(ps_data[, "narrative"])
 ps_data[, "occupcode3digit"] = as.character(ps_data[, "occupcode3digit"])
 ps_data[, "occupation"] = as.character(ps_data[, "occupation"])
@@ -112,8 +114,9 @@ ps_data$narrative <- gsub("ag(a)*( )*(in)*st", "against", ps_data$narrative)
 
 ##################################################################################################
 
-# CLEAN UP OTHER VARIABLES 
+# CLEAN UP OTHER VARIABLES & RECODE MISCLASSIFIED OBSERVATIONS FROM THE TRAINING SET
 
+# Format PS indicator as a binary factor
 ps_data[, "X"] = factor(ifelse(ps_data[, "X"] == 1, "YES", "NO"))
 names(ps_data)[names(ps_data) == "X"] = "PS"
 
@@ -156,7 +159,7 @@ ps_data$PS[ps_data$documentno=="219852050003"] = "NO"
 ps_data$PS[ps_data$documentno=="219891140147"] = "NO"
 ps_data$PS[ps_data$documentno=="220020100051"] = "NO"
 
-# How to destring a variable
+# Destring these numeric variables
 ps_data[,grep("numberofemployees", names(ps_data))] = gsub(pattern = ",",replacement =  "", ps_data[,grep("numberofemployees", names(ps_data))])
 ps_data[,grep("numberofemployees", names(ps_data))] = as.numeric(ps_data[,grep("numberofemployees", names(ps_data))])
 ps_data[,grep("methaneliberation", names(ps_data))] = gsub(pattern = ",",replacement =  "", ps_data[,grep("methaneliberation", names(ps_data))])
@@ -180,14 +183,6 @@ for (i in indices_with_date) {
 
 # Convert accident type codes to numeric values to make this code usable with accidents data
 ps_data$accidenttypecode = as.numeric(ps_data$accidenttypecode)
-
-##################################################################################################
-
-  # # MERGE IN OTHER VARIABLES FROM PROTO-ALGORITHM (LIKE KEYWORD FLAGS) CHANGE TO KEEP ANY OTHER ADDITIONAL VARS
-  # 
-  # ps_data = merge(ps_data, read.csv("X:/Projects/Mining/NIOSH/analysis/data/training/training_set_1_internal.csv"), c("mineid", "documentno"))
-  # ps_data = ps_data[, c(-grep("\\.y", names(ps_data)))]
-  # names(ps_data) = gsub("\\.[x|y]", "", names(ps_data))
 
 ##################################################################################################
 
@@ -267,8 +262,10 @@ ps_data[, "unevenbottom"] = ifelse(grepl("(hole|bump(s| |$|\\.|,)|dip|depression
                                   !grepl("(bolt|drill|steel|cable|test|pin).{1,15}hole", ps_data[,"narrative"]), 1, 0)
 
 ##################################################################################################
+
 # CREATE DUPLICATE NARRATIVE FIELDS AND THEN REPLACE ALL MENTIONS OF VEHICLES WITH "VEHICLE", BODY PARTS WITH "BODY", ETC.
 
+# rename narrative variable
 ps_data$old_narrative <- ps_data$narrative
 
 # VEHICLE
@@ -443,6 +440,7 @@ ps_data$narrative <- gsub("passenger", "PERSON", ps_data$narrative)
 ps_data$narrative <- gsub("driver", "PERSON", ps_data$narrative)
 
 ##################################################################################################
+
 # GENERATE VARS TO COUNT # OF UPPERCASE WORDS AND DISTANCES
 
 # Count the number of capital words in each string
@@ -451,6 +449,7 @@ ps_data$num.pinstrike <- str_count(ps_data$narrative, "PINNED/STRUCK")
 ps_data$num.person <- str_count(ps_data$narrative, "PERSON")
 ps_data$num.body <- str_count(ps_data$narrative, "BODY")
 
+# Create var counting the number of unique vehicles mentioned in a narrative
 uniq_vehcls = function(x) {
   return(length(unique(substr(unlist(regmatches(x, gregexpr("VEHICLE[0-9][0-9]*", x))), 8, 9))))
 }
@@ -461,11 +460,12 @@ ps_data$mult_vehcl = ifelse(ps_data$num_unique_vehcl > 1, 1, 0)
 
 # CREATE A FEW MORE KEYWORDS ON THE NEW NARRATIVE FIELDS
 
+# Identify accidents involving a person who was inside of the vehicle
 ps_data[, "in_vehicle"] = ifelse(grepl("riding.{1,10}(passenger|driver|operat(o|e)r)", ps_data[,"old_narrative"]) | 
                                  grepl("PERSON.{1,8}riding", ps_data[,"narrative"]) |
                                 !grepl("riding.{1,15}VEHICLE", ps_data[,"narrative"]), 1, 0)
                                 
-# if two different types of vehicles are mentioned, it's much more likely to be a V-to-V striking accident
+# If two different types of vehicles are mentioned, it's much more likely to be a V-to-V striking accident
 ps_data[, "dif_vehicle"] = ifelse(grepl("(second|another|different).{1,5}VEHICLE", ps_data[,"narrative"]), 1, 0)
 ps_data[, "loose_rbolting"] = ifelse(grepl("(plate|bit|bolt)+.{1,10}PINNED/STRUCK", ps_data[,"narrative"]), 1, 0)
 ps_data[, "drill_action"] = ifelse(grepl("(plate|bit|bolt)+.{1,10}PINNED/STRUCK", ps_data[,"narrative"]), 1, 0)
@@ -473,19 +473,19 @@ ps_data[, "drill_action"] = ifelse(grepl("(plate|bit|bolt)+.{1,10}PINNED/STRUCK"
 # Roof bolting/drilling steel injuries
 ps_data[, "drillsteel"] = ifelse(grepl("drill.{1,5}steel", ps_data[,"narrative"]) & 
                                  grepl("(between|btwn).{1,17}steel.{1,25}(drill|head|roof|guide|canopy|ring)", ps_data[,"narrative"]), 1, 0)
-# drill steel beraking/bending during roofbolting and caught an injury is not considered PS
+# Drill steel beraking/bending during roofbolting and caught an injury is not considered PS
 ps_data[, "brokensteel"] = ifelse(grepl("drill.{1,5}steel", ps_data[,"narrative"]) & 
                                  (grepl("(drill|roof).{1,5}(steel|bolt).{1,15}(burst|ben(t|d)|br(eak|oke)|loose|drop(ped|ping)*|c(a|o)*me( )*( )*out|f(a|e)ll|stuck|clog)", ps_data[,"old_narrative"]) |
                                   grepl("wrench.{1,5}(slip|c(a|o)me).{1,5}off.{1,15}(bolt|drill head)", ps_data[,"old_narrative"]) |  
                                   grepl("wrench.{1,15}broke", ps_data[,"old_narrative"])), 1, 0)
 ps_data[, "roofbolt"] = ifelse(grepl("(roof|( |^)rib)( |-)*bolt", ps_data[,"narrative"]) | 
                                grepl("(roof|rib).{1,25}bolting", ps_data[,"narrative"]), 1, 0)
-# gloves getting caught during roof bolting count as "entrapment" and should not be marked as PS
+# Gloves getting caught during roof bolting count as "entrapment" and should not be marked as PS
 ps_data[, "entrapment"] = ifelse((ps_data$drillsteel == 1 | 
                                   ps_data$roofbolt == 1) & 
                                  (grepl("(caught|catching|snagg(ed|ing)).{1,10}glove", ps_data[,"old_narrative"]) | 
                                   grepl("glove.{1,10}(caught|catching|snagg(ed|ing))", ps_data[,"old_narrative"])), 1, 0)
-# now create positive and negative roof bolting flags 
+# Now create positive and negative roof bolting flags 
 ps_data[, "pos_roofbolt"] = ifelse(ps_data$roofbolt == 1 & 
                                    grepl("PINNED/STRUCK.{1,15}between.{1,15}(roof( bolt)*|canopy|boom|(bolter|drill)( |-)*(pot|guide|head)|(drill|roof)*( |-)*(steel|guide)|( |^)rib|(bolt(er)*|torque)( |-)*wrench|lead|top).{1,30}(top|roof( bolt)*|canopy|boom|(bolter|drill)( |-)*(pot|guide|(h|l)ead)|(drill|roof)*( |-)*(steel|guide)|( |^)rib|(bolt(er)*|torque)( |-)*wrench|lead)", ps_data[,"narrative"]), 1, 0)
 ps_data[, "neg_roofbolt"] = ifelse(ps_data$roofbolt == 1 & 
@@ -497,7 +497,7 @@ ps_data[, "outsidevehicle"] = ifelse(((grepl("BODY.{1,15}(resting| hanging).{1,5
                                        grepl("VEHICLE", ps_data[,"narrative"])) |
                                        grepl("BODY.{1,15}out( )*side.{1,30}VEHICLE", ps_data[,"narrative"])) &
                                       !grepl("overhang", ps_data[,"narrative"]), 1, 0)
-# in several injuries the miner is struck by a cable which is never PS. However, getting hit by the boom while replacing the cable is common and is PS
+# In several injuries the miner is struck by a cable which is never PS. However, getting hit by the boom while replacing the cable is common and is PS
 ps_data[, "cable"] = ifelse((grepl("cable.{1,30}PINNED/STRUCK", ps_data[,"narrative"]) | 
                              grepl("PINNED/STRUCK.{1,30}cable", ps_data[,"narrative"])) & 
                            (!grepl("boom", ps_data[,"narrative"]) &
@@ -528,6 +528,7 @@ ps_data[, "strikerib"] = ifelse((grepl("PINNED/STRUCK.{0,20}( )rib", ps_data[, "
 
 # GENERATE LIKELY CIRCUMSTANCES
 
+# Remove accidents invovling falling rock 
 ps_data$falling.class = ifelse(ps_data$accidentclassification == "fall of roof or back", 1, 0)
 
 ps_data[, "falling.word"] = ifelse(grepl("rock( )*fell", ps_data[,"narrative"]) |
@@ -562,20 +563,33 @@ ps_data$keyword = ifelse((ps_data$pin == 1 |
                           ps_data$wheel == 1) &
                          (ps_data$falling.accident == 0), 1, 0)
 
-ps_data$false_keyword = ifelse((ps_data$jarring == 1 | ps_data$outsidevehicle == 1 | 
-                                ps_data$steering == 1 | ps_data$neg_roofbolt == 1 |
-                                ps_data$bounced == 1 | ps_data$rock == 1 | 
-                                ps_data$derail == 1 | ps_data$cable == 1 | 
-                                ps_data$tool_break == 1 | ps_data$bodyseat == 1 | 
-                                ps_data$headroof == 1 | ps_data$strap == 1 | 
-                                ps_data$trolleypole == 1 | ps_data$hole == 1), 1, 0)
+ps_data$false_keyword = ifelse((ps_data$jarring == 1 | 
+                                ps_data$outsidevehicle == 1 | 
+                                ps_data$steering == 1 | 
+                                ps_data$neg_roofbolt == 1 |
+                                ps_data$bounced == 1 | 
+                                ps_data$rock == 1 | 
+                                ps_data$derail == 1 | 
+                                ps_data$cable == 1 | 
+                                ps_data$tool_break == 1 | 
+                                ps_data$bodyseat == 1 | 
+                                ps_data$headroof == 1 | 
+                                ps_data$strap == 1 | 
+                                ps_data$trolleypole == 1 | 
+                                ps_data$hole == 1), 1, 0)
 
-ps_data$maybe_false_keyword = ifelse((ps_data$digit == 1 | ps_data$operating == 1 |
-                                      ps_data$bent == 1 | ps_data$strikerib == 1 |
-                                      ps_data$passenger == 1 | ps_data$wrench == 1 |
-                                      ps_data$controls == 1 | ps_data$resin == 1 |
-                                      ps_data$loose == 1 | ps_data$broke == 1 | 
-                                      ps_data$canopy == 1 | ps_data$flew == 1), 1, 0)
+ps_data$maybe_false_keyword = ifelse((ps_data$digit == 1 | 
+                                      ps_data$operating == 1 |
+                                      ps_data$bent == 1 | 
+                                      ps_data$strikerib == 1 |
+                                      ps_data$passenger == 1 | 
+                                      ps_data$wrench == 1 |
+                                      ps_data$controls == 1 | 
+                                      ps_data$resin == 1 |
+                                      ps_data$loose == 1 | 
+                                      ps_data$broke == 1 | 
+                                      ps_data$canopy == 1 | 
+                                      ps_data$flew == 1), 1, 0)
 
 ##################################################################################################
 
@@ -968,13 +982,13 @@ ps_data = ps_data[, c(-grep("date", names(ps_data)))]
 
 # MISSING VALUE IMPUTATION
 
-# make everything a factor var
+# Make everything a factor var
 varlist = names(ps_data)
 for (i in 1:length(varlist)) {
   ps_data[, varlist[i]] = as.factor(ps_data[, varlist[i]])
 }
 
-# now pick out the character vars and make sure they're the right type
+# Now pick out the character vars and make sure they're the right type
 charac_vars = (c("subunit", "degreeofinjury", "accidentclassification", 
                  "accidenttype", "documentno", "mineid", 
                  "mineractivity", "sourceofinjury", "controllername",
@@ -984,7 +998,7 @@ for (i in 1:length(charac_vars)) {
   ps_data[, charac_vars[i]] = as.character(ps_data[, charac_vars[i]])
 }
 
-# same thing for vars that should be numeric
+# Same thing for vars that should be numeric
 num_vars = (c("numberofinjuries", "totalexperience", "jobexperience", 
               "dayslost", "num.vehicles", "num.pinstrike", 
               "num.person", "num.body", "num_unique_vehcl", 
@@ -1046,12 +1060,12 @@ if (imputation_method == 1 | imputation_method == 2) {
     }
   }
 } else {
-  #Not to be implemented as of now. 4/15/16
+  # Not to be implemented as of now. 4/15/16
 }
 
 ##################################################################################################
 
-# PRODUCE DATASETS WITH ONLY VARS OF INTEREST FOR RF/BOOSTING ANALYSIS 
+# PRODUCE DATASETS WITH ONLY VARS OF INTEREST 
 
 simple.data = ps_data[, c(grep("maybe_", names(ps_data)),
                           grep("likely_", names(ps_data)),
