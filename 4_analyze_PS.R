@@ -1142,15 +1142,15 @@ if (strict) {
 
 ##################################################################################################
 
+# Randomly sort data (it was ordered in stata before this)
+set.seed(625)
+rand <- runif(nrow(simple.data))
+simple.ps <- simple.data[order(rand),]
+remove(rand)
+# which( colnames(simple.ps)=="PS" )
+
 if (data.type == "training" ) {
 
-  # Randomly sort data (it was ordered in stata before this)
-  set.seed(625)
-  rand <- runif(nrow(simple.data))
-  simple.ps <- simple.data[order(rand),]
-  remove(rand)
-  # which( colnames(simple.ps)=="PS" )
-  
   # CART
   #cart <- rpart(PS ~ . -documentno, data = simple.ps[1:600,], method="class")
   #cart.predictions = predict(cart, simple.ps[601:1000,],type="class")
