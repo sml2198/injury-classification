@@ -3,11 +3,9 @@
 # 16 - Who am I?
   # What do I do?
 
-# Last edit 9/12/16
+# Last edit 9/13/16
 
-"X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/MR_prediction_data.rds"
-
-######################################################################################################
+#####################################################################################################
 
 # Online Resources
 
@@ -34,6 +32,49 @@
 
 ######################################################################################################
 
+# input: part-level data
+data_file_name = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/MR_prediction_data.rds"
+
+######################################################################################################
+
+# DATA SET-UP
+
+# read in data 
+data = readRDS(data_file_name)
+
+# rename variables
+data = rename(data, c(coal_prod_qtr = "coal_prod", 
+                      employment_qtr = "employment",
+                      hours_qtr = "hours",
+                      goodfaithind = "num_good_faith",
+                      onsite_insp_hours_per_qtr = "onsite_insp_hours"))
+
+names(data)[grep("^[0-9]", names(data))] = paste("p", names(data)[grep("^[0-9]", names(data))], sep = "")
+names(data)[grep("[0-9].[0-9]", names(data))] = paste("s", names(data)[grep("[0-9].[0-9]", names(data))], sep = "")
+
+# reformat variables
+data$mineid = as.character(data$mineid)
+data$quarter = as.numeric(data$quarter)
+data$MR_indicator = as.factor(data$MR_indicator)
+
+# group variables
+violation_vars = names(data)[grep("^p+[0-9]|^sp+[0-9]", names(data))]
+part_vars = violation_vars[grep("^p", violation_vars)]
+subpart_vars = violation_vars[grep("^sp", violation_vars)]
+
+sig_sub_vars = violation_vars[grep("sigandsub$", violation_vars)]
+penalty_point_vars = violation_vars[grep("penaltypoints$", violation_vars)]
+violation_count_vars = setdiff(violation_vars, union(sig_sub_vars, penalty_point_vars))
+
+part_sig_sub_vars = intersect(part_vars, sig_sub_vars)
+subpart_sig_sub_vars = intersect(subpart_vars, sig_sub_vars)
+part_penalty_point_vars = intersect(part_vars, penalty_point_vars)
+subpart_penalty_point_vars = intersect(subpart_vars, penalty_point_vars)
+part_violation_count_vars = intersect(part_vars, violation_count_vars)
+subpart_violation_count_vars = intersect(subpart_vars, violation_count_vars)
+
+######################################################################################################
+
 # Model Label Key: X.Y.Z.N
   # X
     # P: predictors are part-level violations
@@ -56,6 +97,24 @@
 # Running and Testing Models
 
 # Model P.C.V.1
+# data$MR / data$hours
+pcv1 = glm(MR ~ ., family = poisson(link = log), data = data[, c("MR", "hours", part_violation_count_vars)])
+summary(pcv1)
+
+# cluster errors by mine
+# onsite_insp_hours
+# time trend
+# seasonal trend
+
+# operator controls?
+# state controls?
+# fixed time effects?
+
+pcv1 = glm(MR/hours ~ as.factor(mineid) + as.factor(quarter) + p47 + p48 + p71 + p72 + p75 + p77, family = poisson(link = log), data = data)
+summary(pcv1)
+
+pcv1 = glm.nb(MR ~ ., data = data[, c("MR", "hours", part_violation_count_vars)])
+summary(pcv1)
 
 # Model P.C.V.2
 
