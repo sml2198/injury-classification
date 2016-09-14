@@ -51,15 +51,15 @@ injury.type = "MR"
 
 ######################################################################################################################################
 
-# define log file name
+# Define log file name
 #sink(file="prepare_violations_log.txt")
 
 ######################################################################################################################################
 
-# read in merged violations-assessments: 836,612 obs, 1669 unique mineids, 119 vars
+# Read in merged violations-assessments: 836,612 obs, 1669 unique mineids, 118 vars
 merged_violations = readRDS(merged_violations_in_file_name)
 
-# format inspection type
+# Format inspection type
 merged_violations$inspacty = tolower(merged_violations$inspacty)
 merged_violations$inspacty = ifelse(merged_violations$inspacty == "mine idle activity", "mine idle", merged_violations$inspacty)
 merged_violations$inspacty = ifelse(merged_violations$inspacty == "na", "n", merged_violations$inspacty)
@@ -70,7 +70,7 @@ merged_violations$inspacty = ifelse(merged_violations$inspacty == "103(g)(1) spo
 merged_violations$inspacty = ifelse(merged_violations$inspacty == "103(i) spot (ign or expl) insp", "103(i) spot inspections", merged_violations$inspacty)
 merged_violations$inspacty = ifelse(merged_violations$inspacty == "103(i) spot (hazard) inspection", "103(i) spot inspections", merged_violations$inspacty)
 
-# collapse inspection type categories to reasonable amount
+# Collapse inspection type categories to reasonable amount
 merged_violations$inspacty = ifelse((merged_violations$inspacty == "regular inspection" |
                                        merged_violations$inspacty == "regular safety and health inspection"), "regular inspection", merged_violations$inspacty)
 merged_violations$inspacty = ifelse(grepl("complaint", merged_violations$inspacty), "complaint inspection", merged_violations$inspacty)
@@ -78,31 +78,31 @@ merged_violations$inspacty = ifelse(merged_violations$inspacty == "fatal acciden
 merged_violations$inspacty = ifelse(grepl("103", merged_violations$inspacty), "103", merged_violations$inspacty)
 merged_violations$inspacty = ifelse(grepl("(103|fatality|regular|complaint)", merged_violations$inspacty), merged_violations$inspacty, "other")
 
-# format violation and assessment type
+# Format violation and assessment type
 merged_violations$violationtypecode = as.character(merged_violations$violationtypecode)
 merged_violations$assessmenttypecode = as.character(merged_violations$assessmenttypecode)
 
-# specify function for making the pts vars into numeric vars (from their current factor state)
+# Specify function for making the pts vars into numeric vars (from their current factor state)
 as.numeric.factor <- function(x) {as.numeric(levels(x))[x]}
 
-# remove the 3 observations that are missing for likelihood, injuryillness & negligence (now 836,609 obs)
+# Remove the 3 observations that are missing for likelihood, injuryillness & negligence (now 836,609 obs)
 merged_violations = merged_violations[(!is.na(merged_violations$likelihood) & 
                                        !is.na(merged_violations$injuryillness) & 
                                        !is.na(merged_violations$negligence)),]
 
-# rename likelihood categories and deal with missing values
+# Rename likelihood categories and deal with missing values
 merged_violations$likelihood.pts.con = merged_violations$likelihood
 levels(merged_violations$likelihood.pts.con) = c(3, 0, 4, 2, 1)
 merged_violations$likelihood.pts.con = as.numeric.factor(merged_violations$likelihood.pts.con)
 merged_violations$likelihood = as.character(merged_violations$likelihood)
 
-# rename injuryillness categories and deal with missing values
+# Rename injuryillness categories and deal with missing values
 merged_violations$injuryillness.pts.con = merged_violations$injuryillness
 levels(merged_violations$injuryillness.pts.con) = c(3, 1, 0, 2)
 merged_violations$injuryillness.pts.con = as.numeric.factor(merged_violations$injuryillness.pts.con)
 merged_violations$injuryillness = as.character(merged_violations$injuryillness)
 
-# rename negligence categories and deal with missing values
+# Rename negligence categories and deal with missing values
 merged_violations$negligence.pts.con = merged_violations$negligence
 levels(merged_violations$negligence.pts.con) = c(3, 1, 2, 0, 4)
 merged_violations$negligence.pts.con = as.numeric.factor(merged_violations$negligence.pts.con)
@@ -122,14 +122,11 @@ merged_violations$personsaffected.pts.con = merged_violations$personsaffected
 merged_violations$personsaffected.pts.con = ifelse(merged_violations$personsaffected.pts.con > 10, 
                                                    10, merged_violations$personsaffected.pts.con)
 
-# rename points vars 
+# Rename points vars 
 names(merged_violations)[names(merged_violations) == "gravitypersonspoints"] = "personsaffected.pts"
 names(merged_violations)[names(merged_violations) == "negligencepoints"] = "negligence.pts"
 names(merged_violations)[names(merged_violations) == "gravityinjurypoints"] = "injuryillness.pts"
 names(merged_violations)[names(merged_violations) == "gravitylikelihoodpoints"] = "likelihood.pts"
-
-# There are 6 obs that have both section_of_act and part_section non-missing (which shouldn't really happen). We don't want these
-#sum(!is.na(merged_violations$section_of_act) & !is.na(merged_violations$part_section)) # 6
 
 # Format sig and sub var
 names(merged_violations)[names(merged_violations) == "sigandsubdesignation"] = "sigandsub"
@@ -138,31 +135,41 @@ merged_violations$sigandsub = as.numeric.factor(merged_violations$sigandsub)
 
 ######################################################################################################################################
 
-# function to dummy out variables
-datdum = function(var_name, data, data_name) {
-  data$rv = rnorm(nrow(data), 1, 1)
-  mm = data.frame(model.matrix(lm(data$rv ~ -1 + factor(data[, var_name]))))
-  data$rv = NULL
-  data[, var_name] = NULL
-  names(mm) = paste(var, 1:ncol(mm), sep = ".")
-  data = cbind(data, mm)
-  assign(data_name, data, .GlobalEnv) 
-}
-
-# dummy out categorical variables
-dum_vars = c("inspacty", 
-             "assessmenttypecode", 
-             "violationtypecode", 
-             "likelihood", 
-             "injuryillness", 
-             "negligence")
-
-for (var in dum_vars) {
-  datdum(var, merged_violations, "merged_violations")
-}
-
-# memory
-rm(dum_vars, var)
+# # Function to dummy out variables
+# datdum = function(var_name, data, data_name) {
+#   data$rv = rnorm(nrow(data), 1, 1)
+#   mm = data.frame(model.matrix(lm(data$rv ~ -1 + factor(data[, var_name]))))
+#   data$rv = NULL
+#   data[, var_name] = NULL
+#   names(mm) = paste(var, 1:ncol(mm), sep = ".")
+#   data = cbind(data, mm)
+#   assign(data_name, data, .GlobalEnv) 
+# }
+# 
+# # Dummy out categorical variables
+# dum_vars = c("inspacty", 
+#              "assessmenttypecode", 
+#              "violationtypecode", 
+#              "likelihood", 
+#              "injuryillness", 
+#              "negligence")
+# 
+# for (var in dum_vars) {
+#   datdum(var, merged_violations, "merged_violations")
+# }
+# 
+# # Create lists of number of dummies for violation, assessment, and inspection types 
+# violationtypecodes = seq(1, 4)
+# assessmenttypecodes = seq(1, 3)
+# inspactycodes = seq(1, 5)
+# 
+# # Create lists of number of dummies for likelihood, injuryillness (num persons affected) and negligence codes 
+# likelihoodcodes = seq(1, 5)
+# injuryillnesscodes = seq(1, 4)
+# negligencecodes = seq(1, 5)
+#
+# # Memory
+# rm(dum_vars, var)
 
 ######################################################################################################################################
 
@@ -171,8 +178,10 @@ rm(dum_vars, var)
 # For part-specific variable creation
 if (injury.type == "MR") {
   if (relevant.only.option != "on") {
-    relevant_partcodes = as.list(levels(factor(merged_violations[merged_violations$MR_relevant == 1 | merged_violations$MR_maybe_relevant == 1, ]$cfr_part_code)))
-    relevant_subsectcodes = as.list(levels(factor(merged_violations[merged_violations$MR_relevant == 1 | merged_violations$MR_maybe_relevant == 1, ]$subsection_code)))
+    relevant_partcodes = as.list(levels(factor(merged_violations[merged_violations$MR_relevant == 1 | 
+                                                                 merged_violations$MR_maybe_relevant == 1, ]$cfr_part_code)))
+    relevant_subsectcodes = as.list(levels(factor(merged_violations[merged_violations$MR_relevant == 1 | 
+                                                                    merged_violations$MR_maybe_relevant == 1, ]$subsection_code)))
   }
   if (relevant.only.option == "on") {
     relevant_partcodes = as.list(levels(factor(merged_violations[merged_violations$MR_relevant == 1, ]$cfr_part_code)))
@@ -181,8 +190,10 @@ if (injury.type == "MR") {
 }
 if (injury.type == "PS") {
   if (relevant.only.option != "on") {
-    relevant_partcodes = as.list(levels(factor(merged_violations[merged_violations$PS_relevant == 1 | merged_violations$PS_maybe_relevant == 1, ]$cfr_part_code)))
-    relevant_subsectcodes = as.list(levels(factor(merged_violations[merged_violations$PS_relevant == 1 | merged_violations$PS_maybe_relevant == 1, ]$subsection_code)))
+    relevant_partcodes = as.list(levels(factor(merged_violations[merged_violations$PS_relevant == 1 | 
+                                                                 merged_violations$PS_maybe_relevant == 1, ]$cfr_part_code)))
+    relevant_subsectcodes = as.list(levels(factor(merged_violations[merged_violations$PS_relevant == 1 | 
+                                                                    merged_violations$PS_maybe_relevant == 1, ]$subsection_code)))
   }
   if (relevant.only.option == "on") {
     relevant_partcodes = as.list(levels(factor(merged_violations[merged_violations$PS_relevant == 1, ]$cfr_part_code)))
@@ -201,16 +212,6 @@ for (code in relevant_subsectcodes) {
 relevant_subsectcodes = setdiff(relevant_subsectcodes, remove_subcodes)
 rm(remove_subcodes)
 
-# Create lists of number of dummies for violation, assessment, and inspection types 
-violationtypecodes = seq(1, 4)
-assessmenttypecodes = seq(1, 3)
-inspactycodes = seq(1, 5)
-
-# Create lists of number of dummies for likelihood, injuryillness (num persons affected) and negligence codes 
-likelihoodcodes = seq(1, 5)
-injuryillnesscodes = seq(1, 4)
-negligencecodes = seq(1, 5)
-
 ######################################################################################################################################
 
 # LOOPS TO GENERATE PART AND SUBSECTION SPECIFIC VARIABLES
@@ -223,7 +224,6 @@ for (i in 1:length(cfr_codes)) {
     merged_violations[, cfr_codes[i]] = ifelse(merged_violations$cfr_part_code == cfr_codes[i], 1, 0)
     merged_violations[, paste(cfr_codes[i], "penaltypoints", sep = ".")] = apply(cbind(merged_violations[, "penaltypoints"], merged_violations[, cfr_codes[i]]), 1, prod)
     merged_violations[, paste(cfr_codes[i], "sigandsub", sep = ".")] = apply(cbind(merged_violations[, "sigandsub"], merged_violations[, cfr_codes[i]]), 1, prod)
-    
 # 
 #     # PTS VARS FOR ASSESSMENT CHARACTERISTICS & CONSTRUCTED PTS VARS FOR ASSESSMENT CHARACTERISTICS  
 #     merged_violations[, paste(cfr_codes[i], "negligence.pts", sep = ".")] = apply(cbind(merged_violations[, "negligence.pts"], merged_violations[, cfr_codes[i]]), 1, prod)
@@ -264,9 +264,9 @@ for (i in 1:length(cfr_codes)) {
 }
   
 # Remove things we won't use again.
-rm(relevant_subsectcodes, relevant_partcodes, cfr_codes,
-  violationtypecodes, assessmenttypecodes, inspactycodes,
-  likelihoodcodes, injuryillnesscodes, negligencecodes)
+rm(relevant_subsectcodes, relevant_partcodes, cfr_codes)
+#   violationtypecodes, assessmenttypecodes, inspactycodes,
+#   likelihoodcodes, injuryillnesscodes, negligencecodes)
 
 ######################################################################################################################################
 
@@ -280,12 +280,12 @@ varlist = names(merged_violations[, grep("^[0-9][0-9]((.[a-z])|($))", names(merg
 
 if (injury.type == "MR" & relevant.only.option == "off") {
   merged_violations$relevant = ifelse((merged_violations$MR_relevant == 1 |
-                                        merged_violations$MR_maybe_relevant == 1), 1, 0)
+                                       merged_violations$MR_maybe_relevant == 1), 1, 0)
 }
 
 if (injury.type == "PS" & relevant.only.option == "off") {
   merged_violations$relevant = ifelse((merged_violations$PS_relevant == 1 |
-                                         merged_violations$PS_maybe_relevant == 1), 1, 0)
+                                       merged_violations$PS_maybe_relevant == 1), 1, 0)
 }
 
 # This problem only affects the part-level data preparation. Subsection-level data is already (obviously) subsection specific.
@@ -536,28 +536,6 @@ prediction_data = prediction_data[complete.cases(prediction_data$minetype),]
 prediction_data = prediction_data[prediction_data$minetype == "Underground",]
 prediction_data = prediction_data[prediction_data$coalcormetalmmine == "C",]
 
-# Drop unnecessary vars - at this point should have 30,266 obs & 198 vars
-prediction_data = prediction_data[, c(-grep("merge", names(prediction_data)), 
-                                      -grep("row_id", names(prediction_data)), 
-                                      -grep("coalcormetalmmine", names(prediction_data)), 
-                                      -grep("minetype", names(prediction_data)),
-                                      -grep("daysperweek", names(prediction_data)), 
-                                      -grep("productionshiftsperday", names(prediction_data)),
-                                      -grep("idesc", names(prediction_data)), 
-                                      -grep("idate", names(prediction_data)), 
-                                      -grep("year", names(prediction_data)), 
-                                      -grep("exlate_interest_amt", names(prediction_data)),
-                                      -grep("minesizepoints", names(prediction_data)), 
-                                      -grep("con_", names(prediction_data)),
-                                      -match("insp_hours_per_qtr", names(prediction_data)), 
-                                      -grep("excessive_history_ind", names(prediction_data)),
-                                      -match("minename", names(prediction_data)), 
-                                      -match("minestatus", names(prediction_data)), 
-                                      -match("minestatusdate", names(prediction_data)), 
-                                      -match("operatorid", names(prediction_data)),
-                                      -match("operatorname", names(prediction_data)), 
-                                      -match("stateabbreviation", names(prediction_data)))]
-
 ######################################################################################################################################
 
 # FINAL VARIABLE CLEANING AND PREP
@@ -577,7 +555,81 @@ prediction_data$MR_indicator = ifelse(prediction_data$MR > 0, 1, 0)
 prediction_data$num_no_terminations = ifelse(prediction_data$terminated < prediction_data$total_violations, 
                                              prediction_data$total_violations-prediction_data$terminated, 0)
 
-prediction_data = prediction_data[, c(-match("terminated", names(prediction_data)))]
+# Drop unnecessary vars - at this point should have 30,289 obs & 1046 vars
+prediction_data = prediction_data[, c(-grep("coalcormetalmmine", names(prediction_data)),
+                                      -grep("con_", names(prediction_data)),
+                                      -grep("daysperweek", names(prediction_data)), 
+                                      -grep("excessive_history_ind", names(prediction_data)),
+                                      -grep("exlate_interest_amt", names(prediction_data)),
+                                      -grep("idate", names(prediction_data)), 
+                                      -grep("idesc", names(prediction_data)), 
+                                      -match("insp_hours_per_qtr", names(prediction_data)),
+                                      -grep("merge", names(prediction_data)), 
+                                      -grep("minetype", names(prediction_data)),
+                                      -match("minename", names(prediction_data)),
+                                      -grep("minesizepoints", names(prediction_data)), 
+                                      -match("minestatus", names(prediction_data)), 
+                                      -match("minestatusdate", names(prediction_data)), 
+                                      -grep("productionshiftsperday", names(prediction_data)),
+                                      -grep("row_id", names(prediction_data)),
+                                      -match("terminated", names(prediction_data)),
+                                      -grep("year", names(prediction_data)))]
+
+######################################################################################################################################
+
+# CLEAN UP OPERATORNAME AND OPERATORID
+
+# Remove any leading or traling whitespace on operator names & make lowercase
+trim <- function (x) gsub("^\\s+|\\s+$", "", x)
+prediction_data$operatorname = trim(prediction_data$operatorname)
+prediction_data$operatorname = tolower(prediction_data$operatorname)
+
+clean_names = function(var) {
+  prediction_data[, var] = gsub(",", "", prediction_data[, var])
+  prediction_data[, var] = gsub("\\.", "", prediction_data[, var])
+  prediction_data[, var] = gsub("-", " ", prediction_data[, var])
+  prediction_data[, var] = gsub("\\s\\s", " ", prediction_data[, var])
+  prediction_data[, var] = gsub("company", "co", prediction_data[, var])
+  prediction_data[, var] = gsub("corporation", "co", prediction_data[, var])
+  prediction_data[, var] = gsub("comp", "co", prediction_data[, var])
+  prediction_data[, var] = gsub("corp$", "co", prediction_data[, var])
+  prediction_data[, var] = gsub("incorporated", "inc", prediction_data[, var])
+  prediction_data[, var] = gsub(" and ", " & ", prediction_data[, var])
+  prediction_data[, var] = gsub("limited", "ltd", prediction_data[, var])
+  prediction_data[, var] = gsub("l.l.c.", "llc", prediction_data[, var])
+  prediction_data[, var] = gsub("l l c", "llc", prediction_data[, var])
+}
+prediction_data$operatorname = clean_names("operatorname")
+
+strip_names = function(var) {
+  prediction_data[, var] = gsub(" inc( )*$", "", prediction_data[, var])
+  prediction_data[, var] = gsub(" co( )*$", "", prediction_data[, var])
+  prediction_data[, var] = gsub(" co( )*inc( )*$", "", prediction_data[, var])
+  prediction_data[, var] = gsub(" co( )*llc( )*$", "", prediction_data[, var])
+  prediction_data[, var] = gsub(" llc( )*$", "", prediction_data[, var])
+  prediction_data[, var] = gsub(" ltd( )*$", "", prediction_data[, var])
+}
+prediction_data$operatorname = strip_names("operatorname")
+
+# Special clean-up treatment
+special_names = function(var) {
+  prediction_data[, var] = gsub("little buck coal co # 2", "little buck coal co #2", prediction_data[, var])
+  prediction_data[, var] = gsub("gemco energies", "gemco energy", prediction_data[, var])
+  prediction_data[, var] = gsub("goodin creek contracting", "goodin creek mining", prediction_data[, var])
+  prediction_data[, var] = gsub("j&r", "j & r", prediction_data[, var])
+  prediction_data[, var] = gsub("d&d", "d & d", prediction_data[, var])
+  prediction_data[, var] = gsub("nu fac mining", "nufac mining", prediction_data[, var])
+  prediction_data[, var] = gsub("omega mining  beehive coal", "omega mining", prediction_data[, var])
+  prediction_data[, var] = gsub("s e l a h", "selah", prediction_data[, var])
+  prediction_data[, var] = gsub("williams bros coal", "williams brothers coal", prediction_data[, var])
+  prediction_data[, var] = gsub("rock 'n' roll coal", "rock n roll coal", prediction_data[, var])
+  prediction_data[, var] = gsub("road fork development", "roadfork development", prediction_data[, var])
+}
+prediction_data$operatorname = special_names("operatorname")
+
+# Generate factor identifier for unique oeprators (ignore names from here on out)
+prediction_data$operatorid = as.factor(as.numeric(as.factor(prediction_data$operatorname)))
+prediction_data = prediction_data[, c(-grep("operatorname", names(prediction_data)))]
 
 ######################################################################################################################################
 
@@ -595,8 +647,9 @@ rm(var_stats)
 # Keeps only nontrivial vars. Warning: This excludes all non-numeric variables - wind up with 30,266 obs with 169 vars
 prediction_data = prediction_data[, c(nontriv_vars, "mineid", "quarter")]
 
-# This line will report number of missings per var - should be zero (except lagged vars which will be missing for first quarter)!
-apply(is.na(prediction_data),2,sum)
+# Rename and format state var
+prediction_data$stateabbreviation = as.factor(as.character(prediction_data$stateabbreviation))
+names(prediction_data)[names(prediction_data) == "stateabbreviation"] = "state"
 
 ######################################################################################################################################
 
@@ -615,39 +668,6 @@ if (relevant.only.option == "off" & injury.type == "PS") {
 }
 
 #sink()
-
-######################################################################################################################################
-
-# REFERENCE INFO
-# Here we've tabbed our categorical vars, so we know which value will become which dummy.
-
-#table(merged_violations$inspacty)
-#103 complaint inspection  fatality inspection                other   regular inspection 
-#42364                 5374                  435                66461               721975 
-
-#table(merged_violations$violationtypecode)
-#Citation    Notice     Order Safeguard 
-#825502         3     11103         1 
-
-#table(merged_violations$assessmenttypecode)
-#Regular  Single Special 
-#637724  185957   12928 
-
-#table(merged_violations$likelihood)
-#Highly NoLikelihood     Occurred   Reasonably     Unlikely 
-#5358        23167         1412       268878       537794 
-
-#table(merged_violations$injuryillness)
-#Fatal   LostDays NoLostDays  Permanent 
-#56717     577357     119077      83458 
-
-#table(merged_violations$negligence)
-#HighNegligence  LowNegligence  ModNegligence   NoNegligence       Reckless 
-#35434          97051         701957           1224            943 
-
-#table(merged_violations$personsaffected)
-#0      1      2      3      4      5      6      7      8      9     10 
-#12436 461815  64630  16285  11497  13268   8070   5709  10132   6128  27754 
 
 ######################################################################################################################################
 
