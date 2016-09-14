@@ -89,6 +89,57 @@ ps_data[, "returntoworkdate"] = as.character(ps_data[, "returntoworkdate"])
 
 ##################################################################################################
 
+# DO THIS CODE IF YOU'RE RUNNING ON THE REAL ACCIDENTS DATA (NOT THE TRAINING SET)
+
+if (data.type == "real accidents data") {
+  
+  # Format PS indicator as a binary factor
+  ps_data[, "X"] = factor(ifelse(ps_data[, "X"] == 1, "YES", "NO"))
+  names(ps_data)[names(ps_data) == "X"] = "PS"
+  
+  # Remove uncommon vars from ps_data 
+  drops <- c("bomstatecode", "fipscountycode", "fipscountyname", 
+             "primarysiccode", "primarysicdesc", "primarycanvasscode", 
+             "primarycanvasscodedesc", "averagemineheight", "district", 
+             "officecode", "officename", "primarysiccodegroup", 
+             "primarysiccodesuffix", "secondarysiccode", "secondarysicdesc",
+             "secondarysiccodegroup", "secondarysiccodesuffix", "secondarycanvasscode",
+             "secondarycanvasscodedesc", "i", "portableoperationindicator", 
+             "portablefipsstatecode", "hourspershift", "maintenanceshiftsperday",
+             "numberofemployees", "longitude", "latitude",
+             "minegascategorycode", "methaneliberation", "noofproducingpits", 
+             "noofnonproducingpits", "nooftailingponds", "roomandpillarindicator",
+             "highwallminerindicator", "multiplepitsindicator", "minersrepindicator",
+             "safetycommitteeindicator", "milesfromoffice", "directionstominemodified",
+             "nearesttown")
+  ps_data = ps_data[, !(names(ps_data) %in% drops)]
+  ps_data[, "type"] = "training" 
+  
+  # Remove uncommon vars from ps_data   
+  drops <- c("fiscalyear", "fiscalquarter", "investigationbegindate", 
+             "avg_hours_qtr", "avg_employment_qtr", "avg_coal_prod_qtr",
+             "year", "quarter")
+  accidents.data = accidents.data[, !(names(accidents.data) %in% drops)] 
+  accidents.data[, "PS"] = ""
+  accidents.data[, "type"] = "unclassified" 
+  
+  # Create lists of documentnos from each dataset 
+  ps.docnos = ps_data$documentno
+  ps.docnos = as.character(ps.docnos)
+  accident.docnos = accidents.data$documentno
+  
+  # Identify common documentnos
+  keep.docnos = setdiff(accident.docnos, ps.docnos) 
+  
+  # Remove observations from accidents data present in the ps_data/training set - 74,743 obs
+  accidents.data = accidents.data[which(accidents.data$documentno %in% keep.docnos),]
+  
+  # Append dataset of training observations and real accidents for classification
+  ps_data <- rbind(ps_data, accidents.data) # 75,743 obs
+}
+
+##################################################################################################
+
 # CLEAN UP THE NARRATIVE FIELDS 
 
 # 23 narrative fields are polluted with other columns - split and replace these  
@@ -115,10 +166,6 @@ ps_data$narrative <- gsub("ag(a)*( )*(in)*st", "against", ps_data$narrative)
 ##################################################################################################
 
 # CLEAN UP OTHER VARIABLES & RECODE MISCLASSIFIED OBSERVATIONS FROM THE TRAINING SET
-
-# Format PS indicator as a binary factor
-ps_data[, "X"] = factor(ifelse(ps_data[, "X"] == 1, "YES", "NO"))
-names(ps_data)[names(ps_data) == "X"] = "PS"
 
 # Recoded in light of Miguel's 5/27/16 response to our questions
 ps_data$PS[ps_data$documentno=="219891280164"] = "YES"
@@ -885,90 +932,68 @@ ps_data$likely_ps = ifelse((ps_data$keyword == 1 |
 
 ##################################################################################################
 
-# DUMMY-OUT FACTOR VARS WITH TOO MANY VALUES FOR RANDOM FOREST - MAYBE BETTER THAN THE ABOVE
-
-datdum <- function(x, data, name){
-  data$rv <- rnorm(dim(data)[1],1,1)
-  mm <- data.frame(model.matrix(lm(data$rv~-1+factor(data[,x]))))
-  names(mm) <- paste(name,1:dim(mm)[2],sep=".")
-  data$rv <- NULL
-  data <- cbind(data,mm)
-  return(data)
-}
-
-test.data1 <- datdum(x="injurysourcecode",data=ps_data,name="injurysourcecode")
-test.data1 <- test.data1 [, c(grep("injurysourcecode", names(test.data1)))]
-test.data2 <- datdum(x="accidentclassification",data=ps_data,name="accidentclassification")
-test.data2 <- test.data2 [, c(grep("accidentclassification", names(test.data2)))]
-test.data3 <- datdum(x="accidenttype",data=ps_data,name="accidenttype")
-test.data3 <- test.data3 [, c(grep("accidenttype", names(test.data3)))]
-test.data4 <- datdum(x="equiptypecode",data=ps_data,name="equiptypecode")
-test.data4 <- test.data4 [, c(grep("equiptypecode", names(test.data4)))]
-test.data5 <- datdum(x="natureofinjury",data=ps_data,name="natureofinjury")
-test.data5 <- test.data5 [, c(grep("natureofinjury", names(test.data5)))]
-test.data6 <- datdum(x="activitycode",data=ps_data,name="activitycode")
-test.data6 <- test.data6 [, c(grep("activitycode", names(test.data6)))]
-test.data7 <- datdum(x="occupcode3digit",data=ps_data,name="occupcode3digit")
-test.data7 <- test.data7 [, c(grep("occupcode3digit", names(test.data7)))]
-test.data8 <- datdum(x="bodypartcode",data=ps_data,name="bodypartcode")
-test.data8 <- test.data8 [, c(grep("bodypartcode", names(test.data8)))]
-
-ps_data = cbind(ps_data, test.data1, test.data2, test.data3, test.data4, test.data5, test.data6, test.data7, test.data8)
-rm(test.data1, test.data2, test.data3, test.data4, test.data5, test.data6, test.data7, test.data8)
+# # DUMMY-OUT FACTOR VARS WITH TOO MANY VALUES FOR RANDOM FOREST - MAYBE BETTER THAN THE ABOVE
+# 
+# datdum <- function(x, data, name){
+#   data$rv <- rnorm(dim(data)[1],1,1)
+#   mm <- data.frame(model.matrix(lm(data$rv~-1+factor(data[,x]))))
+#   names(mm) <- paste(name,1:dim(mm)[2],sep=".")
+#   data$rv <- NULL
+#   data <- cbind(data,mm)
+#   return(data)
+# }
+# 
+# test.data1 <- datdum(x="injurysourcecode",data=ps_data,name="injurysourcecode")
+# test.data1 <- test.data1 [, c(grep("injurysourcecode", names(test.data1)))]
+# test.data2 <- datdum(x="accidentclassification",data=ps_data,name="accidentclassification")
+# test.data2 <- test.data2 [, c(grep("accidentclassification", names(test.data2)))]
+# test.data3 <- datdum(x="accidenttype",data=ps_data,name="accidenttype")
+# test.data3 <- test.data3 [, c(grep("accidenttype", names(test.data3)))]
+# test.data4 <- datdum(x="equiptypecode",data=ps_data,name="equiptypecode")
+# test.data4 <- test.data4 [, c(grep("equiptypecode", names(test.data4)))]
+# test.data5 <- datdum(x="natureofinjury",data=ps_data,name="natureofinjury")
+# test.data5 <- test.data5 [, c(grep("natureofinjury", names(test.data5)))]
+# test.data6 <- datdum(x="activitycode",data=ps_data,name="activitycode")
+# test.data6 <- test.data6 [, c(grep("activitycode", names(test.data6)))]
+# test.data7 <- datdum(x="occupcode3digit",data=ps_data,name="occupcode3digit")
+# test.data7 <- test.data7 [, c(grep("occupcode3digit", names(test.data7)))]
+# test.data8 <- datdum(x="bodypartcode",data=ps_data,name="bodypartcode")
+# test.data8 <- test.data8 [, c(grep("bodypartcode", names(test.data8)))]
+# 
+# ps_data = cbind(ps_data, test.data1, test.data2, test.data3, test.data4, test.data5, test.data6, test.data7, test.data8)
+# rm(test.data1, test.data2, test.data3, test.data4, test.data5, test.data6, test.data7, test.data8)
 
 ##################################################################################################
 
 # Drop variables with redundant or no information while keeping codes used in the algorithms below
 ps_data = ps_data[, c(-match("accidenttime", names(ps_data)), 
                       -match("accidenttypecode", names(ps_data)),
-                      -match("averagemineheight", names(ps_data)),
-                      -match("bomstatecode", names(ps_data)),
+                      -match("bodypartcode", names(ps_data)),
                       -match("classificationcode", names(ps_data)),
                       -match("coalcormetalmmine", names(ps_data)),
                       -match("contractorid", names(ps_data)),
                       -match("daysperweek", names(ps_data)), 
                       -match("daysrestrictedduty", names(ps_data)), 
                       -match("degreeofinjurycode", names(ps_data)), 
-                      -match("directionstominemodified", names(ps_data)),
-                      -match("district", names(ps_data)),
-                      -grep("^fips", names(ps_data)),
-                      -match("highwallminerindicator", names(ps_data)),
-                      -match("hourspershift", names(ps_data)),
-                      -match("i", names(ps_data)), 
+                      -match("equipmanufacturercode", names(ps_data)),
                       -match("idesc", names(ps_data)), 
                       -match("immediatenotificationcode", names(ps_data)), 
                       -match("immediatenotificationclass", names(ps_data)), 
                       -match("injurysourcecode", names(ps_data)),
-                      -match("latitude", names(ps_data)),
-                      -match("longitude", names(ps_data)), 
-                      -match("maintenanceshiftsperday", names(ps_data)),
-                      -match("methaneliberation", names(ps_data)), 
-                      -match("milesfromoffice", names(ps_data)), 
                       -match("mineexperience", names(ps_data)), 
-                      -match("minegascategorycode", names(ps_data)), 
-                      -match("minersrepindicator", names(ps_data)),
                       -match("minename", names(ps_data)),
                       -match("minestatus", names(ps_data)),
                       -match("minetype", names(ps_data)), 
-                      -match("multiplepitsindicator", names(ps_data)), 
                       -match("narrative", names(ps_data)), 
                       -match("natureofinjurycode", names(ps_data)),
-                      -match("nearesttown", names(ps_data)), 
-                      -grep("noof", names(ps_data)),
                       -match("numbertypo", names(ps_data)),
-                      -match("numberofemployees", names(ps_data)),
-                      -grep("office", names(ps_data)),
+                      -match("occupation", names(ps_data)),
                       -match("old_narrative", names(ps_data)),
                       -match("oldoccupationcode", names(ps_data)),
                       -match("operatorid", names(ps_data)),
                       -match("operatorname", names(ps_data)),
-                      -grep("portable", names(ps_data)),
-                      -grep("primary", names(ps_data)), 
                       -match("productionshiftsperday", names(ps_data)),
-                      -match("roomandpillarindicator", names(ps_data)), 
-                      -match("safetycommitteeindicator", names(ps_data)),  
                       -match("schedulechargedays", names(ps_data)),  
-                      -grep("secondary", names(ps_data)), 
                       -match("shiftbeginningtime", names(ps_data)),
                       -match("stateabbreviation", names(ps_data)),
                       -match("subunitcode", names(ps_data)),
@@ -1013,6 +1038,7 @@ var_classes = sapply(ps_data[,names(ps_data)], class)
 charac_vars = names(var_classes[c(grep("character", var_classes), 
                                   grep("factor", var_classes))])
 
+# Format all missing/unknown vars as NAs
 for (i in 1:length(charac_vars)) {
   ps_data[, charac_vars[i]] = ifelse((ps_data[,charac_vars[i]] == "NO VALUE FOUND" | 
                                       ps_data[,charac_vars[i]] == "UNKNOWN" | 
@@ -1023,6 +1049,9 @@ for (i in 1:length(charac_vars)) {
   ps_data[, charac_vars[i]] = factor(ps_data[, charac_vars[i]])
 }
 
+# This line will report number of missings per var 
+# apply(is.na(ps_data),2,sum)
+
 # Must define function to calculate mode for imputation methods 1 & 2
 modus = function(x) {
   uniqv = unique(x)
@@ -1030,10 +1059,12 @@ modus = function(x) {
 }
 
 if (imputation_method == 1 | imputation_method == 2) {
+  # METHOD 1 IMPUTES THE MEAN (this is a weak method, was just used for testing)
   for (i in 1:length(num_vars)) {
     ps_data[, num_vars[i]] = ifelse(is.na(ps_data[, num_vars[i]]), 
                                     mean(ps_data[, num_vars[i]]), ps_data[, num_vars[i]])
   }
+  # METHOD 2 IMPUTES BY MEAN/MODE DEPEDENDING ON VAR TYPE (this is a weak method, was just used for testing)
   if (imputation_method == 2) {
     for (i in 1:length(num_vars)) {
       ps_data[, num_vars[i]] = ifelse(is.na(ps_data[, num_vars[i]]), 
@@ -1044,6 +1075,7 @@ if (imputation_method == 1 | imputation_method == 2) {
     ps_data[, charac_vars[i]] = ifelse(is.na(ps_data[, charac_vars[i]]), 
                                        modus(ps_data[, charac_vars[i]]), ps_data[, charac_vars[i]])
   }
+  # METHOD 3 RANDOMLY SAMPLE FROM THE DISTRIBUTION - THIS IS THE PREFERRED METHOD
 } else if (imputation_method == 3) {
   for (i in 1:length(num_vars)) {
     i_rowsmissing = row.names(ps_data)[is.na(ps_data[, num_vars[i]])]
@@ -1059,9 +1091,7 @@ if (imputation_method == 1 | imputation_method == 2) {
       ps_data[i_rowsmissing, charac_vars[i]] = ps_data[replace_rows, charac_vars[i]]
     }
   }
-} else {
-  # Not to be implemented as of now. 4/15/16
-}
+} 
 
 ##################################################################################################
 
@@ -1093,7 +1123,7 @@ simple.data = ps_data[, c(grep("maybe_", names(ps_data)),
                           match("drill_action", names(ps_data)),
                           match("drillsteel", names(ps_data)), 
                           match("dropped", names(ps_data)), 
-                          match("entrapment", names(ps_data)), 
+                          match("entrapment", names(ps_data)),
                           match("falling.accident", names(ps_data)),
                           match("flew", names(ps_data)), 
                           match("headcanopy", names(ps_data)),
@@ -1147,10 +1177,9 @@ simple.data = ps_data[, c(grep("maybe_", names(ps_data)),
 
 # Enforce factor storage
 if (strict) {
-  var_classes = sapply(simple.data[,names(simple.data)], class)
-  num_vars = names(var_classes[grep("numeric", var_classes)])
-  for (i in 1:length(num_vars)) {
-    simple.data[, num_vars[i]] = factor(simple.data[, num_vars[i]])
+  vars = names(simple.data)
+  for (i in 1:length(vars)) {
+    simple.data[, vars[i]] = factor(simple.data[, vars[i]])
   }
 }
 
@@ -1161,35 +1190,46 @@ set.seed(625)
 rand <- runif(nrow(simple.data))
 simple.ps <- simple.data[order(rand),]
 remove(rand)
-# which( colnames(simple.ps)=="PS" )
+# which(colnames(simple.ps)=="PS") # 86
+
+######################################################################################################
+
+# TO TEST VARIOUS MODELS
 
 if (data.type == "training" ) {
 
   # CART
-  #cart <- rpart(PS ~ . -documentno, data = simple.ps[1:600,], method="class")
-  #cart.predictions = predict(cart, simple.ps[601:1000,],type="class")
+  cart <- rpart(PS ~ . -documentno, data = simple.ps[1:600,], method="class")
+  cart.predictions = predict(cart, simple.ps[601:1000,],type="class")
+  table(simple.ps[601:1000,2], predicted = cart.predictions)
   
   # RANDOM FOREST
-  #rf <- randomForest(PS ~ . -documentno, data = simple.ps[1:600,], mtry = 8, importance=TRUE, type="class",
-  #                   ntree = 200)
-  #rf.predictions = predict(rf, simple.ps[601:1000,],type="class")
+  rf <- randomForest(PS ~ . -documentno, data = simple.ps[1:600,], mtry = 8, importance=TRUE, type="class", ntree = 200)
+  rf.predictions = predict(rf, simple.ps[601:1000,],type="class")
+  table(simple.ps[601:1000,2], predicted = rf.predictions)
   
   # RANDOM FOREST WITH SMOTE
-  #smote.trainx = simple.ps[1:600,]
-  #smote.test = simple.ps[601:1000,]
-  #smote <- SMOTE(PS ~ ., smote.trainx, perc.over = 600,perc.under=100)
-  #rf.smo <- randomForest(PS ~ . -documentno, data = smote, mtry = 15, ntree = 1000)
-  #rf.smo.pred = predict(rf.smo, smote.test, type="class")
+  smote.trainx = simple.ps[1:600,]
+  smote.test = simple.ps[601:1000,]
+  smote <- SMOTE(PS ~ ., smote.trainx, perc.over = 600,perc.under=100)
+  rf.smo <- randomForest(PS ~ . -documentno, data = smote, mtry = 15, ntree = 1000)
+  rf.smo.pred = predict(rf.smo, smote.test, type="class")
+  table(simple.ps[601:1000,2], predicted = rf.smo.pred)
   
   # BOOSTING
-  #ps.adaboost = boosting(PS ~ . -documentno, data = simple.ps[1:600,], boos = T, mfinal = 100, coeflearn = 'Freund')
-  #simple.adaboost.pred = predict.boosting(ps.adaboost, newdata = simple.ps[601:1000,])
+  ps.adaboost = boosting(PS ~ . -documentno, data = simple.ps[1:600,], boos = T, mfinal = 100, coeflearn = 'Freund')
+  
+  simple.adaboost.pred = predict.boosting(ps.adaboost, newdata = simple.ps[601:1000,])
+  simple.adaboost.pred$confusion
 }
+
+######################################################################################################
+
+# TO CLASSIFY REAL ACCIDENTS DATA
 
 if (data.type == "real accidents data") {
   
   # COMPOSITE ALGORITHM
-  
   #splitIndex = createDataPartition(simple.ps$PS, p =.50, list = FALSE, times = 1)
   #smote.trainx = simple.ps[splitIndex,]
   #smote.test = simple.ps[-splitIndex,]
@@ -1197,42 +1237,38 @@ if (data.type == "real accidents data") {
   smote.trainx = simple.ps[1:600,]
   smote.test = simple.ps[601:1000,]
   
-  # STEP ONE: PRE-PROCESSING
+  ######################################################################################################
+  
+  # PRE-PROCESSING: OVER SAMPLE DATA & WEED OUT FALLING ROCK ACCIDENTS
   
   # Use smote to oversample data
   smote.ps <- SMOTE(PS ~ ., smote.trainx, perc.over = 600,perc.under=100)
   table(smote.ps$PS)
   
   # Weed out obs that are definitely not ps
-  num_vars = num_vars[-grep("documentno", num_vars)]
-  if (strict) {
-    for (i in 1:length(num_vars)) {
-      smote.ps[, num_vars[i]] = as.numeric(smote.ps[, num_vars[i]])
-      smote.trainx[, num_vars[i]] = as.numeric(smote.trainx[, num_vars[i]])
-      smote.test[, num_vars[i]] = as.numeric(smote.test[, num_vars[i]])
-      smote.test[, "predict"] = ifelse((smote.test$falling.accident == 1), 1, 0)
-    }
-  } else {
-      smote.test[, "predict"] = ifelse((smote.test$falling.accident == 0), 1, 0)
-  }
+  smote.test[, "predict"] = ifelse((smote.test$falling.accident == 0), 1, 0)
   
-  # STEP TWO: MODEL
+  ######################################################################################################
+  
+  # RUN A RANDOM FOREST
   
   # Now do a random forest on the smoted data
   rf.smote <- randomForest(PS ~ . -documentno, data = smote.ps, mtry = 15, ntree = 1000)
   rf.smote
   
-  # predict
+  # Predict
   rf.smote.pred = predict(rf.smote, smote.test[smote.test$predict == 1,], type="class")
   table(smote.test[smote.test$predict == 1,]$PS, predicted = rf.smote.pred)
   
-  # merge on predictions
+  # Merge on predictions
   smote.test.aux = cbind(smote.test[smote.test$predict == 1,], rf.smote.pred)
   post.smote.test = merge(smote.test, smote.test.aux, by = "documentno", all = T)
   post.smote.test = post.smote.test[, c(-grep("\\.y", names(post.smote.test)))]
   names(post.smote.test) = gsub("\\.[x|y]", "", names(post.smote.test))
   
   post.smote.test[, "smote_pred"] = ifelse(is.na(post.smote.test$rf.smote.pred), 1, post.smote.test$rf.smote.pred)
+  
+  ######################################################################################################
   
   # STEP THREE: RUN ANOTHER MODEL TO TRY AND CLASSIFY MORE FALSE NEGATIVES
   
@@ -1253,32 +1289,12 @@ if (data.type == "real accidents data") {
   
   post.smote.test[, "smote_pred"] = ifelse((post.smote.test$`adaboost.pred$class` == "YES" | 
                                             post.smote.test$rf.smote.pred == "YES"), "YES", "NO")
+  # Random forest then adaboost prediction
   table(post.smote.test$smote_pred, post.smote.test$PS)
-  
-  ##################################################################################################
-  
-  # PERFORMANCE OF ALL MODELS 
-  
-  # cart alone
-  table(simple.ps[601:1000,2], predicted = cart.predictions)
-  
-  # random forest alone
-  table(simple.ps[601:1000,2], predicted = rf.predictions)
-  
-  # random forest with smote  
-  table(simple.ps[601:1000,2], predicted = rf.smo.pred)
-  
-  # adaboost alone
-  simple.adaboost.pred$confusion
-  
-  # random forest then adaboost
-  table(post.smote.test$smote_pred, post.smote.test$PS)
-  
   # BEST PREDICTION SO FAR
   #NO YES
   #NO  240  20
   #YES  16  85
-  
   View(post.smote.test[post.smote.test$PS=="NO" & post.smote.test$smote_pred =="YES",]$documentno)
   
   # Save
