@@ -903,7 +903,9 @@ if (data.type == "real accidents data") {
     # USE BOOSTING TO CLASSIFY REAL ACCIDENTS DATA WITH UNKNOWN "MR" STATUS
     set.seed(625)
     mr.adaboost = boosting(MR ~ . , data = simple[simple$type!="unclassified",!(names(simple) %in% c('documentno','narrative','type','mineid'))], boos = T, mfinal = 300, coeflearn = 'Freund')
+    
     adaboost.pred = predict.boosting(mr.adaboost, newdata = simple[simple$type=="unclassified",!(names(simple) %in% c('documentno','narrative','type','mineid'))])
+    
     accidents.data = cbind(simple[simple$type=="unclassified",], adaboost.pred$class)
     names(accidents.data)[names(accidents.data) == 'adaboost.pred$class'] = 'adaboost'
     
@@ -911,16 +913,16 @@ if (data.type == "real accidents data") {
     
     # POST-PROCESSING
     
-    # merge in the rest of the variables from the original accidents-mines data     
+    # Merge in the rest of the variables from the original accidents-mines data     
     accidents.mines = readRDS(accidents_data_file_name)
     accidents.data = merge(accidents.data, accidents.mines, by="documentno", all = TRUE)
 
-    # clean up var names from the merge
+    # Clean up var names from the merge
     rm(train, simple, simple.data, mr.fatalities, accidents.mines)
     accidents.data = accidents.data[, c(-grep("\\.x", names(accidents.data)))]
     names(accidents.data) = gsub("\\.[x|y]", "", names(accidents.data))
     
-    # now manually weed out false positives and negatives that could not have been foreseen in the training data # 
+    # Now manually weed out false positives and negatives that could not have been foreseen in the training data # 
     accidents.data$manual.predict = ifelse(((accidents.data$likely.activy == 1 & 
                                              accidents.data$likely.class == 1 & 
                                              accidents.data$false.keyword == 0) |
@@ -943,13 +945,13 @@ if (data.type == "real accidents data") {
                                              accidents.data$likely.keyword == 1) & 
                                              accidents.data$accident.only == 0, 1, 0)
     
-    # false negatives 
+    # False negatives 
     accidents.data[, "flashburn"] = ifelse(grepl("weld.{1,40}flash( |-)*burn", accidents.data[,"narrative"]) | 
                                            grepl("flash( |-)*burn.{1,40}weld", accidents.data[,"narrative"]), 1, 0)
     
     accidents.data$false.neg = ifelse(accidents.data$flashburn == 1 & accidents.data$adaboost == "NO", 1, 0)
     
-    # false positives   
+    # False positives   
     accidents.data[, "carpal.tunnel"] = ifelse((grepl("carp(a|u|e)l( |-)*tun(n)*(e|l)(e|l)", accidents.data[,"narrative"]) | 
                                                 grepl("bursitis", accidents.data[,"narrative"])) &
                                                !grepl("fracture", accidents.data[,"narrative"]), 1, 0)
@@ -1019,7 +1021,7 @@ if (data.type == "real accidents data") {
                                       accidents.data$maybe.keyword == 0 & 
                                       accidents.data$other.keyword == 0, 1, accidents.data$false.pos)  
     
-    # save final mr prediction and dataset with just doc no's  & predictions
+    # Save final mr prediction and dataset with just doc no's  & predictions
     accidents.data$MR  = ifelse((accidents.data$adaboost == "YES" & 
                                  accidents.data$false.pos == 0) | 
                                  accidents.data$false.neg == 1, 1, 0)
