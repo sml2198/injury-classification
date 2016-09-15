@@ -651,6 +651,8 @@ prediction_data = prediction_data[, c(-grep("operatorname", names(prediction_dat
 
 # Pare away variables with zero variation before model selection and prediction stages
 var_stats = describe(prediction_data[, c(-match("mineid", names(prediction_data)), 
+                                         -match("stateabbreviation", names(prediction_data)), 
+                                         -match("operatorid", names(prediction_data)), 
                                          -match("quarter", names(prediction_data)))])
 
 # Variables are nontrivial (worth keeping) if their standard deviation is greater than zero 
@@ -658,8 +660,8 @@ nontriv_vars = rownames(var_stats[var_stats$sd > 0,])
 triv_vars = setdiff(names(prediction_data), nontriv_vars)
 rm(var_stats)
 
-# Keeps only nontrivial vars. Warning: This excludes all non-numeric variables - wind up with 30,266 obs with 169 vars
-prediction_data = prediction_data[, c(nontriv_vars, "mineid", "quarter")]
+# Keeps only nontrivial vars. Warning: This excludes all non-numeric variables - wind up with 30,289 obs
+prediction_data = prediction_data[, c(nontriv_vars, "mineid", "quarter", "stateabbreviation", "operatorid")]
 
 ######################################################################################################################################
 
@@ -726,15 +728,16 @@ if (relevant.only.option == "off" & injury.type == "MR") {
   saveRDS(prediction_data, file = MR_prediction_data_out_file_name)
     if (stata.friendly) {
       # Remove special characters from data names so it's stata-friendly, if option is TRUE
-      r.names = names(prediction_data)
-      r.names = gsub("\\.", "_", r.names)
-      r.names = gsub("-", "_", r.names)
-      names(prediction_data) = r.names
-      rm(r.names)
+      stata.names = names(prediction_data)
+      stata.names = gsub("\\.", "_", stata.names)
+      stata.names = gsub("-", "_", stata.names)
+      stata.data = prediction_data
+      names(stata.data) = stata.names
       
       # Also save a csv for this so that we can do prelimary analysis in Stata (clustering is easier in Stata)
-      write.csv(prediction_data, file = MR_prediction_data_out_csv_name)
-      write.dta(prediction_data, file = MR_prediction_data_out_dta_name)
+      write.csv(stata.data, file = MR_prediction_data_out_csv_name)
+      write.dta(stata.data, file = MR_prediction_data_out_dta_name)
+      rm(stata.names, stata.data)
     }
 }
 
