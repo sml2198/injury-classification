@@ -40,8 +40,8 @@ classified_accidents_file_name = "X:/Projects/Mining/NIOSH/analysis/data/4_coded
 # SET PREFERENCES 
 
 # Set preferences - data type - either training data for model selection, or real accidents data for classification
-#data.type = "training data"
-data.type = "real accidents data"
+data.type = "training data"
+#data.type = "real accidents data"
 
 # Specify imputation method
 imputation_method = 3
@@ -63,7 +63,7 @@ if (data.type == "real accidents data") {
 
 # RENAME AND FORMAT VARS
 
-# Drop anything missing mineid
+# Drop anything missing mineid - 2 obvs
 ps_data = ps_data[!is.na(ps_data$mineid),]
 
 # Make all string variables lowercase
@@ -87,15 +87,18 @@ ps_data[, "occupcode3digit"] = as.character(ps_data[, "occupcode3digit"])
 ps_data[, "occupation"] = as.character(ps_data[, "occupation"])
 ps_data[, "returntoworkdate"] = as.character(ps_data[, "returntoworkdate"])
 
+# This is used for identifying training from testing observations, or training from real observations 
+ps_data[, "type"] = "training" 
+
+# Format PS indicator as a binary factor
+ps_data[, "X"] = factor(ifelse(ps_data[, "X"] == 1, "YES", "NO"))
+names(ps_data)[names(ps_data) == "X"] = "PS"
+
 ##################################################################################################
 
 # DO THIS CODE IF YOU'RE RUNNING ON THE REAL ACCIDENTS DATA (NOT THE TRAINING SET)
 
 if (data.type == "real accidents data") {
-  
-  # Format PS indicator as a binary factor
-  ps_data[, "X"] = factor(ifelse(ps_data[, "X"] == 1, "YES", "NO"))
-  names(ps_data)[names(ps_data) == "X"] = "PS"
   
   # Remove uncommon vars from ps_data 
   drops <- c("bomstatecode", "fipscountycode", "fipscountyname", 
@@ -113,7 +116,6 @@ if (data.type == "real accidents data") {
              "safetycommitteeindicator", "milesfromoffice", "directionstominemodified",
              "nearesttown")
   ps_data = ps_data[, !(names(ps_data) %in% drops)]
-  ps_data[, "type"] = "training" 
   
   # Remove uncommon vars from ps_data   
   drops <- c("fiscalyear", "fiscalquarter", "investigationbegindate", 
@@ -590,8 +592,10 @@ ps_data$falling.accident = ifelse(ps_data$falling.class == 1 |
 ps_data = ps_data[, c(-match("falling.class", names(ps_data)), 
                       -match("falling.word", names(ps_data)))]
 
+# The last non-missing is key, because otherwise we have one obs that is NA for accident.only
 ps_data$accident.only = ifelse((ps_data$degreeofinjury == "accident only" | 
-                                ps_data$accidenttypecode == 44), 1, 0)
+                                ps_data$accidenttypecode == 44) & 
+                               !is.na(ps_data$accidenttypecode), 1, 0)
 
 # GENERATE KEYWORD FLAGS
 
@@ -1038,6 +1042,10 @@ var_classes = sapply(ps_data[,names(ps_data)], class)
 charac_vars = names(var_classes[c(grep("character", var_classes), 
                                   grep("factor", var_classes))])
 
+# Make sure PS isn't imputed
+PS = c("PS")
+charac_vars = setdiff(charac_vars, PS)
+
 # Format all missing/unknown vars as NAs
 for (i in 1:length(charac_vars)) {
   ps_data[, charac_vars[i]] = ifelse((ps_data[,charac_vars[i]] == "NO VALUE FOUND" | 
@@ -1097,8 +1105,7 @@ if (imputation_method == 1 | imputation_method == 2) {
 
 # PRODUCE DATASETS WITH ONLY VARS OF INTEREST 
 
-simple.data = ps_data[, c(grep("maybe_", names(ps_data)),
-                          grep("likely_", names(ps_data)),
+simple.data = ps_data[, c(grep("likely_", names(ps_data)),
                           grep("keyword", names(ps_data)),
                           grep("uncertain", names(ps_data)),
                           match("accident.only", names(ps_data)),
@@ -1135,6 +1142,7 @@ simple.data = ps_data[, c(grep("maybe_", names(ps_data)),
                           match("jarring", names(ps_data)), 
                           match("loose", names(ps_data)),
                           match("loose_rbolting", names(ps_data)), 
+                          match("maybe_type", names(ps_data)),
                           match("moving_vehcl", names(ps_data)),
                           match("mult_vehcl", names(ps_data)),
                           match("neg_pts", names(ps_data)),
@@ -1168,6 +1176,7 @@ simple.data = ps_data[, c(grep("maybe_", names(ps_data)),
                           match("tool_break", names(ps_data)), 
                           match("trap", names(ps_data)),
                           match("trolleypole", names(ps_data)), 
+                          match("type", names(ps_data)),
                           match("unevenbottom", names(ps_data)),
                           match("vcomp_test", names(ps_data)), 
                           match("v_to_v", names(ps_data)), 
@@ -1196,29 +1205,30 @@ remove(rand)
 
 # TO TEST VARIOUS MODELS
 
-if (data.type == "training" ) {
+if (data.type == "training data" ) {
 
+  simple.ps = simple.ps[,c(-grep("type", names(simple.ps)))]
+  
   # CART
-  cart <- rpart(PS ~ . -documentno, data = simple.ps[1:600,], method="class")
-  cart.predictions = predict(cart, simple.ps[601:1000,],type="class")
-  table(simple.ps[601:1000,2], predicted = cart.predictions)
+  cart <- rpart(PS ~ ., data = simple.ps[1:600,!(names(simple.ps) %in% c('documentno'))], method = "class")
+  cart.predictions = predict(cart, simple.ps[601:1000,], type = "class")
+  table(simple.ps[601:1000,81], predicted = cart.predictions)
   
   # RANDOM FOREST
-  rf <- randomForest(PS ~ . -documentno, data = simple.ps[1:600,], mtry = 8, importance=TRUE, type="class", ntree = 200)
-  rf.predictions = predict(rf, simple.ps[601:1000,],type="class")
-  table(simple.ps[601:1000,2], predicted = rf.predictions)
+  rf <- randomForest(PS ~ . -documentno, data = simple.ps[1:600,], mtry = 8, importance = TRUE, type = "class", ntree = 200)
+  rf.predictions = predict(rf, simple.ps[601:1000,], type="class")
+  table(simple.ps[601:1000,81], predicted = rf.predictions)
   
   # RANDOM FOREST WITH SMOTE
   smote.trainx = simple.ps[1:600,]
   smote.test = simple.ps[601:1000,]
-  smote <- SMOTE(PS ~ ., smote.trainx, perc.over = 600,perc.under=100)
+  smote <- SMOTE(PS ~ ., smote.trainx, perc.over = 600, perc.under = 100)
   rf.smo <- randomForest(PS ~ . -documentno, data = smote, mtry = 15, ntree = 1000)
-  rf.smo.pred = predict(rf.smo, smote.test, type="class")
-  table(simple.ps[601:1000,2], predicted = rf.smo.pred)
+  rf.smo.pred = predict(rf.smo, smote.test, type = "class")
+  table(simple.ps[601:1000,81], predicted = rf.smo.pred)
   
   # BOOSTING
-  ps.adaboost = boosting(PS ~ . -documentno, data = simple.ps[1:600,], boos = T, mfinal = 100, coeflearn = 'Freund')
-  
+  ps.adaboost = boosting(PS ~ ., data = simple.ps[1:600,!(names(simple.ps) %in% c('documentno'))], boos = T, mfinal = 100, coeflearn = 'Freund')
   simple.adaboost.pred = predict.boosting(ps.adaboost, newdata = simple.ps[601:1000,])
   simple.adaboost.pred$confusion
 }
@@ -1229,44 +1239,44 @@ if (data.type == "training" ) {
 
 if (data.type == "real accidents data") {
   
-  # COMPOSITE ALGORITHM
-  #splitIndex = createDataPartition(simple.ps$PS, p =.50, list = FALSE, times = 1)
-  #smote.trainx = simple.ps[splitIndex,]
-  #smote.test = simple.ps[-splitIndex,]
-  set.seed(625)
-  smote.trainx = simple.ps[1:600,]
-  smote.test = simple.ps[601:1000,]
-  
-  ######################################################################################################
-  
-  # PRE-PROCESSING: OVER SAMPLE DATA & WEED OUT FALLING ROCK ACCIDENTS
-  
-  # Use smote to oversample data
-  smote.ps <- SMOTE(PS ~ ., smote.trainx, perc.over = 600,perc.under=100)
-  table(smote.ps$PS)
-  
-  # Weed out obs that are definitely not ps
-  smote.test[, "predict"] = ifelse((smote.test$falling.accident == 0), 1, 0)
-  
-  ######################################################################################################
-  
-  # RUN A RANDOM FOREST
-  
-  # Now do a random forest on the smoted data
-  rf.smote <- randomForest(PS ~ . -documentno, data = smote.ps, mtry = 15, ntree = 1000)
-  rf.smote
-  
-  # Predict
-  rf.smote.pred = predict(rf.smote, smote.test[smote.test$predict == 1,], type="class")
-  table(smote.test[smote.test$predict == 1,]$PS, predicted = rf.smote.pred)
-  
-  # Merge on predictions
-  smote.test.aux = cbind(smote.test[smote.test$predict == 1,], rf.smote.pred)
-  post.smote.test = merge(smote.test, smote.test.aux, by = "documentno", all = T)
-  post.smote.test = post.smote.test[, c(-grep("\\.y", names(post.smote.test)))]
-  names(post.smote.test) = gsub("\\.[x|y]", "", names(post.smote.test))
-  
-  post.smote.test[, "smote_pred"] = ifelse(is.na(post.smote.test$rf.smote.pred), 1, post.smote.test$rf.smote.pred)
+#   # COMPOSITE ALGORITHM
+#   #splitIndex = createDataPartition(simple.ps$PS, p =.50, list = FALSE, times = 1)
+#   #smote.trainx = simple.ps[splitIndex,]
+#   #smote.test = simple.ps[-splitIndex,]
+#   set.seed(625)
+#   smote.trainx = simple.ps[1:600,]
+#   smote.test = simple.ps[601:1000,]
+#   
+#   ######################################################################################################
+#   
+#   # PRE-PROCESSING: OVER SAMPLE DATA & WEED OUT FALLING ROCK ACCIDENTS
+#   
+#   # Use smote to oversample data
+#   smote.ps <- SMOTE(PS ~ ., smote.trainx, perc.over = 600,perc.under=100)
+#   table(smote.ps$PS)
+#   
+#   # Weed out obs that are definitely not ps
+#   smote.test[, "predict"] = ifelse((smote.test$falling.accident == 0), 1, 0)
+#   
+#   ######################################################################################################
+#   
+#   # RUN A RANDOM FOREST
+# 
+#   # Now do a random forest on the smoted data
+#   rf.smote <- randomForest(PS ~ . -documentno, data = smote.ps, mtry = 15, ntree = 1000)
+#   rf.smote
+#   
+#   # Predict
+#   rf.smote.pred = predict(rf.smote, smote.test[smote.test$predict == 1,], type="class")
+#   table(smote.test[smote.test$predict == 1,]$PS, predicted = rf.smote.pred)
+#   
+#   # Merge on predictions
+#   smote.test.aux = cbind(smote.test[smote.test$predict == 1,], rf.smote.pred)
+#   post.smote.test = merge(smote.test, smote.test.aux, by = "documentno", all = T)
+#   post.smote.test = post.smote.test[, c(-grep("\\.y", names(post.smote.test)))]
+#   names(post.smote.test) = gsub("\\.[x|y]", "", names(post.smote.test))
+#   
+#   post.smote.test[, "smote_pred"] = ifelse(is.na(post.smote.test$rf.smote.pred), 1, post.smote.test$rf.smote.pred)
   
   ######################################################################################################
   
