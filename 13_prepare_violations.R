@@ -18,6 +18,7 @@ library(stats)
 library(stringr)
 library(withr)
 library(psych)
+library(reshape)
 
 # define file names
   # input: merged violations data produced in 11_merge_violations.R
@@ -31,13 +32,17 @@ mines_quarters_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/cle
   # input: cleaned mine-types key produced in produced in 1_clean_mines.R
 mine_types_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/mine_types.rds"
   
-  # output: prediction-ready data containing part-level vars (all relevant and maybe relevant) - MR
+  # output: prediction-ready data containing all relevant and maybe relevant vars - MR
 MR_prediction_data_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/MR_prediction_data.rds"
-  # output: prediction-ready data containing part-level vars (only relevant) - MR
+  # output: prediction-ready csv containing all relevant and maybe relevant vars (for Stata analysis) - MR
+MR_prediction_data_out_csv_name = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/MR_prediction_data.csv"
+  # output: prediction-ready data containing only relevant vars - MR
 MR_relevant_prediction_data_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/MR_prediction_data_relevant.rds"
-# output: prediction-ready data containing part-level vars (all relevant and maybe relevant) - PS
+  # output: prediction-ready data containing all relevant and maybe relevant vars  - PS
 PS_prediction_data_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/PS_prediction_data.rds"
-# output: prediction-ready data containing part-level vars (only relevant) - PS
+  # output: prediction-ready csv containing all relevant and maybe relevant vars (for Stata analysis) - PS
+PS_prediction_data_out_csv_name = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/PS_prediction_data.csv"
+  # output: prediction-ready data containing only relevant vars - PS
 PS_relevant_prediction_data_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/PS_prediction_data_relevant.rds"
 
 # When relevant-only option is set to "on" (not commented out) only CFR subsections marked as "relevant" will be used for creating
@@ -48,6 +53,9 @@ relevant.only.option = "off"
 # Specify whether you want to create data for maintenance and repair (MR) or pinning and striking (PS) injuries
 injury.type = "MR"
 #injury.type = "PS"
+
+# Specify whether or not you want this file to also produce a Stata-friendly .csv 
+stata.friendly = T
 
 ######################################################################################################################################
 
@@ -555,6 +563,9 @@ prediction_data$MR_indicator = ifelse(prediction_data$MR > 0, 1, 0)
 prediction_data$num_no_terminations = ifelse(prediction_data$terminated < prediction_data$total_violations, 
                                              prediction_data$total_violations-prediction_data$terminated, 0)
 
+# Rename and format state var
+prediction_data$stateabbreviation = as.factor(as.character(prediction_data$stateabbreviation))
+
 # Drop unnecessary vars - at this point should have 30,289 obs & 1046 vars
 prediction_data = prediction_data[, c(-grep("coalcormetalmmine", names(prediction_data)),
                                       -grep("con_", names(prediction_data)),
@@ -647,9 +658,49 @@ rm(var_stats)
 # Keeps only nontrivial vars. Warning: This excludes all non-numeric variables - wind up with 30,266 obs with 169 vars
 prediction_data = prediction_data[, c(nontriv_vars, "mineid", "quarter")]
 
-# Rename and format state var
-prediction_data$stateabbreviation = as.factor(as.character(prediction_data$stateabbreviation))
-names(prediction_data)[names(prediction_data) == "stateabbreviation"] = "state"
+######################################################################################################################################
+
+# SET UP THE DATA - RENAME AND GROUP VARS TO MAKE ANALYSIS EASIER
+
+# Rename variables
+prediction_data = rename(prediction_data, c(coal_prod_qtr = "coal_prod", 
+                                            stateabbreviation = "state", 
+                                            employment_qtr = "employment",
+                                            hours_qtr = "hours",
+                                            goodfaithind = "num_good_faith",
+                                            onsite_insp_hours_per_qtr = "onsite_insp_hours"))
+
+names(prediction_data)[grep("^[0-9]", names(prediction_data))] = paste("p", names(prediction_data)[grep("^[0-9]", names(prediction_data))], sep = "")
+names(prediction_data)[grep("[0-9].[0-9]", names(prediction_data))] = paste("s", names(prediction_data)[grep("[0-9].[0-9]", names(prediction_data))], sep = "")
+
+# Reformat variables
+prediction_data$mineid = as.character(prediction_data$mineid)
+prediction_data$quarter = as.numeric(prediction_data$quarter)
+prediction_data$MR_indicator = as.factor(prediction_data$MR_indicator)
+
+# Group variables
+violation_vars = names(prediction_data)[grep("^p+[0-9]|^sp+[0-9]", names(prediction_data))]
+part_vars = violation_vars[grep("^p", violation_vars)]
+subpart_vars = violation_vars[grep("^sp", violation_vars)]
+sig_sub_vars = violation_vars[grep("sigandsub$", violation_vars)]
+penalty_point_vars = violation_vars[grep("penaltypoints$", violation_vars)]
+violation_count_vars = setdiff(violation_vars, union(sig_sub_vars, penalty_point_vars))
+
+part_sig_sub_vars = intersect(part_vars, sig_sub_vars)
+subpart_sig_sub_vars = intersect(subpart_vars, sig_sub_vars)
+part_penalty_point_vars = intersect(part_vars, penalty_point_vars)
+subpart_penalty_point_vars = intersect(subpart_vars, penalty_point_vars)
+part_violation_count_vars = intersect(part_vars, violation_count_vars)
+subpart_violation_count_vars = intersect(subpart_vars, violation_count_vars)
+
+if (stata.friendly) {
+  # Remove special characters from data names so it's stata-friendly, if option is TRUE
+  r.names = names(prediction_data)
+  r.names = gsub("\\.", "_", r.names)
+  r.names = gsub("-", "_", r.names)
+  names(prediction_data) = r.names
+  rm(r.names)
+}
 
 ######################################################################################################################################
 
@@ -659,12 +710,18 @@ if (relevant.only.option == "on" & injury.type == "MR") {
 }
 if (relevant.only.option == "off" & injury.type == "MR") {
   saveRDS(prediction_data, file = MR_prediction_data_out_file_name)
+  if (stata.friendly) {  # Also save a csv for this so that we can do prelimary analysis in Stata (clustering is easier in Stata)
+    write.csv(prediction_data, file = MR_prediction_data_out_csv_name)
+  }
 }
 if (relevant.only.option == "on" & injury.type == "PS") {
   saveRDS(prediction_data, file = MR_relevant_prediction_data_out_file_name)
 }
 if (relevant.only.option == "off" & injury.type == "PS") {
   saveRDS(prediction_data, file = MR_prediction_data_out_file_name)
+  if (stata.friendly) { # Also save a csv for this so that we can do prelimary analysis in Stata (clustering is easier in Stata)
+    write.csv(prediction_data, file = PS_prediction_data_out_csv_name)
+  }
 }
 
 #sink()
