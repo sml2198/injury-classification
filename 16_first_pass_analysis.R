@@ -32,6 +32,11 @@
 
 ######################################################################################################
 
+library(reshape)
+library(MASS)
+# library(clusterSEs)
+library(mfx)
+
 # input: part-level data
 data_file_name = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/MR_prediction_data.rds"
 
@@ -97,24 +102,6 @@ subpart_violation_count_vars = intersect(subpart_vars, violation_count_vars)
 # Running and Testing Models
 
 # Model P.C.V.1
-# data$MR / data$hours
-pcv1 = glm(MR ~ ., family = poisson(link = log), data = data[, c("MR", "hours", part_violation_count_vars)])
-summary(pcv1)
-
-# cluster errors by mine
-# onsite_insp_hours
-# time trend
-# seasonal trend
-
-# operator controls?
-# state controls?
-# fixed time effects?
-
-pcv1 = glm(MR/hours ~ as.factor(mineid) + as.factor(quarter) + p47 + p48 + p71 + p72 + p75 + p77, family = poisson(link = log), data = data)
-summary(pcv1)
-
-pcv1 = glm.nb(MR ~ ., data = data[, c("MR", "hours", part_violation_count_vars)])
-summary(pcv1)
 
 # Model P.C.V.2
 
