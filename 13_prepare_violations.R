@@ -19,6 +19,7 @@ library(stringr)
 library(withr)
 library(psych)
 library(reshape)
+library(foreign)
 
 # define file names
   # input: merged violations data produced in 11_merge_violations.R
@@ -36,6 +37,8 @@ mine_types_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/mine_ty
 MR_prediction_data_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/MR_prediction_data.rds"
   # output: prediction-ready csv containing all relevant and maybe relevant vars (for Stata analysis) - MR
 MR_prediction_data_out_csv_name = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/MR_prediction_data.csv"
+  # output: prediction-ready dta containing all relevant and maybe relevant vars (for Stata analysis) - MR
+MR_prediction_data_out_dta_name = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/MR_prediction_data.dta"
   # output: prediction-ready data containing only relevant vars - MR
 MR_relevant_prediction_data_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/MR_prediction_data_relevant.rds"
   # output: prediction-ready data containing all relevant and maybe relevant vars  - PS
@@ -693,35 +696,66 @@ subpart_penalty_point_vars = intersect(subpart_vars, penalty_point_vars)
 part_violation_count_vars = intersect(part_vars, violation_count_vars)
 subpart_violation_count_vars = intersect(subpart_vars, violation_count_vars)
 
-if (stata.friendly) {
-  # Remove special characters from data names so it's stata-friendly, if option is TRUE
-  r.names = names(prediction_data)
-  r.names = gsub("\\.", "_", r.names)
-  r.names = gsub("-", "_", r.names)
-  names(prediction_data) = r.names
-  rm(r.names)
+######################################################################################################################################
+
+# CREATE MINE-TIME VARIABLE (accounts for age of mine)
+
+make_mine_time = function (mine_data) {
+  for (i in 1:nrow(mine_data)) {
+    if (is.na(mine_data$hours[i])) {
+      mine_data$mine_time = NA
+    }
+    else {
+      mine_data$mine_time[i] = i
+    }
+  }
+  return(mine_data)
 }
+
+prediction_data$mine_time = integer(nrow(prediction_data))
+prediction_data = ddply(prediction_data, "mineid", make_mine_time)
 
 ######################################################################################################################################
 
-# Set the file name (if part-specific).
+# Set the file name (MR/PS, relevant or all vars, Stata-friendly or not.)
 if (relevant.only.option == "on" & injury.type == "MR") {
   saveRDS(prediction_data, file = MR_relevant_prediction_data_out_file_name)
 }
+
 if (relevant.only.option == "off" & injury.type == "MR") {
   saveRDS(prediction_data, file = MR_prediction_data_out_file_name)
-  if (stata.friendly) {  # Also save a csv for this so that we can do prelimary analysis in Stata (clustering is easier in Stata)
-    write.csv(prediction_data, file = MR_prediction_data_out_csv_name)
-  }
+    if (stata.friendly) {
+      # Remove special characters from data names so it's stata-friendly, if option is TRUE
+      r.names = names(prediction_data)
+      r.names = gsub("\\.", "_", r.names)
+      r.names = gsub("-", "_", r.names)
+      names(prediction_data) = r.names
+      rm(r.names)
+      
+      # Also save a csv for this so that we can do prelimary analysis in Stata (clustering is easier in Stata)
+      write.csv(prediction_data, file = MR_prediction_data_out_csv_name)
+      write.dta(prediction_data, file = MR_prediction_data_out_dta_name)
+    }
 }
+
 if (relevant.only.option == "on" & injury.type == "PS") {
-  saveRDS(prediction_data, file = MR_relevant_prediction_data_out_file_name)
+  saveRDS(prediction_data, file = PS_relevant_prediction_data_out_file_name)
 }
+
 if (relevant.only.option == "off" & injury.type == "PS") {
-  saveRDS(prediction_data, file = MR_prediction_data_out_file_name)
-  if (stata.friendly) { # Also save a csv for this so that we can do prelimary analysis in Stata (clustering is easier in Stata)
-    write.csv(prediction_data, file = PS_prediction_data_out_csv_name)
-  }
+  saveRDS(prediction_data, file = PS_prediction_data_out_file_name)
+    if (stata.friendly) {
+      # Remove special characters from data names so it's stata-friendly, if option is TRUE
+      r.names = names(prediction_data)
+      r.names = gsub("\\.", "_", r.names)
+      r.names = gsub("-", "_", r.names)
+      names(prediction_data) = r.names
+      rm(r.names)
+      
+      # Also save a csv for this so that we can do prelimary analysis in Stata (clustering is easier in Stata)
+      write.csv(prediction_data, file = PS_prediction_data_out_csv_name)
+      write.dta(prediction_data, file = PS_prediction_data_out_dta_name)
+    }
 }
 
 #sink()
