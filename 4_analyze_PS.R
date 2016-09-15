@@ -228,8 +228,8 @@ for (i in indices_with_date) {
   ps_data[,i] = as.Date(ps_data[,i], "%m/%d/%Y")
 }
 
-# Convert accident type codes to numeric values to make this code usable with accidents data
-ps_data$accidenttypecode = as.numeric(ps_data$accidenttypecode)
+# Convert accident type codes to factor to make this code usable with accidents data
+ps_data$accidenttypecode = as.factor(ps_data$accidenttypecode)
 
 ##################################################################################################
 
@@ -1018,7 +1018,7 @@ charac_vars = (c("subunit", "degreeofinjury", "accidentclassification",
                  "accidenttype", "documentno", "mineid", 
                  "mineractivity", "sourceofinjury", "controllername",
                  "natureofinjury", "bodypart", "controllerid", 
-                 "typeofequipment", "equipmanufacturer", "occupation"))
+                 "typeofequipment", "equipmanufacturer"))
 for (i in 1:length(charac_vars)) {
   ps_data[, charac_vars[i]] = as.character(ps_data[, charac_vars[i]])
 }
@@ -1190,7 +1190,7 @@ set.seed(625)
 rand <- runif(nrow(simple.data))
 simple.ps <- simple.data[order(rand),]
 remove(rand)
-# which(colnames(simple.ps)=="PS") # 86
+# which(colnames(simple.ps)=="PS") # 83
 
 ######################################################################################################
 
