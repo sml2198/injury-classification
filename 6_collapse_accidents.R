@@ -23,7 +23,7 @@ PS_accidents_coded_in_file_name = "X:/Projects/Mining/NIOSH/analysis/data/4_code
 
   # output: collapsed coded accidents data 
 MR_accidents_coded_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/4_collapsed/collapsed_MR_accidents.rds"
-# output: collapsed coded accidents data 
+  # output: collapsed coded accidents data 
 PS_accidents_coded_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/4_collapsed/collapsed_PS_accidents.rds"
 
 ######################################################################################################################################
@@ -43,7 +43,7 @@ mine_types = readRDS(mine_types_file_name)
 if (injury.type == "PS"){
   mines_accidents_coded = readRDS(PS_accidents_coded_in_file_name)
   
-  # Remove unecessary vars
+  # Remove unnecessary vars
   mines_accidents_coded = mines_accidents_coded[, c(match("mineid", names(mines_accidents_coded)),
                                                     match("accidentdate", names(mines_accidents_coded)),
                                                     match("PS", names(mines_accidents_coded)))]
@@ -51,7 +51,7 @@ if (injury.type == "PS"){
 if (injury.type == "MR"){
   mines_accidents_coded = readRDS(MR_accidents_coded_in_file_name)
   
-  # Remove unecessary vars
+  # Remove unnecessary vars
   mines_accidents_coded = mines_accidents_coded[, c(match("mineid", names(mines_accidents_coded)),
                                                     match("accidentdate", names(mines_accidents_coded)),
                                                     match("MR", names(mines_accidents_coded)))]
