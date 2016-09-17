@@ -40,8 +40,8 @@ classified_accidents_file_name = "X:/Projects/Mining/NIOSH/analysis/data/4_coded
 # SET PREFERENCES 
 
 # Set preferences - data type - either training data for model selection, or real accidents data for classification
-data.type = "training data"
-#data.type = "real accidents data"
+#data.type = "training data"
+data.type = "real accidents data"
 
 # Specify imputation method
 imputation_method = 3
@@ -1210,7 +1210,7 @@ if (data.type == "training data" ) {
   simple.ps = simple.ps[,c(-grep("type", names(simple.ps)))]
   
   # CART
-  cart <- rpart(PS ~ ., data = simple.ps[1:600,!(names(simple.ps) %in% c('documentno'))], method = "class")
+  cart <- rpart(PS ~ ., data = simple.ps[1:600, !(names(simple.ps) %in% c('documentno'))], method = "class")
   cart.predictions = predict(cart, simple.ps[601:1000,], type = "class")
   table(simple.ps[601:1000,81], predicted = cart.predictions)
   
@@ -1228,7 +1228,7 @@ if (data.type == "training data" ) {
   table(simple.ps[601:1000,81], predicted = rf.smo.pred)
   
   # BOOSTING
-  ps.adaboost = boosting(PS ~ ., data = simple.ps[1:600,!(names(simple.ps) %in% c('documentno'))], boos = T, mfinal = 100, coeflearn = 'Freund')
+  ps.adaboost = boosting(PS ~ ., data = simple.ps[1:600, !(names(simple.ps) %in% c('documentno'))], boos = T, mfinal = 100, coeflearn = 'Freund')
   simple.adaboost.pred = predict.boosting(ps.adaboost, newdata = simple.ps[601:1000,])
   simple.adaboost.pred$confusion
 }
@@ -1283,7 +1283,8 @@ if (data.type == "real accidents data") {
   # STEP THREE: RUN ANOTHER MODEL TO TRY AND CLASSIFY MORE FALSE NEGATIVES
   
   # Run boosting on observations classified "no" by the random forest
-  ps.adaboost = boosting(PS ~ . -documentno, data = smote.trainx, boos = T, mfinal = 1000, coeflearn = 'Freund')
+  ps.adaboost = boosting(PS ~ ., data = simple.ps[simple.ps$type=="training", 
+                                                  !(names(simple.ps) %in% c('documentno', 'type'))], boos = T, mfinal = 1000, coeflearn = 'Freund')
   
   adaboost.pred = predict.boosting(ps.adaboost, newdata = post.smote.test[post.smote.test$predict==1 & 
                                                                           post.smote.test$rf.smote.pred=="NO",
