@@ -555,7 +555,12 @@ prediction_data = prediction_data[prediction_data$coalcormetalmmine == "C",]
 prediction_data = prediction_data[order(prediction_data[,"mineid"], prediction_data[,"quarter"]),]
 
 # Add variables for binary and proportional dependent vars
-prediction_data$MR_indicator = ifelse(prediction_data$MR > 0, 1, 0)
+if (injury.type == "MR"){
+  prediction_data$MR_indicator = ifelse(prediction_data$MR > 0, 1, 0)
+}
+if (injury.type == "PS"){
+  prediction_data$PS_indicator = ifelse(prediction_data$PS > 0, 1, 0)
+}
 
 # All violations should be terminated, meaning the issue has been abated by the violator. A violation that has not been terminated is
 # therefore an indication of mine/operator negligence. Rather than include the number of terminations as a variable in our models
@@ -713,7 +718,6 @@ make_mine_time = function (mine_data) {
   }
   return(mine_data)
 }
-
 prediction_data$mine_time = integer(nrow(prediction_data))
 prediction_data = ddply(prediction_data, "mineid", make_mine_time)
 
@@ -753,7 +757,6 @@ if (relevant.only.option == "off" & injury.type == "PS") {
       r.names = gsub("\\.", "_", r.names)
       r.names = gsub("-", "_", r.names)
       names(prediction_data) = r.names
-      rm(r.names)
       
       # Also save a csv for this so that we can do prelimary analysis in Stata (clustering is easier in Stata)
       write.csv(prediction_data, file = PS_prediction_data_out_csv_name)
