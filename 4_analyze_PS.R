@@ -40,8 +40,8 @@ classified_accidents_file_name = "X:/Projects/Mining/NIOSH/analysis/data/4_coded
 # SET PREFERENCES 
 
 # Set preferences - data type - either training data for model selection, or real accidents data for classification
-#data.type = "training data"
-data.type = "real accidents data"
+data.type = "training data"
+#data.type = "real accidents data"
 
 # Specify imputation method
 imputation_method = 3
@@ -137,6 +137,7 @@ if (data.type == "real accidents data") {
   accidents.data = accidents.data[which(accidents.data$documentno %in% keep.docnos),]
   
   # Append dataset of training observations and real accidents for classification
+  all.accidents <- rbind(ps_data, accidents.data) # keep this for when we do prediction
   ps_data <- rbind(ps_data, accidents.data) # 75,743 obs
 }
 
@@ -969,6 +970,7 @@ ps_data$likely_ps = ifelse((ps_data$keyword == 1 |
 
 ##################################################################################################
 
+all_vars = ps_data
 # Drop variables with redundant or no information while keeping codes used in the algorithms below
 ps_data = ps_data[, c(-match("accidenttime", names(ps_data)), 
                       -match("accidenttypecode", names(ps_data)),
@@ -1199,7 +1201,7 @@ set.seed(625)
 rand <- runif(nrow(simple.data))
 simple.ps <- simple.data[order(rand),]
 remove(rand)
-# which(colnames(simple.ps)=="PS") # 83
+# which(colnames(simple.ps)=="PS") # prints PS column number - 81
 
 ######################################################################################################
 
@@ -1231,6 +1233,32 @@ if (data.type == "training data" ) {
   ps.adaboost = boosting(PS ~ ., data = simple.ps[1:600, !(names(simple.ps) %in% c('documentno'))], boos = T, mfinal = 100, coeflearn = 'Freund')
   simple.adaboost.pred = predict.boosting(ps.adaboost, newdata = simple.ps[601:1000,])
   simple.adaboost.pred$confusion
+#   # Predicted Class  NO YES
+#   NO  284  28
+#   YES  19  69
+  
+  # Generate variable with boosting predictions
+  simple.adaboost.pred$class = as.factor(simple.adaboost.pred$class)
+  predictions = simple.ps[601:1000,]
+  predictions = cbind(predictions, simple.adaboost.pred$class)
+  names(predictions)[names(predictions) == 'simple.adaboost.pred$class'] = 'prediction'
+  
+  # Retrieve narratives of misclassified obs
+  predictions = merge(predictions, all_vars, by = "documentno")
+  predictions = predictions[,c(match("prediction", names(predictions)),
+                           match("mineid", names(predictions)),
+                           match("PS.x", names(predictions)),
+                           match("old_narrative", names(predictions)),
+                           match("documentno", names(predictions)))]
+  
+  # Inspect false negatives
+  View(predictions[predictions$PS.x == "YES" & predictions$prediction == "NO", c("old_narrative", "documentno")], "false negatives")
+  write.csv(predictions[predictions$PS.x == "YES" & predictions$prediction == "NO", c("old_narrative", "documentno")], 
+            file = "C:/Users/slevine2/Desktop/ps_false_negatives.csv")
+  # Inspect false positives
+  View(predictions[predictions$PS.x == "NO" & predictions$prediction == "YES", c("old_narrative", "documentno")], "false positives")
+  write.csv(predictions[predictions$PS.x == "NO" & predictions$prediction == "YES", c("old_narrative", "documentno")], 
+            file = "C:/Users/slevine2/Desktop/ps_false_positives.csv")
 }
 
 ######################################################################################################
@@ -1282,34 +1310,34 @@ if (data.type == "real accidents data") {
   
   # STEP THREE: RUN ANOTHER MODEL TO TRY AND CLASSIFY MORE FALSE NEGATIVES
   
-  # Run boosting on observations classified "no" by the random forest
+  # Randomize
+  set.seed(625)
+  
+  # Run boosting on training observations
   ps.adaboost = boosting(PS ~ ., data = simple.ps[simple.ps$type=="training", 
-                                                  !(names(simple.ps) %in% c('documentno', 'type'))], boos = T, mfinal = 1000, coeflearn = 'Freund')
+                                                !(names(simple.ps) %in% c('documentno', 'type'))], boos = T, mfinal = 1000, coeflearn = 'Freund')
   
-  adaboost.pred = predict.boosting(ps.adaboost, newdata = post.smote.test[post.smote.test$predict==1 & 
-                                                                          post.smote.test$rf.smote.pred=="NO",
-                                                                        c(-grep("rf.smote.pred",names(post.smote.test)), 
-                                                                          -grep("predict",names(post.smote.test)))])
+  # Predict PS for unclassified observations
+  adaboost.pred = predict.boosting(ps.adaboost, newdata = simple.ps[simple.ps$type=="unclassified",
+                                                                  !(names(simple.ps) %in% c('documentno', 'type'))])
+
+  # Generate variable with boosting predictions
+  adaboost.pred$class = as.factor(adaboost.pred$class)
+  accidents = cbind(simple.ps[simple.ps$type=="unclassified",], adaboost.pred$class)
+  accidents = accidents[,c(-match("PS", names(accidents)))]
+  names(accidents)[names(accidents) == 'adaboost.pred$class'] = 'prediction'
   
-  # Generate variable with final predictions
-  boost.test.aux = cbind(post.smote.test[post.smote.test$predict == 1 & 
-                         post.smote.test$rf.smote.pred == "NO",], adaboost.pred$class)
-  post.smote.test = merge(post.smote.test, boost.test.aux, by = "documentno", all = T)
-  post.smote.test = post.smote.test[, c(-grep("\\.y", names(post.smote.test)))]
-  names(post.smote.test) = gsub("\\.[x|y]", "", names(post.smote.test))
-  
-  post.smote.test[, "smote_pred"] = ifelse((post.smote.test$`adaboost.pred$class` == "YES" | 
-                                            post.smote.test$rf.smote.pred == "YES"), "YES", "NO")
-  # Random forest then adaboost prediction
-  table(post.smote.test$smote_pred, post.smote.test$PS)
-  # BEST PREDICTION SO FAR
-  #NO YES
-  #NO  240  20
-  #YES  16  85
-  View(post.smote.test[post.smote.test$PS=="NO" & post.smote.test$smote_pred =="YES",]$documentno)
+  # Merge predictions back onto real data (we just need mineid and accidentdate for the next stage)
+  accidents = accidents[,c(match("prediction", names(accidents)),
+                           match("documentno", names(accidents)))]
+  accidents = merge(accidents, all.accidents, by="documentno")
+  accidents$PS = ifelse(!is.na(accidents$prediction), accidents$prediction, accidents$PS)
+  accidents = accidents[,c(match("prediction", names(accidents)),
+                           match("mineid", names(accidents)),
+                           match("documentno", names(accidents)))]
   
   # Save
-  saveRDS(accidents.data, file = classified_accidents_file_name)
+  saveRDS(accidents, file = classified_accidents_file_name)
 }
 
 rm(list = ls())
