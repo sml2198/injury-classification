@@ -726,36 +726,51 @@ prediction_data = ddply(prediction_data, "mineid", make_mine_time)
 # CREATE VARIOUS LAGGED VARIABLE CONSTRUCTIONS
 
 # Thanks, R-bloggers! https://www.r-bloggers.com/generating-a-laglead-variables/
-shift<-function(x,shift_by){
+shift_helper = function(x, shift_by){
   stopifnot(is.numeric(shift_by))
   stopifnot(is.numeric(x))
   
-  if (length(shift_by)>1)
-    return(sapply(shift_by,shift, x=x))
+  if (length(shift_by) > 1)
+    return(sapply(shift_by, shift_helper, x = x))
   
-  out<-NULL
-  abs_shift_by=abs(shift_by)
+  out = NULL
+  abs_shift_by = abs(shift_by)
   if (shift_by > 0 )
-    out<-c(tail(x,-abs_shift_by),rep(NA,abs_shift_by))
+    out = c(tail(x,-abs_shift_by), rep(NA,abs_shift_by))
   else if (shift_by < 0 )
-    out<-c(rep(NA,abs_shift_by), head(x,-abs_shift_by))
+    out = c(rep(NA,abs_shift_by), head(x,-abs_shift_by))
   else
-    out<-x
+    out = x
   out
 }
 
+shift = function(data, var_to_shift, shifted_var, shift_by) {
+  data[, shifted_var] = shift_helper(data[, var_to_shift], shift_by)
+  return(data)
+}
+
+# Group data by mines and order the data by mine-quarter
+prediction_data = prediction_data[order(prediction_data[,"mineid"], -prediction_data[,"quarter"]),]
+
+# Genereate empty vars for lags 
+prediction_data$MR_lead1 = 0
+prediction_data$MR_lead2 = 0
+prediction_data$MR_lead3 = 0
+
 # Generate lead MR variables (as opposed to lagged violation variables)
-prediction_data$MR_lead1 = shift(prediction_data$MR, 1)
-prediction_data$MR_lead2 = shift(prediction_data$MR, 2)
-prediction_data$MR_lead3 = shift(prediction_data$MR, 3)
-#  head(prediction_data[,c("MR","MR_lead1", "MR_lead2", "MR_lead3")])
+prediction_data = ddply(prediction_data, "mineid", shift, var_to_shift = "MR", shifted_var = "MR_lead1", shift_by = -1)
+prediction_data = ddply(prediction_data, "mineid", shift, var_to_shift = "MR_lead1", shifted_var = "MR_lead2", shift_by = -1)
+prediction_data = ddply(prediction_data, "mineid", shift, var_to_shift = "MR_lead2", shifted_var = "MR_lead3", shift_by = -1)
 
 # Generate cumulative lead MR vars (cumulative leads will always be the sum of the MR of one observation and the lead of that observation)
 prediction_data$MR_cuml_lead1 = (prediction_data$MR + prediction_data$MR_lead1)
 prediction_data$MR_cuml_lead2 = (prediction_data$MR + prediction_data$MR_lead1 + prediction_data$MR_lead2)
 prediction_data$MR_cuml_lead3 = (prediction_data$MR + prediction_data$MR_lead1 + prediction_data$MR_lead2 + prediction_data$MR_lead3)
-# head(prediction_data[,c("quarter","MR","MR_lead1", "MR_lead2", "MR_lead3", "MR_cuml_lead1", "MR_cuml_lead2", "MR_cuml_lead3")])
-  
+# head(prediction_data[,c("quarter","MR","MR_lead1", "MR_lead2", "MR_lead3", "MR_cuml_lead1", "MR_cuml_lead2", "MR_cuml_lead3")], n=75)
+
+# Generate average lead MR vars
+prediction_data$MR_lead4_avg = (prediction_data$MR_cuml_lead3/4)
+
 ######################################################################################################################################
 
 # Set the file name (MR/PS, relevant or all vars, Stata-friendly or not.)
