@@ -723,7 +723,7 @@ prediction_data = ddply(prediction_data, "mineid", make_mine_time)
 
 ######################################################################################################################################
 
-# CREATE VARIOUS LAGGED VARIABLE CONSTRUCTIONS
+# DECLARE FUNCTION TO CREATE VARIOUS LEAD/LAGGED VARIABLE CONSTRUCTIONS
 
 # Thanks, R-bloggers! https://www.r-bloggers.com/generating-a-laglead-variables/
 shift_helper = function(x, shift_by){
@@ -749,27 +749,76 @@ shift = function(data, var_to_shift, shifted_var, shift_by) {
   return(data)
 }
 
-# Group data by mines and order the data by mine-quarter
+######################################################################################################################################
+
+# CREATE LEAD VARIABLES 
+
+# Group data by mines and order the data by mine-quarters (descending)
 prediction_data = prediction_data[order(prediction_data[,"mineid"], -prediction_data[,"quarter"]),]
 
 # Genereate empty vars for lags 
-prediction_data$MR_lead1 = 0
-prediction_data$MR_lead2 = 0
-prediction_data$MR_lead3 = 0
+prediction_data$MR.lead1 = 0
+prediction_data$MR.lead2 = 0
+prediction_data$MR.lead3 = 0
 
 # Generate lead MR variables (as opposed to lagged violation variables)
-prediction_data = ddply(prediction_data, "mineid", shift, var_to_shift = "MR", shifted_var = "MR_lead1", shift_by = -1)
-prediction_data = ddply(prediction_data, "mineid", shift, var_to_shift = "MR_lead1", shifted_var = "MR_lead2", shift_by = -1)
-prediction_data = ddply(prediction_data, "mineid", shift, var_to_shift = "MR_lead2", shifted_var = "MR_lead3", shift_by = -1)
+prediction_data = ddply(prediction_data, "mineid", shift, var_to_shift = "MR", shifted_var = "MR.lead1", shift_by = -1)
+prediction_data = ddply(prediction_data, "mineid", shift, var_to_shift = "MR.lead1", shifted_var = "MR.lead2", shift_by = -1)
+prediction_data = ddply(prediction_data, "mineid", shift, var_to_shift = "MR.lead2", shifted_var = "MR.lead3", shift_by = -1)
+# head(prediction_data[,c("quarter","MR","MR.lead1", "MR.lead2", "MR.lead3")], n=75)
 
-# Generate cumulative lead MR vars (cumulative leads will always be the sum of the MR of one observation and the lead of that observation)
-prediction_data$MR_cuml_lead1 = (prediction_data$MR + prediction_data$MR_lead1)
-prediction_data$MR_cuml_lead2 = (prediction_data$MR + prediction_data$MR_lead1 + prediction_data$MR_lead2)
-prediction_data$MR_cuml_lead3 = (prediction_data$MR + prediction_data$MR_lead1 + prediction_data$MR_lead2 + prediction_data$MR_lead3)
-# head(prediction_data[,c("quarter","MR","MR_lead1", "MR_lead2", "MR_lead3", "MR_cuml_lead1", "MR_cuml_lead2", "MR_cuml_lead3")], n=75)
+######################################################################################################################################
 
-# Generate average lead MR vars
-prediction_data$MR_lead4_avg = (prediction_data$MR_cuml_lead3/4)
+# CREATE LAGGED VARIABLES 
+
+# Generate cumulative violation lag variables (we must lag violations here, because we want to evaluate whether or not 
+# patterns of violations predict injuries, not whether incidents of injuries predict patterns of injuries)
+violation_vars = names(prediction_data)[grep("^p+[0-9]|^sp+[0-9]", names(prediction_data))]
+part_vars = violation_vars[grep("^p[0-9]", violation_vars)]
+subpart_vars = violation_vars[grep("^p[0-9]", violation_vars)]
+
+# Group data by mines and order the data by mine-quarters (ascending)
+prediction_data = prediction_data[order(prediction_data[,"mineid"], prediction_data[,"quarter"]),]
+
+# CREATE FUNCTION TO FIND CUMULATIVE NUMBER OF VIOLATIONS PER MINE SINCE THE FIRST QUARTER IN WHICH THAT MINE WAS OPERATIONAL
+# However, this var should be quarter-specific (looking backwards).
+viols_so_far = function(data, var_to_sum, sum_viols) {
+  data[, sum_viols] =  cumsum(data[, var_to_sum])
+  return(data)
+}
+
+# CREATE FUNCTION TO GET CUMULATIVE VIOLATIONS LAGS (LOOKING BACK 4 QUARTERS) USING CUMSUM
+cs_wrapper = function(data, var_to_cum, cum_var, cum_shift) {
+  data[, cum_var] = 0
+  
+  for (i in 1:nrow(data)) {
+    if (i < cum_shift) {
+      data[, cum_var][i] = NA
+    }
+    else {
+      data_to_cum = data[which(data$quarter >= data$quarter[i - cum_shift + 1] & data$quarter <= data$quarter[i]), var_to_cum]
+      val = tail(cumsum(data_to_cum), n = 1)
+      data[, cum_var][i] = val
+    }
+  }
+  return(data)
+}
+# Now apply the two functions written above to variables of interest.
+for (i in 1:length(part_vars)) {
+  #cs_wrapper
+  prediction_data = ddply(prediction_data, "mineid", cs_wrapper, 
+                          var_to_cum = part_vars[i], 
+                          cum_var = paste(part_vars[i], "c.lag.4", sep = "."), 
+                          cum_shift = 4)
+  # viols_so_far
+  prediction_data = ddply(prediction_data, "mineid", viols_so_far, 
+                          var_to_sum = part_vars[i], 
+                          sum_viols = paste(part_vars[i], "c.lag.all", sep = "."))
+}
+
+# MR LEAD VAR SUFFIX = .lead[1-3]
+# VIOLATION CUMULATIVE LAG OVER LAST 4 QUARTERS = c.lag.4
+# VIOLATION CUMULATIVE LAG SINCE BEGINNING OF MINE-TIME =  c.lag.all
 
 ######################################################################################################################################
 
