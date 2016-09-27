@@ -692,8 +692,8 @@ prediction_data$MR_indicator = as.factor(prediction_data$MR_indicator)
 violation_vars = names(prediction_data)[grep("^p+[0-9]|^sp+[0-9]", names(prediction_data))]
 part_vars = violation_vars[grep("^p", violation_vars)]
 subpart_vars = violation_vars[grep("^sp", violation_vars)]
-sig_sub_vars = violation_vars[grep("sigandsub$", violation_vars)]
-penalty_point_vars = violation_vars[grep("penaltypoints$", violation_vars)]
+sig_sub_vars = violation_vars[grep("sigandsub", violation_vars)]
+penalty_point_vars = violation_vars[grep("penaltypoints", violation_vars)]
 violation_count_vars = setdiff(violation_vars, union(sig_sub_vars, penalty_point_vars))
 
 part_sig_sub_vars = intersect(part_vars, sig_sub_vars)
@@ -775,7 +775,7 @@ prediction_data = ddply(prediction_data, "mineid", shift, var_to_shift = "MR.lea
 # patterns of violations predict injuries, not whether incidents of injuries predict patterns of injuries)
 violation_vars = names(prediction_data)[grep("^p+[0-9]|^sp+[0-9]", names(prediction_data))]
 part_vars = violation_vars[grep("^p[0-9]", violation_vars)]
-subpart_vars = violation_vars[grep("^p[0-9]", violation_vars)]
+subpart_vars = violation_vars[grep("^sp[0-9]", violation_vars)]
 
 # Group data by mines and order the data by mine-quarters (ascending)
 prediction_data = prediction_data[order(prediction_data[,"mineid"], prediction_data[,"quarter"]),]
@@ -818,7 +818,20 @@ for (i in 1:length(part_vars)) {
 
 # MR LEAD VAR SUFFIX = .lead[1-3]
 # VIOLATION CUMULATIVE LAG OVER LAST 4 QUARTERS = c.lag.4
-# VIOLATION CUMULATIVE LAG SINCE BEGINNING OF MINE-TIME =  c.lag.all
+# VIOLATION CUMULATIVE LAG SINCE BEGINNING OF MINE-TIME = c.lag.all
+
+# now the same for subparts = eek!
+for (i in 1:length(subpart_vars)) {
+  #cs_wrapper
+  prediction_data = ddply(prediction_data, "mineid", cs_wrapper, 
+                          var_to_cum = subpart_vars[i], 
+                          cum_var = paste(subpart_vars[i], "c.lag.4", sep = "."), 
+                          cum_shift = 4)
+  # viols_so_far
+  prediction_data = ddply(prediction_data, "mineid", viols_so_far, 
+                          var_to_sum = subpart_vars[i], 
+                          sum_viols = paste(subpart_vars[i], "c.lag.all", sep = "."))
+}
 
 ######################################################################################################################################
 
@@ -834,9 +847,10 @@ if (relevant.only.option == "off" & injury.type == "MR") {
       stata.names = names(prediction_data)
       stata.names = gsub("\\.", "_", stata.names)
       stata.names = gsub("-", "_", stata.names)
+      stata.names = gsub("penaltypoints", "pp", stata.names)
+      stata.names = gsub("sigandsub", "ss", stata.names)
       stata.data = prediction_data
       names(stata.data) = stata.names
-      
       # Also save a csv for this so that we can do prelimary analysis in Stata (clustering is easier in Stata)
       write.csv(stata.data, file = MR_prediction_data_out_csv_name)
       write.dta(stata.data, file = MR_prediction_data_out_dta_name)
@@ -852,11 +866,13 @@ if (relevant.only.option == "off" & injury.type == "PS") {
   saveRDS(prediction_data, file = PS_prediction_data_out_file_name)
     if (stata.friendly) {
       # Remove special characters from data names so it's stata-friendly, if option is TRUE
-      r.names = names(prediction_data)
-      r.names = gsub("\\.", "_", r.names)
-      r.names = gsub("-", "_", r.names)
-      names(prediction_data) = r.names
-      
+      stata.names = names(prediction_data)
+      stata.names = gsub("\\.", "_", stata.names)
+      stata.names = gsub("-", "_", stata.names)
+      stata.names = gsub("penaltypoints", "pp", stata.names)
+      stata.names = gsub("sigandsub", "ss", stata.names)
+      stata.data = prediction_data
+      names(stata.data) = stata.names
       # Also save a csv for this so that we can do prelimary analysis in Stata (clustering is easier in Stata)
       write.csv(prediction_data, file = PS_prediction_data_out_csv_name)
       write.dta(prediction_data, file = PS_prediction_data_out_dta_name)
