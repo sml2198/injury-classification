@@ -849,6 +849,7 @@ if (relevant.only.option == "off" & injury.type == "MR") {
       stata.names = gsub("-", "_", stata.names)
       stata.names = gsub("penaltypoints", "pp", stata.names)
       stata.names = gsub("sigandsub", "ss", stata.names)
+      stata.names = gsub("_c_lag_4", "_c_4_lag", stata.names)
       stata.data = prediction_data
       names(stata.data) = stata.names
       # Also save a csv for this so that we can do prelimary analysis in Stata (clustering is easier in Stata)
@@ -871,6 +872,7 @@ if (relevant.only.option == "off" & injury.type == "PS") {
       stata.names = gsub("-", "_", stata.names)
       stata.names = gsub("penaltypoints", "pp", stata.names)
       stata.names = gsub("sigandsub", "ss", stata.names)
+      stata.names = gsub("_c_lag_4", "_c_4_lag", stata.names)
       stata.data = prediction_data
       names(stata.data) = stata.names
       # Also save a csv for this so that we can do prelimary analysis in Stata (clustering is easier in Stata)
