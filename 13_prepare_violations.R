@@ -753,30 +753,40 @@ shift = function(data, var_to_shift, shifted_var, shift_by) {
 
 # CREATE LEAD VARIABLES 
 
+# # Genereate empty vars for lags 
+# prediction_data$MR.lead1 = 0
+# prediction_data$MR.lead2 = 0
+# prediction_data$MR.lead3 = 0
+# # Generate lead MR variables (as opposed to lagged violation variables)
+# prediction_data = ddply(prediction_data, "mineid", shift, var_to_shift = "MR", shifted_var = "MR.lead1", shift_by = -1)
+# prediction_data = ddply(prediction_data, "mineid", shift, var_to_shift = "MR.lead1", shifted_var = "MR.lead2", shift_by = -1)
+# prediction_data = ddply(prediction_data, "mineid", shift, var_to_shift = "MR.lead2", shifted_var = "MR.lead3", shift_by = -1)
+
+# CREATE NON-CUMULATIVE LAGGED VARIABLES 
+
 # Group data by mines and order the data by mine-quarters (descending)
 prediction_data = prediction_data[order(prediction_data[,"mineid"], -prediction_data[,"quarter"]),]
 
-# Genereate empty vars for lags 
-prediction_data$MR.lead1 = 0
-prediction_data$MR.lead2 = 0
-prediction_data$MR.lead3 = 0
+violation_vars = names(prediction_data)[grep("^p+[0-9][0-9](\\.penaltypoints|\\.sigandsub)*$|^sp+[0-9].+[0-9](\\.penaltypoints|\\.sigandsub)*$", names(prediction_data))]
+part_vars = violation_vars[grep("^p[0-9][0-9](\\.penaltypoints|\\.sigandsub)*$", violation_vars)]
+subpart_vars = violation_vars[grep("^sp[0-9].+[0-9](\\.penaltypoints|\\.sigandsub)*$", violation_vars)]
 
-# Generate lead MR variables (as opposed to lagged violation variables)
-prediction_data = ddply(prediction_data, "mineid", shift, var_to_shift = "MR", shifted_var = "MR.lead1", shift_by = -1)
-prediction_data = ddply(prediction_data, "mineid", shift, var_to_shift = "MR.lead1", shifted_var = "MR.lead2", shift_by = -1)
-prediction_data = ddply(prediction_data, "mineid", shift, var_to_shift = "MR.lead2", shifted_var = "MR.lead3", shift_by = -1)
-# head(prediction_data[,c("quarter","MR","MR.lead1", "MR.lead2", "MR.lead3")], n=75)
+# CREATE LAGGED (1) VARS FOR PARTS AND SUBPARTS
+for (i in 1:length(violation_vars)) {
+  prediction_data[, paste(violation_vars[i], "1lag", sep = ".")] = 0 
+  prediction_data = ddply(prediction_data, "mineid", shift, 
+                          var_to_shift = violation_vars[i], 
+                          shifted_var = paste(violation_vars[i], "1lag", sep = "."), 
+                          shift_by = 1)
+}
+# head(prediction_data[,c("mineid","quarter","p47", "p47.1lag","p75", "p75.1lag", "p75.penaltypoints.1lag", "p75.sigandsub.1lag")], n=75)
 
 ######################################################################################################################################
 
-# CREATE LAGGED VARIABLES 
+# CREATE CUMULATIVE LAGGED VARIABLES 
 
 # Generate cumulative violation lag variables (we must lag violations here, because we want to evaluate whether or not 
 # patterns of violations predict injuries, not whether incidents of injuries predict patterns of injuries)
-violation_vars = names(prediction_data)[grep("^p+[0-9]|^sp+[0-9]", names(prediction_data))]
-part_vars = violation_vars[grep("^p[0-9]", violation_vars)]
-subpart_vars = violation_vars[grep("^sp[0-9]", violation_vars)]
-
 # Group data by mines and order the data by mine-quarters (ascending)
 prediction_data = prediction_data[order(prediction_data[,"mineid"], prediction_data[,"quarter"]),]
 
@@ -808,7 +818,7 @@ for (i in 1:length(part_vars)) {
   #cs_wrapper
   prediction_data = ddply(prediction_data, "mineid", cs_wrapper, 
                           var_to_cum = part_vars[i], 
-                          cum_var = paste(part_vars[i], "c.lag.4", sep = "."), 
+                          cum_var = paste(part_vars[i], "c.4lag", sep = "."), 
                           cum_shift = 4)
   # viols_so_far
   prediction_data = ddply(prediction_data, "mineid", viols_so_far, 
@@ -816,22 +826,21 @@ for (i in 1:length(part_vars)) {
                           sum_viols = paste(part_vars[i], "c.lag.all", sep = "."))
 }
 
-# MR LEAD VAR SUFFIX = .lead[1-3]
-# VIOLATION CUMULATIVE LAG OVER LAST 4 QUARTERS = c.lag.4
-# VIOLATION CUMULATIVE LAG SINCE BEGINNING OF MINE-TIME = c.lag.all
-
 # now the same for subparts = eek!
 for (i in 1:length(subpart_vars)) {
   #cs_wrapper
   prediction_data = ddply(prediction_data, "mineid", cs_wrapper, 
                           var_to_cum = subpart_vars[i], 
-                          cum_var = paste(subpart_vars[i], "c.lag.4", sep = "."), 
+                          cum_var = paste(subpart_vars[i], "c.4lag", sep = "."), 
                           cum_shift = 4)
   # viols_so_far
   prediction_data = ddply(prediction_data, "mineid", viols_so_far, 
                           var_to_sum = subpart_vars[i], 
                           sum_viols = paste(subpart_vars[i], "c.lag.all", sep = "."))
 }
+# VIOLATION LAG = 1lag
+# VIOLATION CUMULATIVE LAG OVER LAST 4 QUARTERS = c.4lag
+# VIOLATION CUMULATIVE LAG SINCE BEGINNING OF MINE-TIME = c.lag.all
 
 ######################################################################################################################################
 
@@ -849,7 +858,6 @@ if (relevant.only.option == "off" & injury.type == "MR") {
       stata.names = gsub("-", "_", stata.names)
       stata.names = gsub("penaltypoints", "pp", stata.names)
       stata.names = gsub("sigandsub", "ss", stata.names)
-      stata.names = gsub("_c_lag_4", "_c_4_lag", stata.names)
       stata.data = prediction_data
       names(stata.data) = stata.names
       # Also save a csv for this so that we can do prelimary analysis in Stata (clustering is easier in Stata)
@@ -872,7 +880,6 @@ if (relevant.only.option == "off" & injury.type == "PS") {
       stata.names = gsub("-", "_", stata.names)
       stata.names = gsub("penaltypoints", "pp", stata.names)
       stata.names = gsub("sigandsub", "ss", stata.names)
-      stata.names = gsub("_c_lag_4", "_c_4_lag", stata.names)
       stata.data = prediction_data
       names(stata.data) = stata.names
       # Also save a csv for this so that we can do prelimary analysis in Stata (clustering is easier in Stata)
