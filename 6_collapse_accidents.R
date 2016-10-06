@@ -30,8 +30,8 @@ PS_accidents_coded_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/4_col
 
 # Set preferences 
 
-# injury.type = "PS"
- injury.type = "MR"
+ injury.type = "PS"
+# injury.type = "MR"
 
 ######################################################################################################################################
 
