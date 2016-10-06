@@ -48,8 +48,8 @@ false_pos_file_name = "C:/Users/slevine2/Desktop/ps_false_positives.csv"
 # SET PREFERENCES 
 
 # Set preferences - data type - either training data for model selection, or real accidents data for classification
-data.type = "training data"
-#data.type = "real accidents data"
+#data.type = "training data"
+data.type = "real accidents data"
 
 # Specify imputation method
 imputation_method = 3
@@ -529,24 +529,24 @@ ps_data[, "drill_action"] = ifelse(grepl("(plate|bit|bolt)+.{1,10}PINNED/STRUCK"
                                 
 # Define a few narratives using the vehicle flags - before replacing body parts 
 ps_data[, "operating"] = ifelse((grepl("( |^|was|while|had)(tr(a)*m(m)*[^ ]{0,3}|op(e)*r(a)*t[^ ]{0,3}|backin.{1,10}VEHICLE|r(a|u)n|makin(g)*( )*(a)*( )*tu(r)*n|remote.{1,5}control|driv)", ps_data$narrative) &
-                                   (!grepl("PERSON.{1,20}(splic(e|ing)|crawl(ing)*|repair|fix)", ps_data$narrative) & 
-                                      grepl("(splic(e|ing)|crawl(ing)*|repair|fix).{1,20}PERSON", ps_data$narrative)) &
-                                   (grepl("operat", ps_data$mineractivity) | 
-                                      (grepl("roof bolt", ps_data$mineractivity) & 
-                                         !grepl("help(ing|er|)", ps_data$old_narrative))) &
-                                   (!grepl("(side of|right|left|beside).{1,10}VEHICLE", ps_data$narrative) | 
-                                      grepl("remote.{1,5}control", ps_data$narrative))), 1, 0)o
+                               (!grepl("PERSON.{1,20}(splic(e|ing)|crawl(ing)*|repair|fix)", ps_data$narrative) & 
+                                 grepl("(splic(e|ing)|crawl(ing)*|repair|fix).{1,20}PERSON", ps_data$narrative)) &
+                                (grepl("operat", ps_data$mineractivity) | 
+                                (grepl("roof bolt", ps_data$mineractivity) & 
+                                !grepl("help(ing|er|)", ps_data$old_narrative))) &
+                               (!grepl("(side of|right|left|beside).{1,10}VEHICLE", ps_data$narrative) | 
+                                 grepl("remote.{1,5}control", ps_data$narrative))), 1, 0)
 
 # Use head/roof to remove driver hitting head against vehicle roof - REQUIRES OPEATING
 ps_data[, "headroof"] = ifelse((grepl("(head|neck).{1,5}(on|str(ike|uck)|hit|against).{1,5}(roof|top)", ps_data[,"old_narrative"]) |
-                                  grepl("(bump|str(ike|uck)|hit).{1,5}(head|neck).{1,5}(roof|top)", ps_data[,"old_narrative"]) | 
-                                  (grepl("whip( )*lash", ps_data[,"old_narrative"]) & 
-                                     ps_data$operating == 1) | 
-                                  grepl("jerked.{1,10}(head|neck)", ps_data[,"old_narrative"])) &
-                                 !grepl("drill( )*head.{1,10}roof", ps_data[,"old_narrative"]) &
-                                 !grepl("over( )*head.{1,10}roof", ps_data[,"old_narrative"]) &
-                                 !grepl("head(ing|er|ed).{1,10}roof", ps_data[,"old_narrative"]) &
-                                 !grepl("head.{1,10}roof.{1,5}bolt", ps_data[,"old_narrative"]), 1, 0) 
+                                grepl("(bump|str(ike|uck)|hit).{1,5}(head|neck).{1,5}(roof|top)", ps_data[,"old_narrative"]) | 
+                               (grepl("whip( )*lash", ps_data[,"old_narrative"]) & 
+                                ps_data$operating == 1) | 
+                                grepl("jerked.{1,10}(head|neck)", ps_data[,"old_narrative"])) &
+                                !grepl("drill( )*head.{1,10}roof", ps_data[,"old_narrative"]) &
+                                !grepl("over( )*head.{1,10}roof", ps_data[,"old_narrative"]) &
+                                !grepl("head(ing|er|ed).{1,10}roof", ps_data[,"old_narrative"]) &
+                                !grepl("head.{1,10}roof.{1,5}bolt", ps_data[,"old_narrative"]), 1, 0) 
 # ROOF BOLTING
 
 # Now create positive and negative roof bolting flags 
@@ -1217,7 +1217,7 @@ if (data.type == "training data" ) {
   table(simple.ps[601:1000,81], predicted = rf.smo.pred)
   
   # BOOSTING
-  ps.adaboost = boosting(PS ~ ., data = simple.ps[1:600, !(names(simple.ps) %in% c('documentno'))], boos = T, mfinal = 300, coeflearn = 'Freund')
+  ps.adaboost = boosting(PS ~ ., data = simple.ps[1:600, !(names(simple.ps) %in% c('documentno'))], boos = T, mfinal = 1000, coeflearn = 'Freund')
   simple.adaboost.pred = predict.boosting(ps.adaboost, newdata = simple.ps[601:1000,])
   simple.adaboost.pred$confusion
   # # Predicted Class  NO YES
@@ -1271,47 +1271,6 @@ if (data.type == "training data" ) {
 
 if (data.type == "real accidents data") {
   
-#   # COMPOSITE ALGORITHM
-#   #splitIndex = createDataPartition(simple.ps$PS, p =.50, list = FALSE, times = 1)
-#   #smote.trainx = simple.ps[splitIndex,]
-#   #smote.test = simple.ps[-splitIndex,]
-#   set.seed(625)
-#   smote.trainx = simple.ps[1:600,]
-#   smote.test = simple.ps[601:1000,]
-#   
-#   ######################################################################################################
-#   
-#   # PRE-PROCESSING: OVER SAMPLE DATA & WEED OUT FALLING ROCK ACCIDENTS
-#   
-#   # Use smote to oversample data
-#   smote.ps <- SMOTE(PS ~ ., smote.trainx, perc.over = 600,perc.under=100)
-#   table(smote.ps$PS)
-#   
-#   # Weed out obs that are definitely not ps
-#   smote.test[, "predict"] = ifelse((smote.test$falling.accident == 0), 1, 0)
-#   
-#   ######################################################################################################
-#   
-#   # RUN A RANDOM FOREST
-# 
-#   # Now do a random forest on the smoted data
-#   rf.smote <- randomForest(PS ~ . -documentno, data = smote.ps, mtry = 15, ntree = 1000)
-#   rf.smote
-#   
-#   # Predict
-#   rf.smote.pred = predict(rf.smote, smote.test[smote.test$predict == 1,], type="class")
-#   table(smote.test[smote.test$predict == 1,]$PS, predicted = rf.smote.pred)
-#   
-#   # Merge on predictions
-#   smote.test.aux = cbind(smote.test[smote.test$predict == 1,], rf.smote.pred)
-#   post.smote.test = merge(smote.test, smote.test.aux, by = "documentno", all = T)
-#   post.smote.test = post.smote.test[, c(-grep("\\.y", names(post.smote.test)))]
-#   names(post.smote.test) = gsub("\\.[x|y]", "", names(post.smote.test))
-#   
-#   post.smote.test[, "smote_pred"] = ifelse(is.na(post.smote.test$rf.smote.pred), 1, post.smote.test$rf.smote.pred)
-  
-  ######################################################################################################
-  
   # STEP THREE: RUN ANOTHER MODEL TO TRY AND CLASSIFY MORE FALSE NEGATIVES
   
   # Randomize
@@ -1319,7 +1278,7 @@ if (data.type == "real accidents data") {
   
   # Run boosting on training observations
   ps.adaboost = boosting(PS ~ ., data = simple.ps[simple.ps$type=="training", 
-                                                !(names(simple.ps) %in% c('documentno', 'type'))], boos = T, mfinal = 1000, coeflearn = 'Freund')
+                                                !(names(simple.ps) %in% c('documentno', 'type'))], boos = T, mfinal = 300, coeflearn = 'Freund')
   
   # Predict PS for unclassified observations
   adaboost.pred = predict.boosting(ps.adaboost, newdata = simple.ps[simple.ps$type=="unclassified",
@@ -1331,13 +1290,24 @@ if (data.type == "real accidents data") {
   accidents = accidents[,c(-match("PS", names(accidents)))]
   names(accidents)[names(accidents) == 'adaboost.pred$class'] = 'prediction'
   
+  # POST-PROCESSING: MANUALLY RECODE COMMON FALSE POSITIVES # 1 = no, 2 = yes
+  accidents$accidents = ifelse(accidents$entrapment == 1, 1, accidents$prediction) 
+  accidents$prediction = ifelse(accidents$falling.accident == 1, 1, accidents$prediction)
+  accidents$prediction = ifelse(accidents$brokensteel == 1, 1, accidents$prediction)
+  accidents$prediction = ifelse(accidents$accident.only == 1, 1, accidents$prediction)
+  accidents$prediction = ifelse(accidents$headroof == 1, 1, accidents$prediction)
+  accidents$prediction = ifelse(accidents$headcanopy == 1, 1, accidents$prediction)
+  accidents$prediction = ifelse(accidents$hole == 1, 1, accidents$prediction)
+  accidents$prediction = as.factor(accidents$prediction)
+  
   # Merge predictions back onto real data (we just need mineid and accidentdate for the next stage)
-  accidents = accidents[,c(match("prediction", names(accidents)),
+  accidents = accidents[, c(match("prediction", names(accidents)),
                            match("documentno", names(accidents)))]
-  accidents = merge(accidents, all.accidents, by="documentno")
+  accidents = merge(accidents, all.accidents, by = "documentno")
   accidents$PS = ifelse(!is.na(accidents$prediction), accidents$prediction, accidents$PS)
-  accidents = accidents[,c(match("prediction", names(accidents)),
+  accidents = accidents[, c(match("PS", names(accidents)),
                            match("mineid", names(accidents)),
+                           match("accidentdate", names(accidents)),
                            match("documentno", names(accidents)))]
   
   # Save
