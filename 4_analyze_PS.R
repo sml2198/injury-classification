@@ -35,6 +35,10 @@ accidents_data_file_name = "X:/Projects/Mining/NIOSH/analysis/data/3_merged/merg
   # output: all accidents, now classified as PS after algorithm
 classified_accidents_file_name = "X:/Projects/Mining/NIOSH/analysis/data/4_coded/PS_accidents_with_predictions.rds"
 
+# SARAH'S COMPUTER
+coded_training_set_file_name = "C:/Users/slevine2/Dropbox (Stanford Law School)/R-code/Injury-Classification/PS/Training_Set_Pinning_And_Striking_Accidents-January-29-2016.csv"
+accidents_data_file_name = "C:/Users/slevine2/Dropbox (Stanford Law School)/R-code/Injury-Classification/PS/merged_mines_accidents.rds"
+
 ######################################################################################################
 
 # SET PREFERENCES 
@@ -297,6 +301,18 @@ ps_data[, "canopy"] = ifelse(grepl("canopy", ps_data[,"narrative"]), 1, 0)
 ps_data[, "bodyseat"] = ifelse(grepl("(back|head|neck).{1,10}seat", ps_data[,"narrative"]) &
                               !grepl("backward.{1,10}seat", ps_data[,"narrative"]) &
                               !grepl("(bolt|over|drill)( )*head.{1,10}seat", ps_data[,"narrative"]), 1, 0) 
+
+# Use head/roof to remove driver hitting head against vehicle roof
+ps_data[, "headroof"] = ifelse((grepl("(head|neck).{1,5}(on|str(ike|uck)|hit|against).{1,5}(roof|top)", ps_data[,"narrative"]) |
+                                grepl("(bump|str(ike|uck)|hit).{1,5}(head|neck).{1,5}(roof|top)", ps_data[,"narrative"]) | 
+                               (grepl("whip( )*lash", ps_data[,"narrative"]) & 
+                                ps_data$operating == 1) | 
+                                grepl("jerked.{1,10}(head|neck)", ps_data[,"narrative"])) &
+                               !grepl("drill( )*head.{1,10}roof", ps_data[,"narrative"]) &
+                               !grepl("over( )*head.{1,10}roof", ps_data[,"narrative"]) &
+                               !grepl("head(ing|er|ed).{1,10}roof", ps_data[,"narrative"]) &
+                               !grepl("head.{1,10}roof.{1,5}bolt", ps_data[,"narrative"]), 1, 0) 
+
 # Hitting head against canopy
 ps_data[, "headcanopy"] = ifelse((grepl("(head|neck).{1,5}(on|str(ike|uck)|hit|against).{1,5}(canopy)", ps_data[,"narrative"]) |
                                   grepl("(bump|str(ike|uck)|hit).{1,5}(head|neck).{1,5}(canopy)", ps_data[,"narrative"])) &
@@ -305,10 +321,37 @@ ps_data[, "headcanopy"] = ifelse((grepl("(head|neck).{1,5}(on|str(ike|uck)|hit|a
                                  !grepl("head(ing|er|ed).{1,10}canopy", ps_data[,"narrative"]), 1, 0) 
 # Going over a bump and operator hitting head 
 ps_data[, "hole"] = ifelse(grepl("(hit|str(ike|uck)|r(a|u)n( )*over|(went|go)( )*over).{1,10}(rock|hole|(h|b)ump(s| |$|\\.|,)|dip|depression|uneven|off( |-)*set|((low|bad|rough)( |-)*(spot|patch|place)))", 
-                                 ps_data[,"narrative"]), 1, 0)
+                           ps_data[,"narrative"]), 1, 0)
 ps_data[, "unevenbottom"] = ifelse(grepl("(hole|bump(s| |$|\\.|,)|dip|depression|uneven|off( |-)*set|((low|bad|rough)( |-)*(spot|place|patch)))", 
                                    ps_data[,"narrative"]) & 
                                   !grepl("(bolt|drill|steel|cable|test|pin).{1,15}hole", ps_data[,"narrative"]), 1, 0)
+
+# GENERATE KEYWORDS TO IDENTIFY ROOFBOLTING ACCIDENTS AND THEIR FALSE POSITIVES
+
+# Roof bolting/drilling steel injuries
+ps_data[, "drillsteel"] = ifelse(grepl("drill.{1,5}steel", ps_data[,"narrative"]) & 
+                                 grepl("(between|btwn).{1,17}steel.{1,25}(drill|head|roof|guide|canopy|ring)", ps_data[,"narrative"]), 1, 0)
+# Drill steel beraking/bending during roofbolting and caught an injury is not considered PS
+ps_data[, "brokensteel"] = ifelse(grepl("drill.{1,5}steel", ps_data[,"narrative"]) & 
+                                 (grepl("(drill|roof).{1,5}(steel|bolt).{1,15}(burst|ben(t|d)|br(eak|oke)|loose|drop(ped|ping)*|c(a|o)*me( )*( )*out|f(a|e)ll|stuck|clog)", ps_data[,"narrative"]) |
+                                  grepl("wrench.{1,5}(slip|c(a|o)me).{1,5}off.{1,15}(bolt|drill head)", ps_data[,"narrative"]) |  
+                                  grepl("wrench.{1,15}broke", ps_data[,"narrative"])), 1, 0)
+ps_data[, "roofbolt"] = ifelse(grepl("(roof|( |^)rib).{1,10}bolt", ps_data[,"narrative"]) | 
+                               grepl("(roof|rib).{1,25}bolting", ps_data[,"narrative"]) |
+                               grepl("roof.{1,35}bolting", ps_data[,"narrative"]) |
+                               grepl("bolt.{1,10}instal", ps_data[,"narrative"]) |
+                               grepl("instal.{1,20}bolt", ps_data[,"narrative"]), 1, 0)
+ps_data[, "bolting"] = ifelse(grepl("bolting", ps_data[,"narrative"]) |
+                              grepl("put(t)*(ing)*( )*bolt.{1,10}top", ps_data[,"narrative"]), 1, 0)
+
+# Gloves getting caught during roof bolting count as "entrapment" and should not be marked as PS
+ps_data[, "entrapment"] = ifelse((grepl("drill.{1,5}steel", ps_data[,"narrative"]) | 
+                                  ps_data$roofbolt == 1 |
+                                  ps_data$bolting == 1 ) & 
+                                 (grepl("(caught|catching|snagg(ed|ing)|grab).{1,10}(glove|shirt|sleeve)", ps_data[,"narrative"]) | 
+                                  grepl("(glove|shi(r)*t|sle(e)*ve).{1,10}(entangl|cau( )*ght|catching|snagg(ed|ing))", ps_data[,"narrative"])), 1, 0)
+#ps_data[, "glove"] = ifelse(grepl("glove", ps_data[,"narrative"]), 1, 0)
+ps_data[ps_data$glove==1 & ps_data$entrapment==0, c("narrative","drillsteel", "roofbolt")]
 
 ##################################################################################################
 
@@ -378,18 +421,6 @@ ps_data[, "operating"] = ifelse((grepl("( |^|was|while|had)(tr(a)*m(m)*[^ ]{0,3}
 
 ps_data[, "shuttlecar_or_rbolter"] = ifelse((grepl("VEHICLE(8|10|36)", ps_data$narrative) | 
                                              grepl("(s(ch|h)uttle).{1,30}( |-|- |v)*(trip|car)( car)*", ps_data$old_narrative)), 1, 0)
-
-# Use head/roof to remove driver hitting head against vehicle roof
-# do this before "body" masks so that we can use "head/neck" - although maybe let's move this since it doesn't require vehicle flags? Hmmm...
-ps_data[, "headroof"] = ifelse((grepl("(head|neck).{1,5}(on|str(ike|uck)|hit|against).{1,5}(roof|top)", ps_data[,"narrative"]) |
-                                grepl("(bump|str(ike|uck)|hit).{1,5}(head|neck).{1,5}(roof|top)", ps_data[,"narrative"]) | 
-                               (grepl("whip( )*lash", ps_data[,"narrative"]) & 
-                                ps_data$operating == 1) | 
-                                grepl("jerked.{1,10}(head|neck)", ps_data[,"narrative"])) &
-                               !grepl("drill( )*head.{1,10}roof", ps_data[,"narrative"]) &
-                               !grepl("over( )*head.{1,10}roof", ps_data[,"narrative"]) &
-                               !grepl("head(ing|er|ed).{1,10}roof", ps_data[,"narrative"]) &
-                               !grepl("head.{1,10}roof.{1,5}bolt", ps_data[,"narrative"]), 1, 0) 
 
 # BODY PARTS
 ps_data$narrative <- gsub("hand(s| |\\.|,|$)", "BODY ", ps_data$narrative)
@@ -514,21 +545,6 @@ ps_data[, "dif_vehicle"] = ifelse(grepl("(second|another|different).{1,5}VEHICLE
 ps_data[, "loose_rbolting"] = ifelse(grepl("(plate|bit|bolt)+.{1,10}PINNED/STRUCK", ps_data[,"narrative"]), 1, 0)
 ps_data[, "drill_action"] = ifelse(grepl("(plate|bit|bolt)+.{1,10}PINNED/STRUCK", ps_data[,"narrative"]), 1, 0)
 
-# Roof bolting/drilling steel injuries
-ps_data[, "drillsteel"] = ifelse(grepl("drill.{1,5}steel", ps_data[,"narrative"]) & 
-                                 grepl("(between|btwn).{1,17}steel.{1,25}(drill|head|roof|guide|canopy|ring)", ps_data[,"narrative"]), 1, 0)
-# Drill steel beraking/bending during roofbolting and caught an injury is not considered PS
-ps_data[, "brokensteel"] = ifelse(grepl("drill.{1,5}steel", ps_data[,"narrative"]) & 
-                                 (grepl("(drill|roof).{1,5}(steel|bolt).{1,15}(burst|ben(t|d)|br(eak|oke)|loose|drop(ped|ping)*|c(a|o)*me( )*( )*out|f(a|e)ll|stuck|clog)", ps_data[,"old_narrative"]) |
-                                  grepl("wrench.{1,5}(slip|c(a|o)me).{1,5}off.{1,15}(bolt|drill head)", ps_data[,"old_narrative"]) |  
-                                  grepl("wrench.{1,15}broke", ps_data[,"old_narrative"])), 1, 0)
-ps_data[, "roofbolt"] = ifelse(grepl("(roof|( |^)rib)( |-)*bolt", ps_data[,"narrative"]) | 
-                               grepl("(roof|rib).{1,25}bolting", ps_data[,"narrative"]), 1, 0)
-# Gloves getting caught during roof bolting count as "entrapment" and should not be marked as PS
-ps_data[, "entrapment"] = ifelse((ps_data$drillsteel == 1 | 
-                                  ps_data$roofbolt == 1) & 
-                                 (grepl("(caught|catching|snagg(ed|ing)).{1,10}glove", ps_data[,"old_narrative"]) | 
-                                  grepl("glove.{1,10}(caught|catching|snagg(ed|ing))", ps_data[,"old_narrative"])), 1, 0)
 # Now create positive and negative roof bolting flags 
 ps_data[, "pos_roofbolt"] = ifelse(ps_data$roofbolt == 1 & 
                                    grepl("PINNED/STRUCK.{1,15}between.{1,15}(roof( bolt)*|canopy|boom|(bolter|drill)( |-)*(pot|guide|head)|(drill|roof)*( |-)*(steel|guide)|( |^)rib|(bolt(er)*|torque)( |-)*wrench|lead|top).{1,30}(top|roof( bolt)*|canopy|boom|(bolter|drill)( |-)*(pot|guide|(h|l)ead)|(drill|roof)*( |-)*(steel|guide)|( |^)rib|(bolt(er)*|torque)( |-)*wrench|lead)", ps_data[,"narrative"]), 1, 0)
@@ -578,7 +594,7 @@ ps_data[, "strikerib"] = ifelse((grepl("PINNED/STRUCK.{0,20}( )rib", ps_data[, "
 
 # GENERATE LIKELY CIRCUMSTANCES
 
-# Remove accidents invovling falling rock 
+# Remove accidents involving falling rock 
 ps_data$falling.class = ifelse(ps_data$accidentclassification == "fall of roof or back", 1, 0)
 
 ps_data[, "falling.word"] = ifelse(grepl("rock( )*fell", ps_data[,"narrative"]) |
@@ -628,6 +644,7 @@ ps_data$false_keyword = ifelse((ps_data$jarring == 1 |
                                 ps_data$headroof == 1 | 
                                 ps_data$strap == 1 | 
                                 ps_data$trolleypole == 1 | 
+                                ps_data$entrapment == 1 |
                                 ps_data$hole == 1), 1, 0)
 
 ps_data$maybe_false_keyword = ifelse((ps_data$digit == 1 | 
@@ -936,41 +953,9 @@ ps_data$likely_ps = ifelse((ps_data$keyword == 1 |
 
 ##################################################################################################
 
-# # DUMMY-OUT FACTOR VARS WITH TOO MANY VALUES FOR RANDOM FOREST - MAYBE BETTER THAN THE ABOVE
-# 
-# datdum <- function(x, data, name){
-#   data$rv <- rnorm(dim(data)[1],1,1)
-#   mm <- data.frame(model.matrix(lm(data$rv~-1+factor(data[,x]))))
-#   names(mm) <- paste(name,1:dim(mm)[2],sep=".")
-#   data$rv <- NULL
-#   data <- cbind(data,mm)
-#   return(data)
-# }
-# 
-# test.data1 <- datdum(x="injurysourcecode",data=ps_data,name="injurysourcecode")
-# test.data1 <- test.data1 [, c(grep("injurysourcecode", names(test.data1)))]
-# test.data2 <- datdum(x="accidentclassification",data=ps_data,name="accidentclassification")
-# test.data2 <- test.data2 [, c(grep("accidentclassification", names(test.data2)))]
-# test.data3 <- datdum(x="accidenttype",data=ps_data,name="accidenttype")
-# test.data3 <- test.data3 [, c(grep("accidenttype", names(test.data3)))]
-# test.data4 <- datdum(x="equiptypecode",data=ps_data,name="equiptypecode")
-# test.data4 <- test.data4 [, c(grep("equiptypecode", names(test.data4)))]
-# test.data5 <- datdum(x="natureofinjury",data=ps_data,name="natureofinjury")
-# test.data5 <- test.data5 [, c(grep("natureofinjury", names(test.data5)))]
-# test.data6 <- datdum(x="activitycode",data=ps_data,name="activitycode")
-# test.data6 <- test.data6 [, c(grep("activitycode", names(test.data6)))]
-# test.data7 <- datdum(x="occupcode3digit",data=ps_data,name="occupcode3digit")
-# test.data7 <- test.data7 [, c(grep("occupcode3digit", names(test.data7)))]
-# test.data8 <- datdum(x="bodypartcode",data=ps_data,name="bodypartcode")
-# test.data8 <- test.data8 [, c(grep("bodypartcode", names(test.data8)))]
-# 
-# ps_data = cbind(ps_data, test.data1, test.data2, test.data3, test.data4, test.data5, test.data6, test.data7, test.data8)
-# rm(test.data1, test.data2, test.data3, test.data4, test.data5, test.data6, test.data7, test.data8)
-
-##################################################################################################
+# Drop variables with redundant or no information while keeping codes used in the algorithms below
 
 all_vars = ps_data
-# Drop variables with redundant or no information while keeping codes used in the algorithms below
 ps_data = ps_data[, c(-match("accidenttime", names(ps_data)), 
                       -match("accidenttypecode", names(ps_data)),
                       -match("bodypartcode", names(ps_data)),
@@ -1009,98 +994,98 @@ ps_data = ps_data[, c(-match("accidenttime", names(ps_data)),
 ps_data = ps_data[, c(-grep("date", names(ps_data)))]
 
 ##################################################################################################
-
-# MISSING VALUE IMPUTATION
-
-# Make everything a factor var
-varlist = names(ps_data)
-for (i in 1:length(varlist)) {
-  ps_data[, varlist[i]] = as.factor(ps_data[, varlist[i]])
-}
-
-# Now pick out the character vars and make sure they're the right type
-charac_vars = (c("subunit", "degreeofinjury", "accidentclassification", 
-                 "accidenttype", "documentno", "mineid", 
-                 "mineractivity", "sourceofinjury", "controllername",
-                 "natureofinjury", "bodypart", "controllerid", 
-                 "typeofequipment", "equipmanufacturer"))
-for (i in 1:length(charac_vars)) {
-  ps_data[, charac_vars[i]] = as.character(ps_data[, charac_vars[i]])
-}
-
-# Same thing for vars that should be numeric
-num_vars = (c("numberofinjuries", "totalexperience", "jobexperience", 
-              "dayslost", "num.vehicles", "num.pinstrike", 
-              "num.person", "num.body", "num_unique_vehcl", 
-              "keyword_pts", "neg_keyword_pts", "pos_pts", 
-              "neg_pts"))
-for (i in 1:length(num_vars)) {
-  ps_data[, num_vars[i]] = as.numeric(ps_data[, num_vars[i]])
-}
-
-# We don't use date vars as of yet so no need to store a list of their names, "logical" class vars are missing all obsvtns
-var_classes = sapply(ps_data[,names(ps_data)], class)
-charac_vars = names(var_classes[c(grep("character", var_classes), 
-                                  grep("factor", var_classes))])
-
-# Make sure PS isn't imputed
-PS = c("PS")
-charac_vars = setdiff(charac_vars, PS)
-
-# Format all missing/unknown vars as NAs
-for (i in 1:length(charac_vars)) {
-  ps_data[, charac_vars[i]] = ifelse((ps_data[,charac_vars[i]] == "NO VALUE FOUND" | 
-                                      ps_data[,charac_vars[i]] == "UNKNOWN" | 
-                                      ps_data[,charac_vars[i]] == "no value found" | 
-                                      ps_data[,charac_vars[i]] == "unknown" | 
-                                      ps_data[,charac_vars[i]] == "?" | 
-                                      ps_data[,charac_vars[i]] == ""), NA_character_, as.character(ps_data[,charac_vars[i]]))
-  ps_data[, charac_vars[i]] = factor(ps_data[, charac_vars[i]])
-}
-
-# This line will report number of missings per var 
-# apply(is.na(ps_data),2,sum)
-
-# Must define function to calculate mode for imputation methods 1 & 2
-modus = function(x) {
-  uniqv = unique(x)
-  uniqv[which.max(tabulate(match(x, uniqv)))]
-}
-
-if (imputation_method == 1 | imputation_method == 2) {
-  # METHOD 1 IMPUTES THE MEAN (this is a weak method, was just used for testing)
-  for (i in 1:length(num_vars)) {
-    ps_data[, num_vars[i]] = ifelse(is.na(ps_data[, num_vars[i]]), 
-                                    mean(ps_data[, num_vars[i]]), ps_data[, num_vars[i]])
-  }
-  # METHOD 2 IMPUTES BY MEAN/MODE DEPEDENDING ON VAR TYPE (this is a weak method, was just used for testing)
-  if (imputation_method == 2) {
-    for (i in 1:length(num_vars)) {
-      ps_data[, num_vars[i]] = ifelse(is.na(ps_data[, num_vars[i]]), 
-                                      median(ps_data[, num_vars[i]]), ps_data[, num_vars[i]])
-    }
-  }
-  for (i in 1:length(charac_vars)) {
-    ps_data[, charac_vars[i]] = ifelse(is.na(ps_data[, charac_vars[i]]), 
-                                       modus(ps_data[, charac_vars[i]]), ps_data[, charac_vars[i]])
-  }
-  # METHOD 3 RANDOMLY SAMPLE FROM THE DISTRIBUTION - THIS IS THE PREFERRED METHOD
-} else if (imputation_method == 3) {
-  for (i in 1:length(num_vars)) {
-    i_rowsmissing = row.names(ps_data)[is.na(ps_data[, num_vars[i]])]
-    while (sum(!complete.cases(ps_data[, num_vars[i]])) > 0) {
-      replace_rows = sample(setdiff(row.names(ps_data), i_rowsmissing), length(i_rowsmissing), replace = T)
-      ps_data[i_rowsmissing, num_vars[i]] = ps_data[replace_rows, num_vars[i]]
-    }
-  }
-  for (i in 1:length(charac_vars)) {
-    i_rowsmissing = row.names(ps_data)[is.na(ps_data[, charac_vars[i]])]
-    while (sum(!complete.cases(ps_data[, charac_vars[i]])) > 0) {
-      replace_rows = sample(setdiff(row.names(ps_data), i_rowsmissing), length(i_rowsmissing), replace = T)
-      ps_data[i_rowsmissing, charac_vars[i]] = ps_data[replace_rows, charac_vars[i]]
-    }
-  }
-} 
+# 
+# # MISSING VALUE IMPUTATION
+# 
+# # Make everything a factor var
+# varlist = names(ps_data)
+# for (i in 1:length(varlist)) {
+#   ps_data[, varlist[i]] = as.factor(ps_data[, varlist[i]])
+# }
+# 
+# # Now pick out the character vars and make sure they're the right type
+# charac_vars = (c("subunit", "degreeofinjury", "accidentclassification", 
+#                  "accidenttype", "documentno", "mineid", 
+#                  "mineractivity", "sourceofinjury", "controllername",
+#                  "natureofinjury", "bodypart", "controllerid", 
+#                  "typeofequipment", "equipmanufacturer"))
+# for (i in 1:length(charac_vars)) {
+#   ps_data[, charac_vars[i]] = as.character(ps_data[, charac_vars[i]])
+# }
+# 
+# # Same thing for vars that should be numeric
+# num_vars = (c("numberofinjuries", "totalexperience", "jobexperience", 
+#               "dayslost", "num.vehicles", "num.pinstrike", 
+#               "num.person", "num.body", "num_unique_vehcl", 
+#               "keyword_pts", "neg_keyword_pts", "pos_pts", 
+#               "neg_pts"))
+# for (i in 1:length(num_vars)) {
+#   ps_data[, num_vars[i]] = as.numeric(ps_data[, num_vars[i]])
+# }
+# 
+# # We don't use date vars as of yet so no need to store a list of their names, "logical" class vars are missing all obsvtns
+# var_classes = sapply(ps_data[,names(ps_data)], class)
+# charac_vars = names(var_classes[c(grep("character", var_classes), 
+#                                   grep("factor", var_classes))])
+# 
+# # Make sure PS isn't imputed
+# PS = c("PS")
+# charac_vars = setdiff(charac_vars, PS)
+# 
+# # Format all missing/unknown vars as NAs
+# for (i in 1:length(charac_vars)) {
+#   ps_data[, charac_vars[i]] = ifelse((ps_data[,charac_vars[i]] == "NO VALUE FOUND" | 
+#                                       ps_data[,charac_vars[i]] == "UNKNOWN" | 
+#                                       ps_data[,charac_vars[i]] == "no value found" | 
+#                                       ps_data[,charac_vars[i]] == "unknown" | 
+#                                       ps_data[,charac_vars[i]] == "?" | 
+#                                       ps_data[,charac_vars[i]] == ""), NA_character_, as.character(ps_data[,charac_vars[i]]))
+#   ps_data[, charac_vars[i]] = factor(ps_data[, charac_vars[i]])
+# }
+# 
+# # This line will report number of missings per var 
+# # apply(is.na(ps_data),2,sum)
+# 
+# # Must define function to calculate mode for imputation methods 1 & 2
+# modus = function(x) {
+#   uniqv = unique(x)
+#   uniqv[which.max(tabulate(match(x, uniqv)))]
+# }
+# 
+# if (imputation_method == 1 | imputation_method == 2) {
+#   # METHOD 1 IMPUTES THE MEAN (this is a weak method, was just used for testing)
+#   for (i in 1:length(num_vars)) {
+#     ps_data[, num_vars[i]] = ifelse(is.na(ps_data[, num_vars[i]]), 
+#                                     mean(ps_data[, num_vars[i]]), ps_data[, num_vars[i]])
+#   }
+#   # METHOD 2 IMPUTES BY MEAN/MODE DEPEDENDING ON VAR TYPE (this is a weak method, was just used for testing)
+#   if (imputation_method == 2) {
+#     for (i in 1:length(num_vars)) {
+#       ps_data[, num_vars[i]] = ifelse(is.na(ps_data[, num_vars[i]]), 
+#                                       median(ps_data[, num_vars[i]]), ps_data[, num_vars[i]])
+#     }
+#   }
+#   for (i in 1:length(charac_vars)) {
+#     ps_data[, charac_vars[i]] = ifelse(is.na(ps_data[, charac_vars[i]]), 
+#                                        modus(ps_data[, charac_vars[i]]), ps_data[, charac_vars[i]])
+#   }
+#   # METHOD 3 RANDOMLY SAMPLE FROM THE DISTRIBUTION - THIS IS THE PREFERRED METHOD
+# } else if (imputation_method == 3) {
+#   for (i in 1:length(num_vars)) {
+#     i_rowsmissing = row.names(ps_data)[is.na(ps_data[, num_vars[i]])]
+#     while (sum(!complete.cases(ps_data[, num_vars[i]])) > 0) {
+#       replace_rows = sample(setdiff(row.names(ps_data), i_rowsmissing), length(i_rowsmissing), replace = T)
+#       ps_data[i_rowsmissing, num_vars[i]] = ps_data[replace_rows, num_vars[i]]
+#     }
+#   }
+#   for (i in 1:length(charac_vars)) {
+#     i_rowsmissing = row.names(ps_data)[is.na(ps_data[, charac_vars[i]])]
+#     while (sum(!complete.cases(ps_data[, charac_vars[i]])) > 0) {
+#       replace_rows = sample(setdiff(row.names(ps_data), i_rowsmissing), length(i_rowsmissing), replace = T)
+#       ps_data[i_rowsmissing, charac_vars[i]] = ps_data[replace_rows, charac_vars[i]]
+#     }
+#   }
+# } 
 
 ##################################################################################################
 
@@ -1215,25 +1200,25 @@ if (data.type == "training data" ) {
   table(simple.ps[601:1000,81], predicted = cart.predictions)
   
   # RANDOM FOREST
-  rf <- randomForest(PS ~ . -documentno, data = simple.ps[1:600,], mtry = 8, importance = TRUE, type = "class", ntree = 200)
+  rf <- randomForest(PS ~ . -documentno, data = simple.ps[1:600,], mtry = 11, importance = TRUE, type = "class", ntree = 800)
   rf.predictions = predict(rf, simple.ps[601:1000,], type="class")
   table(simple.ps[601:1000,81], predicted = rf.predictions)
   
   # RANDOM FOREST WITH SMOTE
   smote.trainx = simple.ps[1:600,]
   smote.test = simple.ps[601:1000,]
-  smote <- SMOTE(PS ~ ., smote.trainx, perc.over = 600, perc.under = 100)
-  rf.smo <- randomForest(PS ~ . -documentno, data = smote, mtry = 15, ntree = 1000)
+  smote <- SMOTE(PS ~ ., smote.trainx, perc.over = 100, perc.under = 100)
+  rf.smo <- randomForest(PS ~ . -documentno, data = smote, mtry = 10, ntree = 800)
   rf.smo.pred = predict(rf.smo, smote.test, type = "class")
   table(simple.ps[601:1000,81], predicted = rf.smo.pred)
   
   # BOOSTING
-  ps.adaboost = boosting(PS ~ ., data = simple.ps[1:600, !(names(simple.ps) %in% c('documentno'))], boos = T, mfinal = 100, coeflearn = 'Freund')
+  ps.adaboost = boosting(PS ~ ., data = simple.ps[1:600, !(names(simple.ps) %in% c('documentno'))], boos = T, mfinal = 200, coeflearn = 'Freund')
   simple.adaboost.pred = predict.boosting(ps.adaboost, newdata = simple.ps[601:1000,])
   simple.adaboost.pred$confusion
-#   # Predicted Class  NO YES
-#   NO  277  28
-#   YES  26  69
+  # # Predicted Class  NO YES
+  #  NO  282  20
+  #  YES  21  77
   
   # Generate variable with boosting predictions
   simple.adaboost.pred$class = as.factor(simple.adaboost.pred$class)
@@ -1242,20 +1227,27 @@ if (data.type == "training data" ) {
   names(predictions)[names(predictions) == 'simple.adaboost.pred$class'] = 'prediction'
   
   # Retrieve narratives of misclassified obs
-  predictions = merge(predictions, all_vars, by = "documentno")
+  predictions = merge(predictions, all_vars[, c("narrative", "old_narrative", "documentno", "mineid")], by = "documentno")
+  
+  # POST-PROCESSING: MANUALLY RECODE COMMON FALSE POSITIVES # 1 = no, 2 = yes
+  predictions$prediction = ifelse(predictions$entrapment == 1, 1, predictions$prediction) 
+  predictions$prediction = ifelse(predictions$falling.accident == 1, 1, predictions$prediction)
+  predictions$prediction = as.factor(predictions$prediction)
+  
+  # Save simple data with predictions
   predictions = predictions[,c(match("prediction", names(predictions)),
                            match("mineid", names(predictions)),
-                           match("PS.x", names(predictions)),
+                           match("PS", names(predictions)),
                            match("old_narrative", names(predictions)),
                            match("documentno", names(predictions)))]
   
   # Inspect false negatives
-  View(predictions[predictions$PS.x == "YES" & predictions$prediction == "NO", c("old_narrative", "documentno")], "false negatives")
-  write.csv(predictions[predictions$PS.x == "YES" & predictions$prediction == "NO", c("old_narrative", "documentno")], 
+  View(predictions[predictions$PS == "YES" & predictions$prediction == 1, c("old_narrative", "documentno")], "false negatives")
+  write.csv(predictions[predictions$PS == "YES" & predictions$prediction == 1, c("old_narrative", "documentno")], 
             file = "C:/Users/slevine2/Desktop/ps_false_negatives.csv")
   # Inspect false positives
-  View(predictions[predictions$PS.x == "NO" & predictions$prediction == "YES", c("old_narrative", "documentno")], "false positives")
-  write.csv(predictions[predictions$PS.x == "NO" & predictions$prediction == "YES", c("old_narrative", "documentno")], 
+  View(predictions[predictions$PS == "NO" & predictions$prediction == 2, c("old_narrative", "documentno")], "false positives")
+  write.csv(predictions[predictions$PS == "NO" & predictions$prediction == 2, c("old_narrative", "documentno")], 
             file = "C:/Users/slevine2/Desktop/ps_false_positives.csv")
 }
 
