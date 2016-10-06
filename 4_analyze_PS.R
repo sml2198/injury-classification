@@ -401,27 +401,6 @@ ps_data[!grepl("to tram", ps_data[,"narrative"]) &
                                                                                                 !grepl("tram.{1,5}(lever|sprocket|pedal|chain)", ps_data[,"narrative"]),]$narrative)
 ps_data$narrative <- gsub("mucker", "VEHICLE45", ps_data$narrative)
 
-# Define a few narratives using the vehicle flags - before replacing body parts 
-ps_data[, "operating"] = ifelse((grepl("( |^|was|while|had)(tr(a)*m(m)*[^ ]{0,3}|op(e)*r(a)*t[^ ]{0,3}|backin.{1,10}VEHICLE|r(a|u)n|makin(g)*( )*(a)*( )*tu(r)*n|remote.{1,5}control|driv)", ps_data$narrative) &
-                               (!grepl("PERSON.{1,20}(splic(e|ing)|crawl(ing)*|repair|fix)", ps_data$narrative) & 
-                                 grepl("(splic(e|ing)|crawl(ing)*|repair|fix).{1,20}PERSON", ps_data$narrative)) &
-                                (grepl("operat", ps_data$mineractivity) | 
-                                (grepl("roof bolt", ps_data$mineractivity) & 
-                                !grepl("help(ing|er|)", ps_data$old_narrative))) &
-                               (!grepl("(side of|right|left|beside).{1,10}VEHICLE", ps_data$narrative) | 
-                                 grepl("remote.{1,5}control", ps_data$narrative))), 1, 0)
-
-# Use head/roof to remove driver hitting head against vehicle roof - REQUIRES OPEATING
-ps_data[, "headroof"] = ifelse((grepl("(head|neck).{1,5}(on|str(ike|uck)|hit|against).{1,5}(roof|top)", ps_data[,"narrative"]) |
-                                grepl("(bump|str(ike|uck)|hit).{1,5}(head|neck).{1,5}(roof|top)", ps_data[,"narrative"]) | 
-                               (grepl("whip( )*lash", ps_data[,"narrative"]) & 
-                                ps_data$operating == 1) | 
-                                grepl("jerked.{1,10}(head|neck)", ps_data[,"narrative"])) &
-                                !grepl("drill( )*head.{1,10}roof", ps_data[,"narrative"]) &
-                                !grepl("over( )*head.{1,10}roof", ps_data[,"narrative"]) &
-                                !grepl("head(ing|er|ed).{1,10}roof", ps_data[,"narrative"]) &
-                                !grepl("head.{1,10}roof.{1,5}bolt", ps_data[,"narrative"]), 1, 0) 
-
 ps_data[, "shuttlecar_or_rbolter"] = ifelse((grepl("VEHICLE(8|10|36)", ps_data$narrative) | 
                                              grepl("(s(ch|h)uttle).{1,30}( |-|- |v)*(trip|car)( car)*", ps_data$old_narrative)), 1, 0)
 
@@ -539,14 +518,36 @@ uniq_vehcls = function(x) {
 ps_data$num_unique_vehcl = sapply(ps_data$narrative, uniq_vehcls)
 ps_data$mult_vehcl = ifelse(ps_data$num_unique_vehcl > 1, 1, 0)
 
-##################################################################################################
-
-# CREATE A FEW MORE KEYWORDS ON THE NEW NARRATIVE FIELDS
-                                
 # If two different types of vehicles are mentioned, it's much more likely to be a V-to-V striking accident
 ps_data[, "dif_vehicle"] = ifelse(grepl("(second|another|different).{1,5}VEHICLE", ps_data[,"narrative"]), 1, 0)
 ps_data[, "loose_rbolting"] = ifelse(grepl("(plate|bit|bolt)+.{1,10}PINNED/STRUCK", ps_data[,"narrative"]), 1, 0)
 ps_data[, "drill_action"] = ifelse(grepl("(plate|bit|bolt)+.{1,10}PINNED/STRUCK", ps_data[,"narrative"]), 1, 0)
+
+##################################################################################################
+
+# CREATE A FEW MORE KEYWORDS ON THE NEW NARRATIVE FIELDS
+                                
+# Define a few narratives using the vehicle flags - before replacing body parts 
+ps_data[, "operating"] = ifelse((grepl("( |^|was|while|had)(tr(a)*m(m)*[^ ]{0,3}|op(e)*r(a)*t[^ ]{0,3}|backin.{1,10}VEHICLE|r(a|u)n|makin(g)*( )*(a)*( )*tu(r)*n|remote.{1,5}control|driv)", ps_data$narrative) &
+                                   (!grepl("PERSON.{1,20}(splic(e|ing)|crawl(ing)*|repair|fix)", ps_data$narrative) & 
+                                      grepl("(splic(e|ing)|crawl(ing)*|repair|fix).{1,20}PERSON", ps_data$narrative)) &
+                                   (grepl("operat", ps_data$mineractivity) | 
+                                      (grepl("roof bolt", ps_data$mineractivity) & 
+                                         !grepl("help(ing|er|)", ps_data$old_narrative))) &
+                                   (!grepl("(side of|right|left|beside).{1,10}VEHICLE", ps_data$narrative) | 
+                                      grepl("remote.{1,5}control", ps_data$narrative))), 1, 0)o
+
+# Use head/roof to remove driver hitting head against vehicle roof - REQUIRES OPEATING
+ps_data[, "headroof"] = ifelse((grepl("(head|neck).{1,5}(on|str(ike|uck)|hit|against).{1,5}(roof|top)", ps_data[,"old_narrative"]) |
+                                  grepl("(bump|str(ike|uck)|hit).{1,5}(head|neck).{1,5}(roof|top)", ps_data[,"old_narrative"]) | 
+                                  (grepl("whip( )*lash", ps_data[,"old_narrative"]) & 
+                                     ps_data$operating == 1) | 
+                                  grepl("jerked.{1,10}(head|neck)", ps_data[,"old_narrative"])) &
+                                 !grepl("drill( )*head.{1,10}roof", ps_data[,"old_narrative"]) &
+                                 !grepl("over( )*head.{1,10}roof", ps_data[,"old_narrative"]) &
+                                 !grepl("head(ing|er|ed).{1,10}roof", ps_data[,"old_narrative"]) &
+                                 !grepl("head.{1,10}roof.{1,5}bolt", ps_data[,"old_narrative"]), 1, 0) 
+# ROOF BOLTING
 
 # Now create positive and negative roof bolting flags 
 ps_data[, "pos_roofbolt"] = ifelse(ps_data$roofbolt == 1 & 
