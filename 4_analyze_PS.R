@@ -35,9 +35,13 @@ accidents_data_file_name = "X:/Projects/Mining/NIOSH/analysis/data/3_merged/merg
   # output: all accidents, now classified as PS after algorithm
 classified_accidents_file_name = "X:/Projects/Mining/NIOSH/analysis/data/4_coded/PS_accidents_with_predictions.rds"
 
+# FOR TESTING
+false_neg_file_name = "C:/Users/slevine2/Desktop/ps_false_negatives.csv"
+false_pos_file_name = "C:/Users/slevine2/Desktop/ps_false_positives.csv"
+
 # SARAH'S COMPUTER
-coded_training_set_file_name = "C:/Users/slevine2/Dropbox (Stanford Law School)/R-code/Injury-Classification/PS/Training_Set_Pinning_And_Striking_Accidents-January-29-2016.csv"
-accidents_data_file_name = "C:/Users/slevine2/Dropbox (Stanford Law School)/R-code/Injury-Classification/PS/merged_mines_accidents.rds"
+#coded_training_set_file_name = "C:/Users/slevine2/Dropbox (Stanford Law School)/R-code/Injury-Classification/PS/Training_Set_Pinning_And_Striking_Accidents-January-29-2016.csv"
+#accidents_data_file_name = "C:/Users/slevine2/Dropbox (Stanford Law School)/R-code/Injury-Classification/PS/merged_mines_accidents.rds"
 
 ######################################################################################################
 
@@ -298,21 +302,9 @@ ps_data[, "canopy"] = ifelse(grepl("canopy", ps_data[,"narrative"]), 1, 0)
 # GENERATE KEYWORDS TO IDENTIFY FALSE POSITIVE ACCIDENTS BY CIRUMSTANCES
 
 # Use body/seat to remove false positive accidents of someone being jostled against the seat
-ps_data[, "bodyseat"] = ifelse(grepl("(back|head|neck).{1,10}seat", ps_data[,"narrative"]) &
+ps_data[, "bodyseat"] = ifelse(grepl("(back|head|neck|shoulder|elbo).{1,10}seat", ps_data[,"narrative"]) &
                               !grepl("backward.{1,10}seat", ps_data[,"narrative"]) &
                               !grepl("(bolt|over|drill)( )*head.{1,10}seat", ps_data[,"narrative"]), 1, 0) 
-
-# Use head/roof to remove driver hitting head against vehicle roof
-ps_data[, "headroof"] = ifelse((grepl("(head|neck).{1,5}(on|str(ike|uck)|hit|against).{1,5}(roof|top)", ps_data[,"narrative"]) |
-                                grepl("(bump|str(ike|uck)|hit).{1,5}(head|neck).{1,5}(roof|top)", ps_data[,"narrative"]) | 
-                               (grepl("whip( )*lash", ps_data[,"narrative"]) & 
-                                ps_data$operating == 1) | 
-                                grepl("jerked.{1,10}(head|neck)", ps_data[,"narrative"])) &
-                               !grepl("drill( )*head.{1,10}roof", ps_data[,"narrative"]) &
-                               !grepl("over( )*head.{1,10}roof", ps_data[,"narrative"]) &
-                               !grepl("head(ing|er|ed).{1,10}roof", ps_data[,"narrative"]) &
-                               !grepl("head.{1,10}roof.{1,5}bolt", ps_data[,"narrative"]), 1, 0) 
-
 # Hitting head against canopy
 ps_data[, "headcanopy"] = ifelse((grepl("(head|neck).{1,5}(on|str(ike|uck)|hit|against).{1,5}(canopy)", ps_data[,"narrative"]) |
                                   grepl("(bump|str(ike|uck)|hit).{1,5}(head|neck).{1,5}(canopy)", ps_data[,"narrative"])) &
@@ -418,6 +410,17 @@ ps_data[, "operating"] = ifelse((grepl("( |^|was|while|had)(tr(a)*m(m)*[^ ]{0,3}
                                 !grepl("help(ing|er|)", ps_data$old_narrative))) &
                                (!grepl("(side of|right|left|beside).{1,10}VEHICLE", ps_data$narrative) | 
                                  grepl("remote.{1,5}control", ps_data$narrative))), 1, 0)
+
+# Use head/roof to remove driver hitting head against vehicle roof - REQUIRES OPEATING
+ps_data[, "headroof"] = ifelse((grepl("(head|neck).{1,5}(on|str(ike|uck)|hit|against).{1,5}(roof|top)", ps_data[,"narrative"]) |
+                                grepl("(bump|str(ike|uck)|hit).{1,5}(head|neck).{1,5}(roof|top)", ps_data[,"narrative"]) | 
+                               (grepl("whip( )*lash", ps_data[,"narrative"]) & 
+                                ps_data$operating == 1) | 
+                                grepl("jerked.{1,10}(head|neck)", ps_data[,"narrative"])) &
+                                !grepl("drill( )*head.{1,10}roof", ps_data[,"narrative"]) &
+                                !grepl("over( )*head.{1,10}roof", ps_data[,"narrative"]) &
+                                !grepl("head(ing|er|ed).{1,10}roof", ps_data[,"narrative"]) &
+                                !grepl("head.{1,10}roof.{1,5}bolt", ps_data[,"narrative"]), 1, 0) 
 
 ps_data[, "shuttlecar_or_rbolter"] = ifelse((grepl("VEHICLE(8|10|36)", ps_data$narrative) | 
                                              grepl("(s(ch|h)uttle).{1,30}( |-|- |v)*(trip|car)( car)*", ps_data$old_narrative)), 1, 0)
@@ -1213,7 +1216,7 @@ if (data.type == "training data" ) {
   table(simple.ps[601:1000,81], predicted = rf.smo.pred)
   
   # BOOSTING
-  ps.adaboost = boosting(PS ~ ., data = simple.ps[1:600, !(names(simple.ps) %in% c('documentno'))], boos = T, mfinal = 200, coeflearn = 'Freund')
+  ps.adaboost = boosting(PS ~ ., data = simple.ps[1:600, !(names(simple.ps) %in% c('documentno'))], boos = T, mfinal = 300, coeflearn = 'Freund')
   simple.adaboost.pred = predict.boosting(ps.adaboost, newdata = simple.ps[601:1000,])
   simple.adaboost.pred$confusion
   # # Predicted Class  NO YES
@@ -1226,12 +1229,22 @@ if (data.type == "training data" ) {
   predictions = cbind(predictions, simple.adaboost.pred$class)
   names(predictions)[names(predictions) == 'simple.adaboost.pred$class'] = 'prediction'
   
+  # Print variable importance
+  pdf("C:/Users/slevine2/Desktop/plots.pdf", width=40, height=30)
+  importanceplot(ps.adaboost)
+  dev.off()
+  
   # Retrieve narratives of misclassified obs
   predictions = merge(predictions, all_vars[, c("narrative", "old_narrative", "documentno", "mineid")], by = "documentno")
   
   # POST-PROCESSING: MANUALLY RECODE COMMON FALSE POSITIVES # 1 = no, 2 = yes
   predictions$prediction = ifelse(predictions$entrapment == 1, 1, predictions$prediction) 
   predictions$prediction = ifelse(predictions$falling.accident == 1, 1, predictions$prediction)
+  predictions$prediction = ifelse(predictions$brokensteel == 1, 1, predictions$prediction)
+  predictions$prediction = ifelse(predictions$accident.only == 1, 1, predictions$prediction)
+  predictions$prediction = ifelse(predictions$headroof == 1, 1, predictions$prediction)
+  predictions$prediction = ifelse(predictions$headcanopy == 1, 1, predictions$prediction)
+  predictions$prediction = ifelse(predictions$hole == 1, 1, predictions$prediction)
   predictions$prediction = as.factor(predictions$prediction)
   
   # Save simple data with predictions
@@ -1244,11 +1257,11 @@ if (data.type == "training data" ) {
   # Inspect false negatives
   View(predictions[predictions$PS == "YES" & predictions$prediction == 1, c("old_narrative", "documentno")], "false negatives")
   write.csv(predictions[predictions$PS == "YES" & predictions$prediction == 1, c("old_narrative", "documentno")], 
-            file = "C:/Users/slevine2/Desktop/ps_false_negatives.csv")
+            file = false_neg_file_name)
   # Inspect false positives
   View(predictions[predictions$PS == "NO" & predictions$prediction == 2, c("old_narrative", "documentno")], "false positives")
   write.csv(predictions[predictions$PS == "NO" & predictions$prediction == 2, c("old_narrative", "documentno")], 
-            file = "C:/Users/slevine2/Desktop/ps_false_positives.csv")
+            file = false_pos_file_name)
 }
 
 ######################################################################################################
