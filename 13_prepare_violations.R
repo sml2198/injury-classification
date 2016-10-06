@@ -41,10 +41,13 @@ MR_prediction_data_out_csv_name = "X:/Projects/Mining/NIOSH/analysis/data/5_pred
 MR_prediction_data_out_dta_name = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/MR_prediction_data.dta"
   # output: prediction-ready data containing only relevant vars - MR
 MR_relevant_prediction_data_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/MR_prediction_data_relevant.rds"
+
   # output: prediction-ready data containing all relevant and maybe relevant vars  - PS
 PS_prediction_data_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/PS_prediction_data.rds"
   # output: prediction-ready csv containing all relevant and maybe relevant vars (for Stata analysis) - PS
 PS_prediction_data_out_csv_name = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/PS_prediction_data.csv"
+  # output: prediction-ready dta containing all relevant and maybe relevant vars (for Stata analysis) - PS
+PS_prediction_data_out_dta_name = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/PS_prediction_data.dta"
   # output: prediction-ready data containing only relevant vars - PS
 PS_relevant_prediction_data_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/PS_prediction_data_relevant.rds"
 
@@ -54,8 +57,8 @@ PS_relevant_prediction_data_out_file_name = "X:/Projects/Mining/NIOSH/analysis/d
 relevant.only.option = "off"
 
 # Specify whether you want to create data for maintenance and repair (MR) or pinning and striking (PS) injuries
-injury.type = "MR"
-#injury.type = "PS"
+#injury.type = "MR"
+injury.type = "PS"
 
 # Specify whether or not you want this file to also produce a Stata-friendly .csv 
 stata.friendly = T
@@ -772,7 +775,8 @@ part_vars = violation_vars[grep("^p[0-9][0-9](\\.penaltypoints|\\.sigandsub)*$",
 subpart_vars = violation_vars[grep("^sp[0-9].+[0-9](\\.penaltypoints|\\.sigandsub)*$", violation_vars)]
 
 # CREATE LAGGED (1) VARS FOR PARTS AND SUBPARTS
-for (i in 1:length(violation_vars)) {
+# for (i in 1:length(violation_vars)) {
+for (i in 1:length(part_vars)) {
   prediction_data[, paste(violation_vars[i], "1lag", sep = ".")] = 0 
   prediction_data = ddply(prediction_data, "mineid", shift, 
                           var_to_shift = violation_vars[i], 
@@ -814,6 +818,7 @@ cs_wrapper = function(data, var_to_cum, cum_var, cum_shift) {
   return(data)
 }
 # Now apply the two functions written above to variables of interest.
+# for (i in 1:length(violation_vars)) {
 for (i in 1:length(part_vars)) {
   #cs_wrapper
   prediction_data = ddply(prediction_data, "mineid", cs_wrapper, 
@@ -824,19 +829,6 @@ for (i in 1:length(part_vars)) {
   prediction_data = ddply(prediction_data, "mineid", viols_so_far, 
                           var_to_sum = part_vars[i], 
                           sum_viols = paste(part_vars[i], "c.lag.all", sep = "."))
-}
-
-# now the same for subparts = eek!
-for (i in 1:length(subpart_vars)) {
-  #cs_wrapper
-  prediction_data = ddply(prediction_data, "mineid", cs_wrapper, 
-                          var_to_cum = subpart_vars[i], 
-                          cum_var = paste(subpart_vars[i], "c.4lag", sep = "."), 
-                          cum_shift = 4)
-  # viols_so_far
-  prediction_data = ddply(prediction_data, "mineid", viols_so_far, 
-                          var_to_sum = subpart_vars[i], 
-                          sum_viols = paste(subpart_vars[i], "c.lag.all", sep = "."))
 }
 # VIOLATION LAG = 1lag
 # VIOLATION CUMULATIVE LAG OVER LAST 4 QUARTERS = c.4lag
