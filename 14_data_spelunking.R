@@ -2,14 +2,14 @@
 
 # 14 - Data Spelunking
 
-# Last edit 8/18/16
+# Last edit 10/7/16
 
 ######################################################################################################
 
 library(plyr)
-library(minerva)
-library(zoo)
-library(reshape)
+
+injury = "MR"
+# injury = "PS"
 
 # input: part-level data
 data_file_name = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/MR_prediction_data.rds"
@@ -21,20 +21,12 @@ data_file_name = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/MR_p
 # read in data 
 data = readRDS(data_file_name)
 
-# rename variables
-data = rename(data, c(coal_prod_qtr = "coal_prod", 
-                      employment_qtr = "employment",
-                      hours_qtr = "hours",
-                      goodfaithind = "num_good_faith",
-                      onsite_insp_hours_per_qtr = "onsite_insp_hours"))
+keep_vars = names(data)[!grepl("lag", names(data))]
+data = data[keep_vars]
 
-names(data)[grep("^[0-9]", names(data))] = paste("p", names(data)[grep("^[0-9]", names(data))], sep = "")
-names(data)[grep("[0-9].[0-9]", names(data))] = paste("s", names(data)[grep("[0-9].[0-9]", names(data))], sep = "")
-
-# reformat variables
-data$mineid = as.character(data$mineid)
-data$quarter = as.numeric(data$quarter)
-data$MR_indicator = as.factor(data$MR_indicator)
+data$dv = data[, injury]
+data$dv_indicator = data[, paste(injury, "_indicator", sep = "")]
+data[, injury] = data[, paste(injury, "_indicator", sep = "")] = NULL
 
 # group variables
 violation_vars = names(data)[grep("^p+[0-9]|^sp+[0-9]", names(data))]
@@ -76,12 +68,12 @@ barplot(sort(table(no_insp$mineid)),
         ylab = "Number of No-Inspection Quarters")
 
 # mines with no inspections for >= 5 and >= 10 quarters of data
-mineid_5plus_missing = unique(no_insp[no_insp$mineid %in% names(which(table(no_insp$mineid) >= 5)), "mineid"]) # 90 mines
-mineid_10plus_missing = unique(no_insp[no_insp$mineid %in% names(which(table(no_insp$mineid) >= 10)), "mineid"]) # 28 mines
+mineid_5plus_missing = unique(no_insp[no_insp$mineid %in% names(which(table(no_insp$mineid) >= 5)), "mineid"]) # MR: 90 mines
+mineid_10plus_missing = unique(no_insp[no_insp$mineid %in% names(which(table(no_insp$mineid) >= 10)), "mineid"]) # MR: 28 mines
 
 # how many (non-missing) quarters do these mines contribute to data?
-nrow(data[(data$mineid %in% mineid_5plus_missing & data$num_insp > 0), ]) # 2228 obs
-nrow(data[(data$mineid %in% mineid_10plus_missing & data$num_insp > 0), ]) # 585 obs
+nrow(data[(data$mineid %in% mineid_5plus_missing & data$num_insp > 0), ]) # MR: 2228 obs
+nrow(data[(data$mineid %in% mineid_10plus_missing & data$num_insp > 0), ]) # MR: 585 obs
 
 # which quarters are missing inspections
 barplot(table(no_insp$quarter), 
@@ -104,7 +96,7 @@ fill_in_ts = function(mine_df) {
 data_all_quarters = ddply(data, "mineid", fill_in_ts)
 
 # get orphan quarters
-orphans = data_all_quarters[is.na(data_all_quarters$hours), c("mineid", "quarter")]
+orphans = data_all_quarters[is.na(data_all_quarters$hours), c("mineid", "quarter")] # MR: 2736
 
 # how many orphan quarters per mine?
 barplot(sort(table(orphans$mineid)),
@@ -133,22 +125,22 @@ mine_avgs = aggregate(data_all_quarters[, -match("quarter", names(data_all_quart
                        FUN = function(x) mean(as.numeric(x), na.rm = TRUE))
 
 for (var in part_violation_count_vars) { # sub in other groups of variables here
-  plot(mine_avgs[, var], mine_avgs$MR, 
-       main = paste("Average # of", var, "vs. Average # of MR Injuries", sep = " "),
+  plot(mine_avgs[, var], mine_avgs$dv, 
+       main = paste("Average # of", var, "vs. Average # of", injury, "Injuries", sep = " "),
        xlab = paste("Average # of", var, sep = " "),
-       ylab = "Average # of MR Injuries")
+       ylab =  paste("Average # of", injury, "Injuries", sep = " "))
 }
 
 # bye
 rm(var)
 
 # I'm hilarious
-# fit = lm(as.numeric(mine_avgs$MR) ~ as.numeric(mine_avgs$mineid))
+# fit = lm(as.numeric(mine_avgs$dv) ~ as.numeric(mine_avgs$mineid))
 # summary(fit)
-# plot(as.numeric(mine_avgs$mineid), mine_avgs$MR, 
+# plot(as.numeric(mine_avgs$mineid), mine_avgs$dv, 
      # main = "Does Mine ID (numeric) Predict Accidents?",
      # xlab = "Mine ID (NOT A FACTOR)", 
-     # ylab = "# of Accidents")
+     # ylab = "# of Injuries")
 # abline(fit, col = "red")
 # rm(fit)
 
@@ -181,8 +173,10 @@ data_norm = data
 
 data_norm$mineid = 
   data_norm$quarter = 
-  data_norm$MR = 
-  data_norm$MR_indicator =  NULL
+  data_norm$state = 
+  data_norm$operatorid = 
+  data_norm$dv = 
+  data_norm$dv_indicator =  NULL
 
 for (j in 1:ncol(data_norm)) {
   var = as.numeric(data_norm[, j])
@@ -216,14 +210,14 @@ var_var[order(var_var$variance, decreasing = TRUE)[1:10], ]
 rm(i, variable, variance)
 
 # correlation between variables
-cor_violation_count = cor(data[, c(violation_count_vars, "MR")], use = "complete.obs")
-cor_sig_sub = cor(data[, c(sig_sub_vars, "MR")], use = "complete.obs")
-cor_penalty_point = cor(data[, c(penalty_point_vars, "MR")], use = "complete.obs")
+cor_violation_count = cor(data[, c(violation_count_vars, "dv")], use = "complete.obs")
+cor_sig_sub = cor(data[, c(sig_sub_vars, "dv")], use = "complete.obs")
+cor_penalty_point = cor(data[, c(penalty_point_vars, "dv")], use = "complete.obs")
 
 # top correlations with MR
-sort(cor_violation_count[, "MR"], decreasing = TRUE)[1:10]
-sort(cor_sig_sub[, "MR"], decreasing = TRUE)[1:10]
-sort(cor_penalty_point[, "MR"], decreasing = TRUE)[1:10]
+sort(cor_violation_count[, "dv"], decreasing = TRUE)[1:10]
+sort(cor_sig_sub[, "dv"], decreasing = TRUE)[1:10]
+sort(cor_penalty_point[, "dv"], decreasing = TRUE)[1:10]
 
 # find big correlations
 find_big_cor = function(df, cor_mat, r) {
@@ -262,18 +256,5 @@ big_cor_penalty_point = find_big_cor(big_cor_penalty_point, cor_penalty_point, 0
 big_cor_violation_count = big_cor_violation_count[order(big_cor_violation_count$r, decreasing = TRUE), ]
 big_cor_sig_sub = big_cor_sig_sub[order(big_cor_sig_sub$r, decreasing = TRUE), ]
 big_cor_penalty_point = big_cor_penalty_point[order(big_cor_penalty_point$r, decreasing = TRUE), ]
-
-# maximal information coefficient (retired)
-# variables = names(data)
-# variables = variables[-match(c("quarter", "mineid", "MR_indicator", "MR"), variables)]
-
-# mic = mine(data[, variables], y = data$MR, alpha = 0.7, na.rm = TRUE)
-
-# this code from: https://www.r-bloggers.com/maximal-information-coefficient-part-ii/
-# res = data.frame(MIC = c(mic$MIC))
-# rownames(res) = rownames(mic$MIC)
-# res$MIC_Rank = nrow(res) - rank(res$MIC, ties.method="first") + 1
-# res = res[order(res$MIC_Rank),]
-# res
 
 ######################################################################################################
