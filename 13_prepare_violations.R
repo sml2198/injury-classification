@@ -63,6 +63,9 @@ injury.type = "PS"
 # Specify whether or not you want this file to also produce a Stata-friendly .csv 
 stata.friendly = T
 
+# Specify whether or not you also want to produce data collapsed to the mine-year level
+make.year.data = T
+
 ######################################################################################################################################
 
 # Define log file name
@@ -353,7 +356,7 @@ averaged_violations = ddply(merged_violations[, c(grep("minesizepoints", names(m
                                                                match("exlate_interest_amt", names(x)))], na.rm = T))
 
 rm(violations_to_sum)
-# Fun fact! Inspections generate both contractor and operator violations. - April Ramirez @ DOL, 6/6/16
+# Inspections generate both contractor and operator violations. - April Ramirez @ DOL, 6/6/16
 
 ######################################################################################################################################
 
@@ -454,6 +457,7 @@ summed_inspcs = ddply(merged_violations[, c(match("insp_hours_per_qtr", names(me
 
 # Merge number of inspections per quarter & number of quarters per inspection onto inspections data
 summed_inspcs = merge(summed_inspcs, num_inspecs_per_qtr, by = c("mineid", "quarter"), all = T)
+
 rm(merged_violations, num_inspecs_per_qtr, num_qtrs_per_inspec)
 gc()
 
@@ -517,9 +521,15 @@ merged_mines_violations_accidents = merged_mines_violations_accidents[!is.na(mer
 # Replace missings (mine quarters without accidents data) with zeroes (see next section for zero violations)
 merged_mines_violations_accidents$total_injuries = ifelse(is.na(merged_mines_violations_accidents$total_injuries), 
                                                          0, merged_mines_violations_accidents$total_injuries)
-# Replace MR with zero where missing (these all occur in quarters that had zero total accidents)
-merged_mines_violations_accidents$MR = ifelse(is.na(merged_mines_violations_accidents$MR), 
-                                                         0, merged_mines_violations_accidents$MR)
+# Replace MR/PS with zero where missing (these all occur in quarters that had zero total accidents)
+if (injury.type == "MR") {
+  merged_mines_violations_accidents$MR = ifelse(is.na(merged_mines_violations_accidents$MR), 
+                                                0, merged_mines_violations_accidents$MR)
+}
+if (injury.type == "PS") {
+merged_mines_violations_accidents$PS = ifelse(is.na(merged_mines_violations_accidents$PS), 
+                                              0, merged_mines_violations_accidents$PS)
+}
 
 merged_mines_violations_accidents = merged_mines_violations_accidents[, -grep("row_id", names(merged_mines_violations_accidents))]
 merged_mines_violations_accidents$row_id = seq.int(nrow(merged_mines_violations_accidents))
@@ -538,7 +548,7 @@ prediction_data = merge(merged_mines_violations_accidents, summed_inspcs, by = c
 # replace NAs in inspections with zeroes (mine quarters that had no inspections)
 prediction_data$num_insp = ifelse(is.na(prediction_data$num_insp), 0, prediction_data$num_insp)
 
-# Replace missings (mine quarters without violations) with zeroes - BUT only when there were no inspections!!!
+# Replace missings (mine quarters without violations) with zeroes - BUT only when there were no inspections!
 prediction_data$total_violations = ifelse((is.na(prediction_data$total_violations) &
                                              prediction_data$num_insp > 0), 0, prediction_data$total_violations)
 
@@ -567,10 +577,8 @@ if (injury.type == "PS"){
 
 # All violations should be terminated, meaning the issue has been abated by the violator. A violation that has not been terminated is
 # therefore an indication of mine/operator negligence. Rather than include the number of terminations as a variable in our models
-# (which would yield collinearity because the # of terminations closely tracks the # of violations), we create an indicator for mine
-# quarters that have any non-terminated violations.  
-# prediction_data$no_terminations = ifelse(prediction_data$terminated < prediction_data$total_violations, 1, 0)
-# This var is the number of non-terminated violations in a mine quarter. Probably can't be used due to collinearity, but not sure. 
+# (which would yield collinearity because the # of terminations closely tracks the # of violations), we create a variable that is 
+# indicates the # of non-terminated violations in a mine quarter. 
 prediction_data$num_no_terminations = ifelse(prediction_data$terminated < prediction_data$total_violations, 
                                              prediction_data$total_violations-prediction_data$terminated, 0)
 
@@ -689,7 +697,13 @@ names(prediction_data)[grep("[0-9].[0-9]", names(prediction_data))] = paste("s",
 # Reformat variables
 prediction_data$mineid = as.character(prediction_data$mineid)
 prediction_data$quarter = as.numeric(prediction_data$quarter)
-prediction_data$MR_indicator = as.factor(prediction_data$MR_indicator)
+
+if (injury.type == "MR"){
+  prediction_data$MR_indicator = as.factor(prediction_data$MR_indicator)
+}
+if (injury.type == "PS"){
+  prediction_data$PS_indicator = as.factor(prediction_data$PS_indicator)
+}
 
 # Group variables
 violation_vars = names(prediction_data)[grep("^p+[0-9]|^sp+[0-9]", names(prediction_data))]
@@ -732,21 +746,18 @@ prediction_data = ddply(prediction_data, "mineid", make_mine_time)
 shift_helper = function(x, shift_by){
   stopifnot(is.numeric(shift_by))
   stopifnot(is.numeric(x))
-  
   if (length(shift_by) > 1)
     return(sapply(shift_by, shift_helper, x = x))
-  
   out = NULL
   abs_shift_by = abs(shift_by)
-  if (shift_by > 0 )
-    out = c(tail(x,-abs_shift_by), rep(NA,abs_shift_by))
-  else if (shift_by < 0 )
-    out = c(rep(NA,abs_shift_by), head(x,-abs_shift_by))
+  if (shift_by > 0)
+    out = c(tail(x, -abs_shift_by), rep(NA, abs_shift_by))
+  else if (shift_by < 0)
+    out = c(rep(NA, abs_shift_by), head(x, -abs_shift_by))
   else
     out = x
   out
 }
-
 shift = function(data, var_to_shift, shifted_var, shift_by) {
   data[, shifted_var] = shift_helper(data[, var_to_shift], shift_by)
   return(data)
@@ -754,18 +765,7 @@ shift = function(data, var_to_shift, shifted_var, shift_by) {
 
 ######################################################################################################################################
 
-# CREATE LEAD VARIABLES 
-
-# # Genereate empty vars for lags 
-# prediction_data$MR.lead1 = 0
-# prediction_data$MR.lead2 = 0
-# prediction_data$MR.lead3 = 0
-# # Generate lead MR variables (as opposed to lagged violation variables)
-# prediction_data = ddply(prediction_data, "mineid", shift, var_to_shift = "MR", shifted_var = "MR.lead1", shift_by = -1)
-# prediction_data = ddply(prediction_data, "mineid", shift, var_to_shift = "MR.lead1", shifted_var = "MR.lead2", shift_by = -1)
-# prediction_data = ddply(prediction_data, "mineid", shift, var_to_shift = "MR.lead2", shifted_var = "MR.lead3", shift_by = -1)
-
-# CREATE NON-CUMULATIVE LAGGED VARIABLES 
+# CREATE NON-CUMULATIVE LAGGED VARIABLES (LOOKING BACK ONE QUARTER)
 
 # Group data by mines and order the data by mine-quarters (descending)
 prediction_data = prediction_data[order(prediction_data[,"mineid"], -prediction_data[,"quarter"]),]
@@ -775,22 +775,21 @@ part_vars = violation_vars[grep("^p[0-9][0-9](\\.penaltypoints|\\.sigandsub)*$",
 subpart_vars = violation_vars[grep("^sp[0-9].+[0-9](\\.penaltypoints|\\.sigandsub)*$", violation_vars)]
 
 # CREATE LAGGED (1) VARS FOR PARTS AND SUBPARTS
-# for (i in 1:length(violation_vars)) {
-for (i in 1:length(part_vars)) {
+for (i in 1:length(violation_vars)) {
   prediction_data[, paste(violation_vars[i], "1lag", sep = ".")] = 0 
   prediction_data = ddply(prediction_data, "mineid", shift, 
                           var_to_shift = violation_vars[i], 
                           shifted_var = paste(violation_vars[i], "1lag", sep = "."), 
                           shift_by = 1)
 }
-# head(prediction_data[,c("mineid","quarter","p47", "p47.1lag","p75", "p75.1lag", "p75.penaltypoints.1lag", "p75.sigandsub.1lag")], n=75)
 
 ######################################################################################################################################
 
 # CREATE CUMULATIVE LAGGED VARIABLES 
 
 # Generate cumulative violation lag variables (we must lag violations here, because we want to evaluate whether or not 
-# patterns of violations predict injuries, not whether incidents of injuries predict patterns of injuries)
+# patterns of violations predict injuries, not whether incidents of injuries predict patterns of injuries).
+
 # Group data by mines and order the data by mine-quarters (ascending)
 prediction_data = prediction_data[order(prediction_data[,"mineid"], prediction_data[,"quarter"]),]
 
@@ -818,8 +817,7 @@ cs_wrapper = function(data, var_to_cum, cum_var, cum_shift) {
   return(data)
 }
 # Now apply the two functions written above to variables of interest.
-# for (i in 1:length(violation_vars)) {
-for (i in 1:length(part_vars)) {
+for (i in 1:length(violation_vars)) {
   #cs_wrapper
   prediction_data = ddply(prediction_data, "mineid", cs_wrapper, 
                           var_to_cum = part_vars[i], 
@@ -875,12 +873,87 @@ if (relevant.only.option == "off" & injury.type == "PS") {
       stata.data = prediction_data
       names(stata.data) = stata.names
       # Also save a csv for this so that we can do prelimary analysis in Stata (clustering is easier in Stata)
-      write.csv(prediction_data, file = PS_prediction_data_out_csv_name)
-      write.dta(prediction_data, file = PS_prediction_data_out_dta_name)
+      write.csv(stata.data, file = PS_prediction_data_out_csv_name)
+      write.dta(stata.data, file = PS_prediction_data_out_dta_name)
     }
 }
 
-#sink()
+######################################################################################################################################
 
+# MAKE YEAR DATA
+
+if (make.year.data) {
+  # Create year var
+  prediction_data$quarter = as.yearqtr(prediction_data$quarter)
+  prediction_data$year = as.numeric(format(prediction_data$quarter, "%Y"))
+  
+  # Create var that will count number of quarters per year
+  prediction_data$num_qtrs_year = 1
+  
+  # Collapse to the mine-year (sums) - only non-lagged vars
+  if (injury.type == "PS") {
+      prediction_data$injofinterest = prediction_data$PS
+      prediction_data$injofinterestindicator = prediction_data$PS_indicator
+  }
+  if (injury.type == "MR") {
+      prediction_data$injofinterest = prediction_data$MR
+      prediction_data$injofinterestindicator = prediction_data$MR_indicator
+  }
+  prediction_year_data = ddply(prediction_data[, c(grep("p", names(prediction_data)),
+                                              grep("sp", names(prediction_data)),
+                                              grep("hours", names(prediction_data)),
+                                              grep("num_qtrs_year", names(prediction_data)),
+                                              grep("injofinterest", names(prediction_data)),
+                                              match("mineid", names(prediction_data)), 
+                                              match("year", names(prediction_data)))], c("mineid", "year"), 
+                              function(x) colSums(x[, c(grep("p", names(prediction_data)),
+                                                        grep("sp", names(prediction_data)),
+                                                        grep("num_qtrs_year", names(prediction_data)),
+                                                        grep("hours", names(prediction_data)),
+                                                        grep("injofinterest", names(prediction_data)))], na.rm = T))
+  # Merge states back on
+  prediction_year_data = merge(prediction_data, prediction_year_data[, c("mineid", "state")], by = c("mineid"))
+  
+  # Calculate mine-time
+  prediction_data = ddply(prediction_data, "mineid", make_mine_time)
+  
+  # Create 1 lags, lag4, and lag all vars 
+  violation_vars = names(prediction_data)[grep("^p+[0-9][0-9](\\.penaltypoints|\\.sigandsub)*$|^sp+[0-9].+[0-9](\\.penaltypoints|\\.sigandsub)*$", names(prediction_data))]
+  
+      # lag 1
+      prediction_data = prediction_data[order(prediction_data[,"mineid"], -prediction_data[,"year"]),]
+      violation_vars = names(prediction_data)[grep("^p+[0-9][0-9](\\.penaltypoints|\\.sigandsub)*$|^sp+[0-9].+[0-9](\\.penaltypoints|\\.sigandsub)*$", names(prediction_data))]
+      for (i in 1:length(violation_vars)) {
+          # shift (lag 1)
+          prediction_data[, paste(violation_vars[i], "1lag", sep = ".")] = 0 
+          prediction_data = ddply(prediction_data, "mineid", shift, 
+                                  var_to_shift = violation_vars[i], 
+                                  shifted_var = paste(violation_vars[i], "1lag", sep = "."), 
+                                  shift_by = 1)
+      }
+      prediction_data = prediction_data[order(prediction_data[,"mineid"], prediction_data[,"year"]),]
+      for (i in 1:length(violation_vars)) {
+           # cs_wrapper (4 lag)
+          prediction_data = ddply(prediction_data, "mineid", cs_wrapper, 
+                                  var_to_cum = part_vars[i], 
+                                  cum_var = paste(part_vars[i], "c.4lag", sep = "."), 
+                                  cum_shift = 4)
+          # viols_so_far (lag all)
+          prediction_data = ddply(prediction_data, "mineid", viols_so_far, 
+                                  var_to_sum = part_vars[i], 
+                                  sum_viols = paste(part_vars[i], "c.lag.all", sep = "."))
+      }
+      
+  # Save
+  if (injury.type == "PS") {
+    
+    write.csv(prediction_data, file = PS_year_prediction_data_out_csv_name)
+  }
+  if (injury.type == "MR") {
+    write.csv(prediction_data, file = MR_year_prediction_data_out_csv_name)
+  }
+}
+
+#sink()
 ######################################################################################################################################
 
