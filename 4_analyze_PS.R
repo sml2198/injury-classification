@@ -34,6 +34,8 @@ coded_training_set_file_name = "X:/Projects/Mining/NIOSH/analysis/data/training/
 accidents_data_file_name = "X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_mines_accidents.rds"
   # output: all accidents, now classified as PS after algorithm
 classified_accidents_file_name = "X:/Projects/Mining/NIOSH/analysis/data/4_coded/PS_accidents_with_predictions.rds"
+  # output: all accidents, now classified as PS after algorithm - csv for easier inspection
+classified_accidents_file_name_csv = "X:/Projects/Mining/NIOSH/analysis/data/4_coded/PS_accidents_with_predictions.csv"
 
 # FOR TESTING
 false_neg_file_name = "C:/Users/slevine2/Desktop/ps_false_negatives.csv"
@@ -48,14 +50,17 @@ false_pos_file_name = "C:/Users/slevine2/Desktop/ps_false_positives.csv"
 # SET PREFERENCES 
 
 # Set preferences - data type - either training data for model selection, or real accidents data for classification
-#data.type = "training data"
+# data.type = "training data"
 data.type = "real accidents data"
 
-# Specify imputation method
+# Specify imputation method - not used in final boosting algorithm
 imputation_method = 3
 
-# WHAT DOES THIS MEAN? -.-
+# Enforce strict factor storage
 strict = T
+
+# Set seed for reproducible results 
+set.seed(625)
 
 ##################################################################################################
 
@@ -1184,7 +1189,6 @@ if (strict) {
 ##################################################################################################
 
 # Randomly sort data (it was ordered in stata before this)
-set.seed(625)
 rand <- runif(nrow(simple.data))
 simple.ps <- simple.data[order(rand),]
 remove(rand)
@@ -1217,7 +1221,7 @@ if (data.type == "training data" ) {
   table(simple.ps[601:1000,81], predicted = rf.smo.pred)
   
   # BOOSTING
-  ps.adaboost = boosting(PS ~ ., data = simple.ps[1:600, !(names(simple.ps) %in% c('documentno'))], boos = T, mfinal = 1000, coeflearn = 'Freund')
+  ps.adaboost = boosting(PS ~ ., data = simple.ps[1:600, !(names(simple.ps) %in% c('documentno'))], boos = T, mfinal = 400, coeflearn = 'Freund')
   simple.adaboost.pred = predict.boosting(ps.adaboost, newdata = simple.ps[601:1000,])
   simple.adaboost.pred$confusion
   # # Predicted Class  NO YES
@@ -1239,14 +1243,22 @@ if (data.type == "training data" ) {
   predictions = merge(predictions, all_vars[, c("narrative", "old_narrative", "documentno", "mineid")], by = "documentno")
   
   # POST-PROCESSING: MANUALLY RECODE COMMON FALSE POSITIVES # 1 = no, 2 = yes
-  predictions$prediction = ifelse(predictions$entrapment == 1, 1, predictions$prediction) 
-  predictions$prediction = ifelse(predictions$falling.accident == 1, 1, predictions$prediction)
+  predictions$accidents = ifelse(predictions$entrapment == 1, 1, predictions$prediction) 
   predictions$prediction = ifelse(predictions$brokensteel == 1, 1, predictions$prediction)
-  predictions$prediction = ifelse(predictions$accident.only == 1, 1, predictions$prediction)
   predictions$prediction = ifelse(predictions$headroof == 1, 1, predictions$prediction)
   predictions$prediction = ifelse(predictions$headcanopy == 1, 1, predictions$prediction)
   predictions$prediction = ifelse(predictions$hole == 1, 1, predictions$prediction)
+  predictions$prediction = ifelse(predictions$jarring == 1 |
+                                  predictions$bounced == 1 |
+                                  predictions$rock == 1 |
+                                  predictions$bodyseat == 1, 1, predictions$prediction)
+  predictions$prediction = ifelse(predictions$accident.only == 1, 1, predictions$prediction)
+  predictions$prediction = ifelse(predictions$falling.accident == 1, 1, predictions$prediction)
   predictions$prediction = as.factor(predictions$prediction)
+  
+  # Now report final predictive accuracy
+  table = table(predictions$prediction, predictions$PS)
+  table
   
   # Save simple data with predictions
   predictions = predictions[,c(match("prediction", names(predictions)),
@@ -1275,7 +1287,6 @@ if (data.type == "real accidents data") {
   
   # Randomize
   set.seed(625)
-  
   # Run boosting on training observations
   ps.adaboost = boosting(PS ~ ., data = simple.ps[simple.ps$type=="training", 
                                                 !(names(simple.ps) %in% c('documentno', 'type'))], boos = T, mfinal = 300, coeflearn = 'Freund')
@@ -1291,13 +1302,16 @@ if (data.type == "real accidents data") {
   names(accidents)[names(accidents) == 'adaboost.pred$class'] = 'prediction'
   
   # POST-PROCESSING: MANUALLY RECODE COMMON FALSE POSITIVES # 1 = no, 2 = yes
-  accidents$accidents = ifelse(accidents$entrapment == 1, 1, accidents$prediction) 
-  accidents$prediction = ifelse(accidents$falling.accident == 1, 1, accidents$prediction)
+  accidents$prediction = ifelse(accidents$entrapment == 1, 1, accidents$prediction) 
   accidents$prediction = ifelse(accidents$brokensteel == 1, 1, accidents$prediction)
-  accidents$prediction = ifelse(accidents$accident.only == 1, 1, accidents$prediction)
   accidents$prediction = ifelse(accidents$headroof == 1, 1, accidents$prediction)
   accidents$prediction = ifelse(accidents$headcanopy == 1, 1, accidents$prediction)
   accidents$prediction = ifelse(accidents$hole == 1, 1, accidents$prediction)
+  accidents$prediction = ifelse(accidents$jarring == 1 |
+                                accidents$rock == 1 |
+                                accidents$bodyseat == 1, 1, accidents$prediction)
+  accidents$prediction = ifelse(accidents$accident.only == 1, 1, accidents$prediction)
+  accidents$prediction = ifelse(accidents$falling.accident == 1, 1, accidents$prediction)
   accidents$prediction = as.factor(accidents$prediction)
   
   # Merge predictions back onto real data (we just need mineid and accidentdate for the next stage)
@@ -1305,12 +1319,15 @@ if (data.type == "real accidents data") {
                            match("documentno", names(accidents)))]
   accidents = merge(accidents, all.accidents, by = "documentno")
   accidents$PS = ifelse(!is.na(accidents$prediction), accidents$prediction, accidents$PS)
+  
+  # Save csv with narrative info and everything
+  write.csv(accidents, file = classified_accidents_file_name_csv)
+  
+  # Save simple data as rds
   accidents = accidents[, c(match("PS", names(accidents)),
                            match("mineid", names(accidents)),
                            match("accidentdate", names(accidents)),
                            match("documentno", names(accidents)))]
-  
-  # Save
   saveRDS(accidents, file = classified_accidents_file_name)
 }
 
