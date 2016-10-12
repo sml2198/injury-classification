@@ -2,7 +2,26 @@
 
 # 17 - Subpart Model Summary
 
-# Last edit 10/3/16
+# Last edit 10/11/16
+
+#####################################################################################################
+
+injury = "MR"
+# injury = "PS"
+
+# trusted_MR = "on"
+trusted_MR = "off"
+
+# trusted_PS = "on"
+trusted_PS = "off"
+
+if (injury == "MR") {
+  directory_path = "C:/Users/jbodson/Dropbox (Stanford Law School)/R-code/Injury-Classification/MR Model Summaries 9-30/Check Output 10-7/"
+}
+
+if (injury == "PS") {
+  directory_path = "C:/Users/jbodson/Dropbox (Stanford Law School)/R-code/Injury-Classification/PS Model Summaries 10-10/Estout/"
+}
 
 #####################################################################################################
 
@@ -52,11 +71,20 @@ clean_model_output = function(model_name) {
 
 }
 
-directory_path = "C:/Users/jbodson/Dropbox (Stanford Law School)/R-code/Injury-Classification/model summary 9-28/Estout/"
-models = list.files(directory_path)
+#####################################################################################################
 
-models = models[!grepl("\\.Q", models)]
-models = models[!grepl("4", models)]
+models = list.files(directory_path)
+models = models[grepl("^Model", models)]
+models = models[grepl("\\.SP", models)]
+
+if (trusted_MR == "on") {
+  models = models[!grepl("\\.Q", models)]
+  models = models[!grepl("4", models)]
+}
+
+if (trusted_PS == "on") {
+  # fill in later
+}
 
 model_info = clean_model_output(models[1])
 
@@ -69,10 +97,10 @@ rm(data, i)
 
 #####################################################################################################
 
-all_models = substr(models, 1, (nchar(models) - 4))
+all_models = substr(models, 7, (nchar(models) - 4))
 
 Y_models = all_models[grepl("\\.Y", all_models)]
-# Q_models = all_models[grepl("\\.Q", all_models)]
+Q_models = all_models[grepl("\\.Q", all_models)]
 
 B_models = all_models[grepl("\\.B", all_models)]
 C_models = all_models[grepl("\\.C", all_models)]
@@ -84,7 +112,7 @@ PP_models = all_models[grepl("\\.PP", all_models)]
 l1_models = all_models[grepl("1$", all_models)]
 l2_models = all_models[grepl("2$", all_models)]
 l3_models = all_models[grepl("3$", all_models)]
-# l4_models = all_models[grepl("4$", all_models)]
+l4_models = all_models[grepl("4$", all_models)]
 
 model_summary = data.frame(model_info$var)
 names(model_summary) = "var"
@@ -94,11 +122,10 @@ coef_data = model_info[, grepl("coef", names(model_info))]
 
 model_types = c("all_models", 
                "Y_models", 
-               #"Q_models",
+               "Q_models",
                "B_models", "C_models", 
                "V_models", "SSV_models", "PP_models", 
-               "l1_models", "l2_models", "l3_models")
-               #, "l4_models")
+               "l1_models", "l2_models", "l3_models", "l4_models")
 
 significance_levels = c(0.05, 0.01)
 
@@ -106,9 +133,9 @@ for (group in model_types) {
 
   for (sig in significance_levels) {
 
-    p = rowSums(p_data[paste(eval(parse(text = group)), "p", sep = ".")] <= sig, na.rm = TRUE)
-    
-    coef_data_temp = coef_data[paste(paste(eval(parse(text = group)), "coef", sep = "."), substr(toString(sig), 3, nchar(toString(sig))), sep = ".")]
+    p = rowSums(p_data[paste("Model", paste(eval(parse(text = group)), "p", sep = "."), sep = ".")] <= sig, na.rm = TRUE)
+
+    coef_data_temp = coef_data[paste("Model", paste(paste(eval(parse(text = group)), "coef", sep = "."), substr(toString(sig), 3, nchar(toString(sig))), sep = "."), sep = ".")]
     coef_pos = rowSums(coef_data_temp > 1, na.rm = TRUE)
     coef_neg = rowSums(coef_data_temp <= 1, na.rm = TRUE)
     coef_min = apply(coef_data_temp, 1, min, na.rm = TRUE)
@@ -134,7 +161,25 @@ rm(coef_data_temp, data_temp, p, coef_pos, coef_neg, coef_min, coef_max, group, 
 
 #####################################################################################################
 
-write.csv(model_summary, "C:/Users/jbodson/Dropbox (Stanford Law School)/R-code/Injury-Classification/Model Summaries 9-30/MR-Subpart Summary (models we trust).csv", 
-          quote = FALSE, row.names = FALSE)
+if (injury == "MR") {
+  if (trusted_MR == "on") {
+    out_path = "C:/Users/jbodson/Dropbox (Stanford Law School)/R-code/Injury-Classification/MR Model Summaries 9-30/Check Output 10-7/MR-Subpart Summary (models we trust).csv"
+  }
+  if (trusted_MR == "off") {
+    out_path = "C:/Users/jbodson/Dropbox (Stanford Law School)/R-code/Injury-Classification/MR Model Summaries 9-30/Check Output 10-7/MR-Subpart Summary (all models).csv"
+  }
+}
+
+
+if (injury == "PS") {
+  if (trusted_PS == "on") {
+    out_path = "C:/Users/jbodson/Dropbox (Stanford Law School)/R-code/Injury-Classification/PS Model Summaries 10-10/Estout/PS-Subpart Summary (models we trust).csv"
+  }
+    if (trusted_PS == "off") {
+    out_path = "C:/Users/jbodson/Dropbox (Stanford Law School)/R-code/Injury-Classification/PS Model Summaries 10-10/Estout/PS-Subpart Summary (all models).csv"
+  }
+}
+
+write.csv(model_summary, file = out_path, quote = FALSE, row.names = FALSE)
 
 #####################################################################################################
