@@ -15,6 +15,8 @@ trusted_MR = "off"
 # trusted_PS = "on"
 trusted_PS = "off"
 
+#####################################################################################################
+
 if (injury == "MR") {
   directory_path = "C:/Users/jbodson/Dropbox (Stanford Law School)/R-code/Injury-Classification/MR Model Summaries 9-30/Check Output 10-7/"
 }
@@ -41,15 +43,10 @@ clean_model_output = function(model_name) {
   data$p = ifelse(is.na(data$coef), NA, data$p)
   
   data$coef = ifelse(data$coef == 1, NA, data$coef)
-  #data$coef_0.1 = ifelse(is.na(data$p), NA, 
-  #                       ifelse(data$p >= 0.1, NA, data$coef))
   data$coef_0.05 = ifelse(is.na(data$p), NA, 
                           ifelse(data$p >= 0.05, NA, data$coef))
   data$coef_0.01 = ifelse(is.na(data$p), NA, 
                           ifelse(data$p >= 0.01, NA, data$coef))
-  #data$coef_0.001 = ifelse(is.na(data$p), NA, 
-  #                         ifelse(data$p >= 0.001, NA, data$coef))
-  
   
   data$var = ifelse(grepl("_1lag$", data$var), substr(data$var, 1, (nchar(data$var) - 5)), 
                     ifelse(grepl("_c_4lag$", data$var), substr(data$var, 1, (nchar(data$var) - 7)), 
@@ -62,10 +59,8 @@ clean_model_output = function(model_name) {
   names(data) = c("var", 
                   paste(substr(model_name, 1, nchar(model_name) - 4), "coef", sep = "."),
                   paste(substr(model_name, 1, nchar(model_name) - 4), "p", sep = "."), 
-                  #paste(substr(model_name, 1, nchar(model_name) - 4), "coef.1", sep = "."),
                   paste(substr(model_name, 1, nchar(model_name) - 4), "coef.05", sep = "."),
                   paste(substr(model_name, 1, nchar(model_name) - 4), "coef.01", sep = "."))
-                  #paste(substr(model_name, 1, nchar(model_name) - 4), "coef.001", sep = "."))
   
   return(data)
 
