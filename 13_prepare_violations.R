@@ -9,7 +9,7 @@
     # Loads accidents data from "6_collapse_accidents.R"
     # Merges mine-quarter level violations with inspections and accidents
 
-# Last edit 9/13/16
+# Last edit 10/10/16
 
 ######################################################################################################
 
@@ -906,11 +906,11 @@ if (make.year.data) {
                                               grep("injofinterest", names(prediction_data)),
                                               match("mineid", names(prediction_data)), 
                                               match("year", names(prediction_data)))], c("mineid", "year"), 
-                              function(x) colSums(x[, c(grep("p", names(prediction_data)),
-                                                        grep("sp", names(prediction_data)),
-                                                        grep("num_qtrs_year", names(prediction_data)),
-                                                        grep("hours", names(prediction_data)),
-                                                        grep("injofinterest", names(prediction_data)))], na.rm = T))
+                              function(x) colSums(x[, c(grep("p", names(x)),
+                                                        grep("sp", names(x)),
+                                                        grep("num_qtrs_year", names(x)),
+                                                        grep("hours", names(x)),
+                                                        grep("injofinterest", names(x)))], na.rm = T))
   # Merge states back on
   prediction_year_data = merge(prediction_data, prediction_year_data[, c("mineid", "state")], by = c("mineid"))
   
