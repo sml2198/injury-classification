@@ -1,13 +1,13 @@
 # NIOSH Project 2014-N-15776
 
-# 17 - Subpart Model Summary
+# 16 - Subpart Model Summary
 
-# Last edit 10/11/16
+# Last edit 10/13/16
 
 #####################################################################################################
 
-injury = "MR"
-# injury = "PS"
+# injury = "MR"
+injury = "PS"
 
 # trusted_MR = "on"
 trusted_MR = "off"
@@ -18,11 +18,29 @@ trusted_PS = "off"
 #####################################################################################################
 
 if (injury == "MR") {
-  directory_path = "C:/Users/jbodson/Dropbox (Stanford Law School)/R-code/Injury-Classification/MR Model Summaries 9-30/Check Output 10-7/"
+  directory_path = "C:/Users/jbodson/Dropbox (Stanford Law School)/R-code/Injury-Classification/Model Summaries 10-12/MR/Estout/"
+  
+  if (trusted_MR == "on") {
+    out_path = "C:/Users/jbodson/Dropbox (Stanford Law School)/R-code/Injury-Classification/Model Summaries 10-12/MR/Summaries/Subpart Summary (models we trust).csv"
+  }
+  
+  if (trusted_MR == "off") {
+    out_path = "C:/Users/jbodson/Dropbox (Stanford Law School)/R-code/Injury-Classification/Model Summaries 10-12/MR/Summaries/Subpart Summary (all models).csv"
+  }
+  
 }
 
 if (injury == "PS") {
-  directory_path = "C:/Users/jbodson/Dropbox (Stanford Law School)/R-code/Injury-Classification/PS Model Summaries 10-10/Estout/"
+  directory_path = "C:/Users/jbodson/Dropbox (Stanford Law School)/R-code/Injury-Classification/Model Summaries 10-12/PS/Estout/"
+  
+  if (trusted_PS == "on") {
+    out_path = "C:/Users/jbodson/Dropbox (Stanford Law School)/R-code/Injury-Classification/Model Summaries 10-12/PS/Summaries/Subpart Summary (models we trust).csv"
+  }
+  
+  if (trusted_PS == "off") {
+    out_path = "C:/Users/jbodson/Dropbox (Stanford Law School)/R-code/Injury-Classification/Model Summaries 10-12/PS/Summaries/Subpart Summary (all models).csv"
+  }
+  
 }
 
 #####################################################################################################
@@ -129,8 +147,8 @@ for (group in model_types) {
   for (sig in significance_levels) {
 
     p = rowSums(p_data[paste("Model", paste(eval(parse(text = group)), "p", sep = "."), sep = ".")] <= sig, na.rm = TRUE)
-
     coef_data_temp = coef_data[paste("Model", paste(paste(eval(parse(text = group)), "coef", sep = "."), substr(toString(sig), 3, nchar(toString(sig))), sep = "."), sep = ".")]
+    
     coef_pos = rowSums(coef_data_temp > 1, na.rm = TRUE)
     coef_neg = rowSums(coef_data_temp <= 1, na.rm = TRUE)
     coef_min = apply(coef_data_temp, 1, min, na.rm = TRUE)
@@ -155,25 +173,6 @@ for (group in model_types) {
 rm(coef_data_temp, data_temp, p, coef_pos, coef_neg, coef_min, coef_max, group, sig)
 
 #####################################################################################################
-
-if (injury == "MR") {
-  if (trusted_MR == "on") {
-    out_path = "C:/Users/jbodson/Dropbox (Stanford Law School)/R-code/Injury-Classification/MR Model Summaries 9-30/Check Output 10-7/MR-Subpart Summary (models we trust).csv"
-  }
-  if (trusted_MR == "off") {
-    out_path = "C:/Users/jbodson/Dropbox (Stanford Law School)/R-code/Injury-Classification/MR Model Summaries 9-30/Check Output 10-7/MR-Subpart Summary (all models).csv"
-  }
-}
-
-
-if (injury == "PS") {
-  if (trusted_PS == "on") {
-    out_path = "C:/Users/jbodson/Dropbox (Stanford Law School)/R-code/Injury-Classification/PS Model Summaries 10-10/Estout/PS-Subpart Summary (models we trust).csv"
-  }
-    if (trusted_PS == "off") {
-    out_path = "C:/Users/jbodson/Dropbox (Stanford Law School)/R-code/Injury-Classification/PS Model Summaries 10-10/Estout/PS-Subpart Summary (all models).csv"
-  }
-}
 
 write.csv(model_summary, file = out_path, quote = FALSE, row.names = FALSE)
 
