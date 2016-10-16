@@ -2,10 +2,11 @@
 
 # 17 - PREP DATA FOR MAPPING!
 
-# Last edit 10/10/16
+# Last edit 10/12/16
 
 ######################################################################################################
 
+library(stringr)
 library(plyr)
 library(zoo)
 library(ggmap)
@@ -15,10 +16,14 @@ library(ggmap)
 classified_MR_file_name = "X:/Projects/Mining/NIOSH/analysis/data/4_coded/MR_accidents_with_predictions.rds"
   # PS
 classified_PS_file_name = "X:/Projects/Mining/NIOSH/analysis/data/4_coded/PS_accidents_with_predictions.rds"
+  # all accidents data
+accidents_data_file_name = "X:/Projects/Mining/NIOSH/analysis/data/3_merged/merged_mines_accidents.rds"
   # mines
 open_data_mines_file_name = "X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA/open_data/Mines.txt"
   # mine address records data (downloaded October 12)
 open_data_mine_addresses_file_name = "X:/Projects/Mining/NIOSH/analysis/data/6_mapping/AddressOfRecord/AddressOfRecord.txt"
+  # input: quarterly employment/production data
+quarterly_employment_in_file_name = "X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA/open_data/MinesProdQuarterly.txt"
 
 # output
   # MR
@@ -42,6 +47,8 @@ file.remove(tempfilename)
 
 ######################################################################################################
 
+# ACCIDENTS PREP
+
 # load & clean coded accidents 
 if (inj.type == "MR"){
   coded_inj = readRDS(classified_MR_file_name)
@@ -52,10 +59,13 @@ if (inj.type == "MR"){
 }
 if (inj.type == "PS"){
   coded_inj = readRDS(classified_PS_file_name)
-  coded_inj = coded_inj[, c("mineid", "PS", "accidentdate", "accidenttime", "activitycode", 
-                            "bodypart", "sourceofinjury", "mineractivity", 
-                            "jobexperience", "documentno", "natureofinjury", "narrative")]
+  accidents = readRDS(accidents_data_file_name)
+  coded_inj  = merge(coded_inj, accidents[, c("mineid", "accidenttime", "activitycode", 
+                                              "bodypart", "sourceofinjury", "mineractivity", 
+                                              "jobexperience", "documentno", "natureofinjury", 
+                                              "narrative")], by = c("documentno", "mineid"))
   names(coded_inj)[names(coded_inj) == "PS"] = "inj"
+  rm(accidents)
 }
 
 # clean injs
@@ -65,7 +75,7 @@ coded_inj$quarter = as.yearqtr(coded_inj$accidentdate)
 
 ######################################################################################################
 
-# THE GEOCODE PREP
+# MINES & HOURS PREP
 
 # load and clean mines
 mines = read.table(open_data_mines_file_name, header = T, sep = "|", na.strings = c("", "NA"))
@@ -76,18 +86,40 @@ names(mines)[names(mines) == "LATITUDE"] = "lat"
 names(mines)[names(mines) == "LONGITUDE"] = "long"
 names(mines) = tolower(names(mines))
 
-# clean long/lat & mark problem observations
+# read quarterly employment/production data
+# dataset downloaded on 8/16/16 from http://arlweb.msha.gov/OpenGovernmentData/OGIMSHA.asp
+q.employment = read.table(quarterly_employment_in_file_name, header = T, sep = "|", na.strings = c("","NA"))
+names(q.employment)[names(q.employment) == "CAL_QTR"] = "quarter"
+names(q.employment)[names(q.employment) == "CAL_YR"] = "year"
+names(q.employment)[names(q.employment) == "MINE_ID"] = "mineid"
+names(q.employment)[names(q.employment) == "HOURS_WORKED"] = "hours"
+q.employment = q.employment[, c(match("quarter", names(q.employment)),
+                                match("mineid", names(q.employment)),
+                                match("year", names(q.employment)),
+                                match("hours", names(q.employment)))]
+
+# format mineid & collapse employment to mine-level
+q.employment$mineid = str_pad(q.employment$mineid, 7, pad = "0")
+q.employment$quarter = paste0(q.employment$year, " Q", q.employment$quarter)
+q.employment$quarter = as.yearqtr(q.employment$quarter)
+
+# collapse hours and years by sums (we trash year, but ddply needs an array of 2+ columns)
+employment = ddply(q.employment[, c(match("hours", names(q.employment)),
+                                    match("year", names(q.employment)),
+                                    match("mineid", names(q.employment)))], c("mineid"), 
+                        function(x) colSums(x[, c(match("hours", names(x)),
+                                                  match("year", names(x)))], na.rm = T))
+
+######################################################################################################
+
+# GEOCODE PREP
+
 # longs should be negative for the US (because we're west of the prime meridian)
 mines[, "long"] = ifelse(is.na(mines$long), NA, paste("-", mines[, "long"], sep = ""))
-mines[, "long"] = as.numeric(mines$long)
-mines[, "lat"] = as.numeric(mines$lat)
-mines$problem = ifelse((abs(mines[, "long"]) < 10) |
-                         (abs(mines[, "lat"]) < 10), 1, 0)
-mines$problem = ifelse(is.na(mines$problem), 0, mines$problem)
 
-# the following mines have problematic long/lats and were identified by loading the data into QGIS, selecting groups of mines by their
-# reported state and county, and observing which points in fact fall outside of those territories based on their coordinates
-
+# the following mines (all in our sample) have problematic long/lats and were identified by loading the data into QGIS, 
+# selecting groups of mines by their reported state and county, and observing which points in fact fall outside of those 
+# territories based on their coordinates
 # MINEID | SUPPOSED STATE | ACTUAL STATE (BASED ON COORDINATES)
 # 1518279     KY             SC
 # 1518369     KY             VA
@@ -102,56 +134,40 @@ mines$problem = ifelse(is.na(mines$problem), 0, mines$problem)
 # 3608512     PA             ? Canada
 # 4405559     VA             ? Colombia
 
-#   # 1518279 KY, Martin
-# mines[, "latitude"] = ifelse(mines$mineid == "4405559", 36.980513, mines$latitude)
-# mines[, "longitude"] = ifelse(mines$mineid == "4405559", -82.623650, mines$longitude)
-#   # 1518369 KY, Pike
-# mines[, "latitude"] = ifelse(mines$mineid == "4405559", 36.980513, mines$latitude)
-# mines[, "longitude"] = ifelse(mines$mineid == "4405559", -82.623650, mines$longitude)
-#   # 3304595 OH, Meigs
-# mines[, "latitude"] = ifelse(mines$mineid == "4405559", 36.980513, mines$latitude)
-# mines[, "longitude"] = ifelse(mines$mineid == "4405559", -82.623650, mines$longitude)
-#   # 3401782 OK, Le Flore
-# mines[, "latitude"] = ifelse(mines$mineid == "4405559", 36.980513, mines$latitude)
-# mines[, "longitude"] = ifelse(mines$mineid == "4405559", -82.623650, mines$longitude)
-#   # 4407087  VA
-# mines[, "latitude"] = ifelse(mines$mineid == "4405559", 36.980513, mines$latitude)
-# mines[, "longitude"] = ifelse(mines$mineid == "4405559", -82.623650, mines$longitude)
-#   # 4407155 VA
-# mines[, "latitude"] = ifelse(mines$mineid == "4405559", 36.980513, mines$latitude)
-# mines[, "longitude"] = ifelse(mines$mineid == "4405559", -82.623650, mines$longitude)
-#   # 4601436 WV
-# mines[, "latitude"] = ifelse(mines$mineid == "4405559", 36.980513, mines$latitude)
-# mines[, "longitude"] = ifelse(mines$mineid == "4405559", -82.623650, mines$longitude)
-#   # 4608214 WV
-# mines[, "latitude"] = ifelse(mines$mineid == "4405559", 36.980513, mines$latitude)
-# mines[, "longitude"] = ifelse(mines$mineid == "4405559", -82.623650, mines$longitude)
-#   # 4608857 WV
-# mines[, "latitude"] = ifelse(mines$mineid == "4405559", 36.980513, mines$latitude)
-# mines[, "longitude"] = ifelse(mines$mineid == "4405559", -82.623650, mines$longitude)
-#   # 4608892 WV
-# mines[, "latitude"] = ifelse(mines$mineid == "4405559", 36.980513, mines$latitude)
-# mines[, "longitude"] = ifelse(mines$mineid == "4405559", -82.623650, mines$longitude)
-#   # 3608512 PA
-# mines[, "latitude"] = ifelse(mines$mineid == "4405559", 36.980513, mines$latitude)
-# mines[, "longitude"] = ifelse(mines$mineid == "4405559", -82.623650, mines$longitude)
-#   # 4405559 VA 
-# mines[, "latitude"] = ifelse(mines$mineid == "4405559", 36.980513, mines$latitude)
-# mines[, "longitude"] = ifelse(mines$mineid == "4405559", -82.623650, mines$longitude)
+# for this one (which appears in Canada - go figure) I picked a random spot in Clearfield County, PA
+# https://www.google.com/maps/place/Clearfield+County,+PA/@40.9958579,-78.5989015,10.84z/
+#     data=!4m5!3m4!1s0x89cc3b90115f118f:0x2dad211d577a725!8m2!3d40.9519685!4d-78.5660852
+mines[, "lat"] = ifelse(mines$mineid == "3608512", 40.993542, mines$lat)
+mines[, "long"] = ifelse(mines$mineid == "3608512", -78.462343, mines$long)
 
-# # for this one (which appears in Canada - go figure) I picked a random spot in Clearfield County, PA
-# # https://www.google.com/maps/place/Clearfield+County,+PA/@40.9958579,-78.5989015,10.84z/
-# #     data=!4m5!3m4!1s0x89cc3b90115f118f:0x2dad211d577a725!8m2!3d40.9519685!4d-78.5660852
-# mines[, "latitude"] = ifelse(mines$mineid == "3608512", 40.993542, mines$latitude)
-# mines[, "longitude"] = ifelse(mines$mineid == "3608512", -78.462343, mines$longitude)
-# 
-# # one mine - 4405559 - has a "problem" long/lat at this point. we looked it up using the mine data retrieval system,
-# # found the proper address - Wise County, VA - grabbed an approximate long/lat, and recode it here.
-# mines[, "latitude"] = ifelse(mines$mineid == "4405559", 36.980513, mines$latitude)
-# mines[, "longitude"] = ifelse(mines$mineid == "4405559", -82.623650, mines$longitude)
+# one mine - 4405559 - has a "problem" long/lat at this point. we looked it up using the mine data retrieval system,
+# found the proper address - Wise County, VA - grabbed an approximate long/lat, and recode it here.
+mines[, "lat"] = ifelse(mines$mineid == "4405559", 36.980513, mines$lat)
+mines[, "long"] = ifelse(mines$mineid == "4405559", -82.623650, mines$long)
 
-# mines[, "longitude"] = as.character(as.numeric(mines$longitude))
-# mines[, "latitude"] = as.character(as.numeric(mines$latitude))
+# still problematic mineids (even after geocode, so I interevene manually)
+  # Mcdowell County,  WV
+mines[, "lat"] = ifelse(mines$mineid == "4608214", 37.266980, mines$lat)
+mines[, "long"] = ifelse(mines$mineid == "4608214", -81.514068, mines$long)
+  # Wise County,  VA
+mines[, "lat"] = ifelse(mines$mineid == "4407087", 37.030264, mines$lat)
+mines[, "long"] = ifelse(mines$mineid == "4407087", -82.705729, mines$long)
+  # Magoffin County,  KY
+mines[, "lat"] = ifelse(mines$mineid == "1519256", 37.711113, mines$lat)
+mines[, "long"] = ifelse(mines$mineid == "1519256", -83.061548, mines$long)
+  # Floyd County,  KY
+mines[, "lat"] = ifelse(mines$mineid == "1519718", 37.529524, mines$lat)
+mines[, "long"] = ifelse(mines$mineid == "1519718", -82.738810, mines$long)
+  # Jefferson County,  OH
+mines[, "lat"] = ifelse(mines$mineid == "3304591", 40.959080, mines$lat)
+mines[, "long"] = ifelse(mines$mineid == "3304591", -80.641615, mines$long)
+
+# mark problem observations
+mines$lat = as.numeric(mines$lat)
+mines$long = as.numeric(mines$long)
+mines$problem = ifelse((abs(mines[, "long"]) < 10) |
+                         (abs(mines[, "lat"]) < 10), 1, 0)
+mines$problem = ifelse(is.na(mines$problem), 0, mines$problem)
 
 # the following mines have problematic long/lats and were identified by loading the data into QGIS, selecting groups of mines by their
 # reported state and county, and observing which points in fact fall outside of those territories based on their coordinates
@@ -159,18 +175,15 @@ mines$problem = ifelse((mines$mineid == "1518279" |
                           mines$mineid == "1518369" | 
                           mines$mineid == "3304595" | 
                           mines$mineid == "3401782" | 
-                          mines$mineid == "4407087" | 
                           mines$mineid == "4407155" | 
                           mines$mineid == "4601436" |
-                          mines$mineid == "4608214" | 
                           mines$mineid == "4608857" | 
-                          mines$mineid == "4608892" | 
-                          mines$mineid == "3608512" | 
-                          mines$mineid == "4405559"), 1, mines$problem)
+                          mines$mineid == "4608892" ), 1, mines$problem)
 
 ######################################################################################################
 
-# MINE ADDRESSES
+# MINE ADDRESS PREP
+
 addresses = read.table(open_data_mine_addresses_file_name, header = T, sep = "|", na.strings = c("","NA"))
 addresses = addresses[, c("MINE_ID", "MINE_NAME","STREET", "CITY", "ZIP_CD","STATE_ABBR", "STATE", "COUNTRY")]
 names(addresses)[names(addresses) == "MINE_ID"] = "mineid"
@@ -289,8 +302,11 @@ data = data[, c(-grep("pobox", names(data)),
 # finally write it all to the output files
 saveRDS(data, paste0(geocode_infile ,"_geocoded.rds"))
 write.table(data, file = paste0(geocode_infile, "_geocoded.csv"), sep = ",", row.names = F)
+#data = read.csv(file = paste0(geocode_infile, "_geocoded.csv"))
 
 ######################################################################################################
+
+# SPIT OUT FINAL DATA
 
 # merge new long/lats onto mines
 mines = merge(mines, data[, c("mineid", "long_geo",
@@ -320,12 +336,21 @@ collapsed_inj = ddply(coded_inj[, c(match("inj", names(coded_inj)),
                       function(x) colSums(x[, c(match("inj", names(x)),
                                                 match("all_injs", names(x)))], na.rm = T))
 
+# merge quarterly hours onto mine-quarter level data
+q.employment = unique(q.employment)
+collapsed_inj = merge(collapsed_inj, q.employment[, c("mineid", "quarter", "hours")], 
+                      by = c("mineid", "quarter"))
+
 # collapse to mine-level
 collapsed_mines = ddply(collapsed_inj[, c(match("inj", names(collapsed_inj)),
                                           match("all_injs", names(collapsed_inj)),
                                           match("mineid", names(collapsed_inj)))], c("mineid"), 
                         function(x) colSums(x[, c(match("inj", names(x)),
                                                   match("all_injs", names(x)))], na.rm = T))
+
+# merge mine-summed hours onto mine-level data
+collapsed_mines = merge(collapsed_mines, employment[, c("mineid", "hours")], by = "mineid")
+rm(employment, q.employment)
 
 # create unique dataset of mines, states, lats and longs
 other_info = coded_inj[, c("mineid", "state", "county", "lat", "long", "accuracy")]
@@ -382,4 +407,3 @@ if (inj.type == "PS"){
 }
 
 ######################################################################################################
-
