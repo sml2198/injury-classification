@@ -13,6 +13,9 @@ if (injury == "MR") {
   data_file_name = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/MR_prediction_data.rds"
 }
 
+big_check_out_path = "C:/Users/jbodson/Dropbox (Stanford Law School)/R-code/Injury-Classification/Big and Bad Mine Classification/Big_Check.txt"
+bad_check_out_path = "C:/Users/jbodson/Dropbox (Stanford Law School)/R-code/Injury-Classification/Big and Bad Mine Classification/Bad_Check.txt"
+
 ######################################################################################################
 
 # DATA SET-UP
@@ -40,12 +43,13 @@ part_violation_count_vars = intersect(part_vars, violation_count_vars)
 # generate total relevant violations variable
 data$total_relevant_violations = rowSums(data[, part_violation_count_vars], na.rm  = TRUE)
 
-# bye
+# keep only useful variables
 data = data[, c("quarter", "mineid", "mine_time",
                 "hours", 
                 "total_relevant_violations", "total_mine_act_violations", "total_violations", 
                 "total_injuries", "dv", "dv_indicator")]
 
+# bye
 rm(keep_vars, part_vars, violation_vars, part_violation_count_vars, 
    penalty_point_vars, sig_sub_vars, violation_count_vars)
 
@@ -79,6 +83,10 @@ for (dataset in c("avg_all", "max_all", "median_all")) {
   temp95 = d$mineid[d$hours >= quantile(d$hours, probs = seq(0, 1, 0.05), na.rm = TRUE)[20]]
   temp975 = d$mineid[d$hours >= quantile(d$hours, probs = seq(0, 1, 0.025, na.rm = TRUE))[40]]
 
+  assign(paste(paste(paste(dataset, "hours", sep = "_"), 90, sep = "_")), temp90)
+  assign(paste(paste(paste(dataset, "hours", sep = "_"), 95, sep = "_")), temp95)
+  assign(paste(paste(paste(dataset, "hours", sep = "_"), 975, sep = "_")), temp975)
+  
   temp_summary = data.frame(summary$mineid)
   names(temp_summary) = "mineid"
   temp_summary$mineid = as.character(temp_summary$mineid)
@@ -97,6 +105,7 @@ for (dataset in c("avg_all", "max_all", "median_all")) {
 
 }
 
+# bye
 rm(d, dataset, temp_summary, temp90, temp95, temp975)
 
 ######################################################################################################
@@ -104,6 +113,7 @@ rm(d, dataset, temp_summary, temp90, temp95, temp975)
 # HOW BAD?
 
 for (i in seq(2, 8, 2)) {
+  
   data_temp = data[data$mine_time <= i, ]
 
   assign(paste("avg_", i, sep = ""),
@@ -157,9 +167,12 @@ for (i in seq(2, 8, 2)) {
   
 }
 
+# bye
 rm(temp90, temp95, temp975, d, dataset, data_temp, temp_summary, i, var)
 
 ######################################################################################################
+
+# DROP MINES THAT ARE NEVER BIG OR BAD
 
 summary = summary[apply(summary[, -1], 1, function(x) !all(x == 0)), ]
 summary$sum_all = rowSums(summary[, 2:ncol(summary)])
@@ -168,9 +181,59 @@ summary$sum_all = rowSums(summary[, 2:ncol(summary)])
 
 # BIG OR NAH
 
+# evaluate differences between big specifications
+write("Big Mines - Evaluating Differences in Specifications\n", file = big_check_out_path)
+
+write("Average vs. Max vs. Median Specifications\n", file = big_check_out_path, append = TRUE)
+for (q in c("90", "95", "975")) {
+  
+  avg = eval(parse(text = paste("avg_all_hours", q, sep = "_")))
+  max = eval(parse(text = paste("max_all_hours", q, sep = "_")))
+  median = eval(parse(text = paste("median_all_hours", q, sep = "_")))
+  
+  write(paste(q, "Specifications:\n", sep = " "), file = big_check_out_path, append = TRUE)
+  
+  write("Number of Mines in Average, Max, and Median Specifications", file = big_check_out_path, append = TRUE)
+  write(paste("average -", length(avg), sep = " "), file = big_check_out_path, append = TRUE)
+  write(paste("max -", length(max), sep = " "), file = big_check_out_path, append = TRUE)
+  write(paste(paste("median -", length(median), sep = " "), "\n", sep = ""), file = big_check_out_path, append = TRUE)
+  
+  write("Number of Mines Not Captured in Both Specifications (Pairwise Comparison)", file = big_check_out_path, append = TRUE)
+  write(paste("average vs. max -", length(setdiff(avg, max)), sep = " "), file = big_check_out_path, append = TRUE)
+  write(paste("average vs. median -", length(setdiff(avg, median)), sep = " "), file = big_check_out_path, append = TRUE)
+  write(paste(paste("max vs. median -", length(setdiff(max, median)), sep = " "), "\n", sep = ""), file = big_check_out_path, append = TRUE)
+
+}
+
+write("\n90 vs. 95 vs. 97.5\n", file = big_check_out_path, append = TRUE)
+for (d in c("avg_all_hours", "max_all_hours", "median_all_hours")) {
+  
+  q90 = eval(parse(text = paste(d, "90", sep = "_")))
+  q95 = eval(parse(text = paste(d, "95", sep = "_")))
+  q975 = eval(parse(text = paste(d, "975", sep = "_")))
+  
+  write(paste(d, "Specifications:\n", sep = " "), file = big_check_out_path, append = TRUE)
+  
+  write("Number of Mines in 90, 95, and 97.5 Specifications", file = big_check_out_path, append = TRUE)
+  write(paste("90 -", length(q90), sep = " "), file = big_check_out_path, append = TRUE)
+  write(paste("95 -", length(q95), sep = " "), file = big_check_out_path, append = TRUE)
+  write(paste(paste("97.5 -", length(q975), sep = " "), "\n", sep = ""), file = big_check_out_path, append = TRUE)
+  
+  write("Number of Mines Not Captured in Both Specifications (Pairwise Comparison)", file = big_check_out_path, append = TRUE)
+  write(paste("90 vs. 95 -", length(setdiff(q90, q95)), sep = " "), file = big_check_out_path, append = TRUE)
+  write(paste("90 vs. 97.5 -", length(setdiff(q90, q975)), sep = " "), file = big_check_out_path, append = TRUE)
+  write(paste(paste("95 vs. 97.5 -", length(setdiff(q95, q975)), sep = " "), "\n", sep = ""), file = big_check_out_path, append = TRUE)
+  
+}
+
+# bye
+rm(q, avg, max, median, d, q90, q95, q975)
+
+# choose mines that are big under avg, max, and median specifications
 big = summary[, grep("hour", names(summary))]
 
 for (q in c("90", "95", "975")) {
+  
   temp = big[, grep(q, names(big))]
   temp$sum = rowSums(temp)
   temp$mineid = summary$mineid
@@ -179,13 +242,14 @@ for (q in c("90", "95", "975")) {
   
   assign(paste("big", q, sep = "_"), temp)
   rm(temp)
+  
 }
 
-# big 90 includes 122 mines
-# big 95 includes 60 mines
-# big 97.5 includes 27 mines
-
-# seems like big 90 is most reasonable
+# decide whether 90, 95, or 97.5 is the best specification
+  # big 90 includes 122 mines
+  # big 95 includes 60 mines
+  # big 97.5 includes 27 mines
+    # seems like big 90 is most reasonable
 
 # check that we aren't including too many too-small mines
 plot(sort(avg_all$hours), 
@@ -206,52 +270,149 @@ plot(sort(median_all$hours),
      ylab = "Median Hours")
 abline(a = quantile(median_all$hours, probs = seq(0, 1, 0.05), na.rm = TRUE)[19], b = 0, col = "red")
 
+# bye
+rm(q)
+
+# grab big mines
+BIG_MINES = big_90$mineid
+
+# robustness checks - mines at the 90th percentile of each or any specification (avg, max, median)
+big$mineid = summary$mineid
+BIG_R1_AVG = big[big$hours_avg_all_90 == 1, "mineid"]
+BIG_R2_MAX = big[big$hours_max_all_90 == 1, "mineid"]
+BIG_R3_MEDIAN = big[big$hours_median_all_90 == 1, "mineid"]
+BIG_R4_ALL= union(union(BIG_R1_AVG, BIG_R2_MAX), BIG_R3_MEDIAN)
+
 ######################################################################################################
 
 # BAD OR NAH
 
-# 2 vs 4 vs 6 vs 8 
+# evaluate differences between big specifications
+write("Bad Mines - Evaluating Differences in Specifications\n", file = bad_check_out_path)
 
+write("2 vs. 4 vs. 6 vs. 8 Specifications\n", file = bad_check_out_path, append = TRUE)
 for (dataset in c("avg", "max", "median")) {
+  
   for (var in c("total_relevant_violations", "total_violations", "total_injuries", "dv")) {
+    
     for (q in c("90", "95", "975")) {
       
       two = eval(parse(text = paste(paste(paste(dataset, "2", sep = "_"), var, sep = "_"), q, sep = "_")))
-      print("two")
-      print(length(two))
-      
       four = eval(parse(text =  paste(paste(paste(dataset, "4", sep = "_"), var, sep = "_"), q, sep = "_")))
-      print("four")
-      print(length(four))
-      
       six = eval(parse(text = paste(paste(paste(dataset, "6", sep = "_"), var, sep = "_"), q, sep = "_")))
-      print("six")
-      print(length(six))
-      
       eight = eval(parse(text = paste(paste(paste(dataset, "8", sep = "_"), var, sep = "_"), q, sep = "_")))
-      print("eight")
-      print(length(eight))
       
+      write(paste(paste(paste(var, dataset, sep = "_"), q, sep = "_"), "Specifications:\n", sep = " "), file = bad_check_out_path, append = TRUE)
       
-      print(paste(paste(var, dataset, sep = "_"), q, sep = "_"))
+      write("Number of Mines in 2, 4, 6, and 8 Specifications", file = bad_check_out_path, append = TRUE)
+      write(paste("2 -", length(two), sep = " "), file = bad_check_out_path, append = TRUE)
+      write(paste("4 -", length(four), sep = " "), file = bad_check_out_path, append = TRUE)
+      write(paste("6 -", length(six), sep = " "), file = bad_check_out_path, append = TRUE)
+      write(paste(paste("8 -", length(eight), sep = " "), "\n", sep = ""), file = bad_check_out_path, append = TRUE)
       
-      print("2 vs. 4")
-      print(length(setdiff(two, four)))
+      write("Number of Mines Not Captured in Both Specifications (Pairwise Comparison)", file = bad_check_out_path, append = TRUE)
+      write(paste("2 vs. 4 -", length(setdiff(two, four)), sep = " "), file = bad_check_out_path, append = TRUE)
+      write(paste("2 vs. 6 -", length(setdiff(two, six)), sep = " "), file = bad_check_out_path, append = TRUE)
+      write(paste("2 vs. 8 -", length(setdiff(two, eight)), sep = " "), file = bad_check_out_path, append = TRUE)
+      write(paste("4 vs. 6 -", length(setdiff(four, six)), sep = " "), file = bad_check_out_path, append = TRUE)
+      write(paste("4 vs. 8 -", length(setdiff(four, eight)), sep = " "), file = bad_check_out_path, append = TRUE)
+      write(paste(paste("6 vs. 8 -", length(setdiff(six, eight)), sep = " "), "\n", sep = ""), file = bad_check_out_path, append = TRUE)
       
-      print("2 vs. 6")
-      print(length(setdiff(two, six)))
+    }
+    
+  }
+  
+}
+
+write("Average vs. Max vs. Median Specifications\n", file = bad_check_out_path, append = TRUE)
+for (i in c("2", "4", "6", "8")) {
+  
+  for (var in c("total_relevant_violations", "total_violations", "total_injuries", "dv")) {
+    
+    for (q in c("90", "95", "975")) {
       
-      print("2 vs. 8")
-      print(length(setdiff(two, eight)))
+      avg = eval(parse(text = paste(paste(paste("avg", i, sep = "_"), var, sep = "_"), q, sep = "_")))
+      max = eval(parse(text =  paste(paste(paste("max", i, sep = "_"), var, sep = "_"), q, sep = "_")))
+      median = eval(parse(text = paste(paste(paste("median", i, sep = "_"), var, sep = "_"), q, sep = "_")))
+
+      write(paste(paste(paste(var, i, sep = "_"), q, sep = "_"), "Specifications:\n", sep = " "), file = bad_check_out_path, append = TRUE)
       
-      print("4 vs. 6")
-      print(length(setdiff(four, six)))
+      write("Number of Mines in Average, Max, and Median Specifications", file = bad_check_out_path, append = TRUE)
+      write(paste("average -", length(avg), sep = " "), file = bad_check_out_path, append = TRUE)
+      write(paste("max -", length(max), sep = " "), file = bad_check_out_path, append = TRUE)
+      write(paste(paste("median -", length(median), sep = " "), "\n", sep = ""), file = bad_check_out_path, append = TRUE)
       
-      print("4 vs. 8")
-      print(length(setdiff(four, eight)))
+      write("Number of Mines Not Captured in Both Specifications (Pairwise Comparison)", file = bad_check_out_path, append = TRUE)
+      write(paste("average vs. max -", length(setdiff(avg, max)), sep = " "), file = bad_check_out_path, append = TRUE)
+      write(paste("average vs. median -", length(setdiff(avg, median)), sep = " "), file = bad_check_out_path, append = TRUE)
+      write(paste(paste("max vs. median -", length(setdiff(max, median)), sep = " "), "\n", sep = ""), file = bad_check_out_path, append = TRUE)
       
-      print("6 vs. 8")
-      print(length(setdiff(six, eight)))
+    }
+    
+  }
+  
+}
+
+
+
+write("90 vs. 95 vs. 97.5 Specifications\n", file = bad_check_out_path, append = TRUE)
+for (i in c("2", "4", "6", "8")) {
+  
+  for (var in c("total_relevant_violations", "total_violations", "total_injuries", "dv")) {
+    
+    for (dataset in c("avg", "max", "median")) {
+      
+      q90 = eval(parse(text = paste(paste(paste(dataset, i, sep = "_"), var, sep = "_"), "90", sep = "_")))
+      q95 = eval(parse(text =  paste(paste(paste(dataset, i, sep = "_"), var, sep = "_"), "95", sep = "_")))
+      q975 = eval(parse(text = paste(paste(paste(dataset, i, sep = "_"), var, sep = "_"), "975", sep = "_")))
+      
+      write(paste(paste(paste(var, i, sep = "_"), q, sep = "_"), "Specifications:\n", sep = " "), file = bad_check_out_path, append = TRUE)
+      
+      write("Number of Mines in 90, 95, and 97.5 Specifications", file = bad_check_out_path, append = TRUE)
+      write(paste("90 -", length(q90), sep = " "), file = bad_check_out_path, append = TRUE)
+      write(paste("95 -", length(q95), sep = " "), file = bad_check_out_path, append = TRUE)
+      write(paste(paste("97.5 -", length(q975), sep = " "), "\n", sep = ""), file = bad_check_out_path, append = TRUE)
+      
+      write("Number of Mines Not Captured in Both Specifications (Pairwise Comparison)", file = bad_check_out_path, append = TRUE)
+      write(paste("90 vs. 95 -", length(setdiff(q90, q95)), sep = " "), file = bad_check_out_path, append = TRUE)
+      write(paste("90 vs. 97.5 -", length(setdiff(q90, q975)), sep = " "), file = bad_check_out_path, append = TRUE)
+      write(paste(paste("95 vs. 97.5 -", length(setdiff(q95, q975)), sep = " "), "\n", sep = ""), file = bad_check_out_path, append = TRUE)
+      
+    }
+    
+  }
+  
+}
+
+
+
+write("Total vs. Relevant + Violations vs. Injuries Specifications\n", file = bad_check_out_path, append = TRUE)
+for (i in c("2", "4", "6", "8")) {
+  
+  for (q in c("90", "95", "975")) {
+      
+    for (dataset in c("avg", "max", "median")) {
+      
+      rel_viol = eval(parse(text = paste(paste(paste(dataset, i, sep = "_"), "total_relevant_violations", sep = "_"), q, sep = "_")))
+      tot_viol = eval(parse(text = paste(paste(paste(dataset, i, sep = "_"), "total_violations", sep = "_"), q, sep = "_")))
+      rel_inj = eval(parse(text = paste(paste(paste(dataset, i, sep = "_"), "dv", sep = "_"), q, sep = "_")))
+      tot_inj = eval(parse(text =  paste(paste(paste(dataset, i, sep = "_"), "total_injuries", sep = "_"), q, sep = "_")))
+      
+      write(paste(paste(paste(var, i, sep = "_"), q, sep = "_"), "Specifications:\n", sep = " "), file = bad_check_out_path, append = TRUE)
+      
+      write("Number of Mines in Total vs. Relevant + Violations vs. Injuries Specifications", file = bad_check_out_path, append = TRUE)
+      write(paste("Relevant Violations -", length(rel_viol), sep = " "), file = bad_check_out_path, append = TRUE)
+      write(paste("Total Violations -", length(tot_viol), sep = " "), file = bad_check_out_path, append = TRUE)
+      write(paste("Relevant Injuries -", length(rel_inj), sep = " "), file = bad_check_out_path, append = TRUE)
+      write(paste(paste("Total Injuries -", length(tot_inj), sep = " "), "\n", sep = ""), file = bad_check_out_path, append = TRUE)
+      
+      write("Number of Mines Not Captured in Both Specifications (Pairwise Comparison)", file = bad_check_out_path, append = TRUE)
+      write(paste("Rel Viol vs. Tot Viol -", length(setdiff(rel_viol, tot_viol)), sep = " "), file = bad_check_out_path, append = TRUE)
+      write(paste("Rel Viol vs. Rel Inj -", length(setdiff(rel_viol, rel_inj)), sep = " "), file = bad_check_out_path, append = TRUE)
+      write(paste("Rel Viol vs. Tot Inj -", length(setdiff(rel_viol, tot_inj)), sep = " "), file = bad_check_out_path, append = TRUE)
+      write(paste("Tot Viol vs. Rel Inj -", length(setdiff(tot_viol, rel_inj)), sep = " "), file = bad_check_out_path, append = TRUE)
+      write(paste("Tot Viol vs. Tot Inj -", length(setdiff(tot_viol, tot_inj)), sep = " "), file = bad_check_out_path, append = TRUE)
+      write(paste(paste("Rel Inj vs. Tot Inj -", length(setdiff(rel_inj, tot_inj)), sep = " "), "\n", sep = ""), file = bad_check_out_path, append = TRUE)
       
     }
     
