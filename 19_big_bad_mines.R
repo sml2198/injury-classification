@@ -1,8 +1,8 @@
 # NIOSH Project 2014-N-15776
 
-# 19 - Big Mines / Bad Mines
+# 19 - The Big Bad Mines
 
-# Last edit 10/13/16
+# Last edit 10/17/16
 
 ######################################################################################################
 
@@ -41,127 +41,222 @@ part_violation_count_vars = intersect(part_vars, violation_count_vars)
 data$total_relevant_violations = rowSums(data[, part_violation_count_vars], na.rm  = TRUE)
 
 # bye
-data = data[, c("quarter", "mineid",
+data = data[, c("quarter", "mineid", "mine_time",
                 "hours", 
                 "total_relevant_violations", "total_mine_act_violations", "total_violations", 
                 "total_injuries", "dv", "dv_indicator")]
 
-######################################################################################################
-
-# GRAPHS OF ALL MINES 
-
-plot(data$quarter[data$mineid == "0100851"], data$hours[data$mineid == "0100851"],
-     main = "Hours For Each Mine Over Time", 
-     xlab = "Quarter", 
-     ylab = "Hours",
-     type = "l", ylim = c(0, max(data$hours, na.rm = TRUE)))
-for (id in unique(data$mineid)) {
-  lines(data$quarter[data$mineid == id], data$hours[data$mineid == id], type = "l")
-}
-
-plot(data$quarter[data$mineid == "0100851"], data$total_relevant_violations[data$mineid == "0100851"],
-     main = "Total Relevant Violations For Each Mine Over Time", 
-     xlab = "Quarter", 
-     ylab = "Total Relevant Violations",
-     type = "l", ylim = c(0, max(data$total_relevant_violations, na.rm = TRUE)))
-for (id in unique(data$mineid)) {
-  lines(data$quarter[data$mineid == id], data$total_relevant_violations[data$mineid == id], type = "l")
-}
-
-plot(data$quarter[data$mineid == "0100851"], data$total_violations[data$mineid == "0100851"],
-     main = "Total Violations For Each Mine Over Time", 
-     xlab = "Quarter", 
-     ylab = "Total Violations",
-     type = "l", ylim = c(0, max(data$total_violations, na.rm = TRUE)))
-for (id in unique(data$mineid)) {
-  lines(data$quarter[data$mineid == id], data$total_violations[data$mineid == id], type = "l")
-}
+rm(keep_vars, part_vars, violation_vars, part_violation_count_vars, 
+   penalty_point_vars, sig_sub_vars, violation_count_vars)
 
 ######################################################################################################
 
-# COLLAPSE MINE DIMENSION
+# CREATE SUMMARY DATAFRAME
 
-# avg by mine
-mine_avg = aggregate(data[, -match("quarter", names(data))], 
+summary = data.frame(unique(data$mineid))
+names(summary) = "mineid"
+summary$mineid = as.character(summary$mineid)
+
+######################################################################################################
+
+# HOW BIG?
+
+avg_all = aggregate(data[, -match("quarter", names(data))], 
                       list(data$mineid), 
                       FUN = function(x) mean(as.numeric(x), na.rm = TRUE))
-
-# min by mine
-mine_min = aggregate(data[, -match("quarter", names(data))], 
-                      list(data$mineid), 
-                      FUN = function(x) min(as.numeric(x), na.rm = TRUE))
-
-# max by mine
-mine_max = aggregate(data[, -match("quarter", names(data))], 
+max_all = aggregate(data[, -match("quarter", names(data))], 
                       list(data$mineid), 
                       FUN = function(x) max(as.numeric(x), na.rm = TRUE))
-
-# median by mine
-mine_median = aggregate(data[, -match("quarter", names(data))], 
+median_all = aggregate(data[, -match("quarter", names(data))], 
                       list(data$mineid), 
                       FUN = function(x) median(as.numeric(x), na.rm = TRUE))
 
-######################################################################################################
+for (dataset in c("avg_all", "max_all", "median_all")) {
+  
+  d = eval(parse(text = dataset))
+  
+  temp90 = d$mineid[d$hours >= quantile(d$hours, probs = seq(0, 1, 0.05), na.rm = TRUE)[19]]
+  temp95 = d$mineid[d$hours >= quantile(d$hours, probs = seq(0, 1, 0.05), na.rm = TRUE)[20]]
+  temp975 = d$mineid[d$hours >= quantile(d$hours, probs = seq(0, 1, 0.025, na.rm = TRUE))[40]]
 
-# HOURS
+  temp_summary = data.frame(summary$mineid)
+  names(temp_summary) = "mineid"
+  temp_summary$mineid = as.character(temp_summary$mineid)
+  
+  temp_summary$temp90 = ifelse(temp_summary$mineid %in% temp90, 1, 0)
+  temp_summary$temp95 = ifelse(temp_summary$mineid %in% temp95, 1, 0)
+  temp_summary$temp975 = ifelse(temp_summary$mineid %in% temp975, 1, 0)
+  
+  temp_summary$mineid = NULL
+  
+  names(temp_summary) = c(paste(paste("hours_", dataset, sep = ""), "_90", sep = ""), 
+                          paste(paste("hours_", dataset, sep = ""), "_95", sep = ""), 
+                          paste(paste("hours_", dataset, sep = ""), "_975", sep = ""))
+  
+  summary = data.frame(summary, temp_summary)
 
-plot(sort(mine_avg$hours), main = "Avg Hours", xlab = "Sorted Index", ylab = "Avg Hours")
-plot(sort(mine_min$hours), main = "Min Hours", xlab = "Sorted Index", ylab = "Min Hours")
-plot(sort(mine_max$hours), main = "Max Hours", xlab = "Sorted Index", ylab = "Max Hours")
-plot(sort(mine_median$hours), main = "Median Hours", xlab = "Sorted Index", ylab = "Median Hours")
+}
 
-avg_hours = mine_avg$mineid[mine_avg$hours >= quantile(mine_avg$hours, probs = seq(0, 1, 0.05))[20]]
-min_hours = mine_min$mineid[mine_min$hours >= quantile(mine_min$hours, probs = seq(0, 1, 0.05))[20]]
-max_hours = mine_max$mineid[mine_max$hours >= quantile(mine_max$hours, probs = seq(0, 1, 0.05))[20]]
-median_hours = mine_median$mineid[mine_median$hours >= quantile(mine_median$hours, probs = seq(0, 1, 0.05))[20]]
-
-length(setdiff(avg_hours, min_hours)) # 42
-length(setdiff(avg_hours, max_hours)) # 8 
-length(setdiff(avg_hours, median_hours)) # 4
-length(setdiff(min_hours, max_hours)) # 45
-length(setdiff(min_hours, median_hours)) # 43
-length(setdiff(max_hours, median_hours)) # 9
-
-######################################################################################################
-
-# RELEVANT VIOLATIONS
-
-plot(sort(mine_avg$total_relevant_violations), main = "Avg Relevant Violations", xlab = "Sorted Index", ylab = "Avg Relevant Violations")
-plot(sort(mine_min$total_relevant_violations), main = "Min Relevant Violations", xlab = "Sorted Index", ylab = "Min Relevant Violations")
-plot(sort(mine_max$total_relevant_violations), main = "Max Relevant Violations", xlab = "Sorted Index", ylab = "Max Relevant Violations")
-plot(sort(mine_median$total_relevant_violations), main = "Median Relevant Violations", xlab = "Sorted Index", ylab = "Median Relevant Violations")
-
-avg_rel_violations = mine_avg$mineid[mine_avg$total_relevant_violations >= quantile(mine_avg$total_relevant_violations, probs = seq(0, 1, 0.05))[20]]
-min_rel_violations = mine_min$mineid[mine_min$total_relevant_violations >= quantile(mine_min$total_relevant_violations, probs = seq(0, 1, 0.05))[20]]
-max_rel_violations = mine_max$mineid[mine_max$total_relevant_violations >= quantile(mine_max$total_relevant_violations, probs = seq(0, 1, 0.05))[20]]
-median_rel_violations = mine_median$mineid[mine_median$total_relevant_violations >= quantile(mine_median$total_relevant_violations, probs = seq(0, 1, 0.05))[20]]
-
-length(setdiff(avg_rel_violations, min_rel_violations)) # 56
-length(setdiff(avg_rel_violations, max_rel_violations)) # 16
-length(setdiff(avg_rel_violations, median_rel_violations)) # 6
-length(setdiff(min_rel_violations, max_rel_violations)) # 70
-length(setdiff(min_rel_violations, median_rel_violations)) # 66
-length(setdiff(max_rel_violations, median_rel_violations)) # 21
+rm(d, dataset, temp_summary, temp90, temp95, temp975)
 
 ######################################################################################################
 
-# ALL VIOLATIONS
+# HOW BAD?
 
-plot(sort(mine_avg$total_violations), main = "Avg Total Violations", xlab = "Sorted Index", ylab = "Avg Total Violations")
-plot(sort(mine_min$total_violations), main = "Min Total Violations", xlab = "Sorted Index", ylab = "Min Total Violations")
-plot(sort(mine_max$total_violations), main = "Max Total Violations", xlab = "Sorted Index", ylab = "Max Total Violations")
-plot(sort(mine_median$total_violations), main = "Median Total Violations", xlab = "Sorted Index", ylab = "Median Total Violations")
+for (i in seq(2, 8, 2)) {
+  data_temp = data[data$mine_time <= i, ]
 
-avg_all_violations = mine_avg$mineid[mine_avg$total_violations >= quantile(mine_avg$total_violations, probs = seq(0, 1, 0.05), na.rm = TRUE)[20]]
-min_all_violations = mine_min$mineid[mine_min$total_violations >= quantile(mine_min$total_violations, probs = seq(0, 1, 0.05), na.rm = TRUE)[20]]
-max_all_violations = mine_max$mineid[mine_max$total_violations >= quantile(mine_max$total_violations, probs = seq(0, 1, 0.05), na.rm = TRUE)[20]]
-median_all_violations = mine_median$mineid[mine_median$total_violations >= quantile(mine_median$total_violations, probs = seq(0, 1, 0.05), na.rm = TRUE)[20]]
+  assign(paste("avg_", i, sep = ""),
+         aggregate(data_temp[, -match("quarter", names(data_temp))], 
+                   list(data_temp$mineid),
+                   FUN = function(x) mean(as.numeric(x), na.rm = TRUE)))
+  assign(paste("max_", i, sep = ""),
+         aggregate(data_temp[, -match("quarter", names(data_temp))], 
+                   list(data_temp$mineid), 
+                   FUN = function(x) max(as.numeric(x), na.rm = TRUE)))
+  assign(paste("median_", i, sep = ""),
+         aggregate(data_temp[, -match("quarter", names(data_temp))], 
+                   list(data_temp$mineid), 
+                   FUN = function(x) median(as.numeric(x), na.rm = TRUE)))
+  
+  for (dataset in c(paste("avg_", i, sep = ""), 
+                    paste("max_", i, sep = ""),
+                    paste("median_", i, sep = ""))) {
+    
+    d = eval(parse(text = dataset))
+    
+    for (var in c("total_relevant_violations", "total_violations", "total_injuries", "dv")) {
+      
+      temp90 = d$mineid[d[, var] >= quantile(d[, var], probs = seq(0, 1, 0.05), na.rm = TRUE)[19]]
+      temp95 = d$mineid[d[, var] >= quantile(d[, var], probs = seq(0, 1, 0.05), na.rm = TRUE)[20]]
+      temp975 = d$mineid[d[, var] >= quantile(d[, var], probs = seq(0, 1, 0.025), na.rm = TRUE)[40]]
 
-length(setdiff(avg_all_violations, min_all_violations)) # 59
-length(setdiff(avg_all_violations, max_all_violations)) # 15
-length(setdiff(avg_all_violations, median_all_violations)) # 9
-length(setdiff(min_all_violations, max_all_violations)) # 66
-length(setdiff(min_all_violations, median_all_violations)) # 60
-length(setdiff(max_all_violations, median_all_violations)) # 23
+      assign(paste(paste(paste(dataset, var, sep = "_"), 90, sep = "_")), temp90)
+      assign(paste(paste(paste(dataset, var, sep = "_"), 95, sep = "_")), temp95)
+      assign(paste(paste(paste(dataset, var, sep = "_"), 975, sep = "_")), temp975)
+      
+      temp_summary = data.frame(summary$mineid)
+      names(temp_summary) = "mineid"
+      temp_summary$mineid = as.character(temp_summary$mineid)
+      
+      temp_summary$temp90 = ifelse(temp_summary$mineid %in% temp90, 1, 0)
+      temp_summary$temp95 = ifelse(temp_summary$mineid %in% temp95, 1, 0)
+      temp_summary$temp975 = ifelse(temp_summary$mineid %in% temp975, 1, 0)
+      
+      temp_summary$mineid = NULL
+      
+      names(temp_summary) = c(paste(paste(var, dataset, sep = "_"), "_90", sep = ""), 
+                              paste(paste(var, dataset, sep = "_"), "_95", sep = ""), 
+                              paste(paste(var, dataset, sep = "_"), "_975", sep = ""))
+      
+      summary = data.frame(summary, temp_summary)
+      
+    }
+    
+  }
+  
+}
+
+rm(temp90, temp95, temp975, d, dataset, data_temp, temp_summary, i, var)
+
+######################################################################################################
+
+summary = summary[apply(summary[, -1], 1, function(x) !all(x == 0)), ]
+summary$sum_all = rowSums(summary[, 2:ncol(summary)])
+
+######################################################################################################
+
+# BIG OR NAH
+
+big = summary[, grep("hour", names(summary))]
+
+for (q in c("90", "95", "975")) {
+  temp = big[, grep(q, names(big))]
+  temp$sum = rowSums(temp)
+  temp$mineid = summary$mineid
+  
+  temp = temp[temp$sum == 3, ]
+  
+  assign(paste("big", q, sep = "_"), temp)
+  rm(temp)
+}
+
+# big 90 includes 122 mines
+# big 95 includes 60 mines
+# big 97.5 includes 27 mines
+
+# seems like big 90 is most reasonable
+
+# check that we aren't including too many too-small mines
+plot(sort(avg_all$hours), 
+     main = "Average Hours for Each Mine", 
+     xlab = "Mine (Sorted on Average Hours)", 
+     ylab = "Average Hours")
+abline(a = quantile(avg_all$hours, probs = seq(0, 1, 0.05), na.rm = TRUE)[19], b = 0, col = "red")
+
+plot(sort(max_all$hours), 
+     main = "Max Hours for Each Mine", 
+     xlab = "Mine (Sorted on Max Hours)", 
+     ylab = "Max Hours")
+abline(a = quantile(max_all$hours, probs = seq(0, 1, 0.05), na.rm = TRUE)[19], b = 0, col = "red")
+
+plot(sort(median_all$hours), 
+     main = "Median Hours for Each Mine", 
+     xlab = "Mine (Sorted on Median Hours)", 
+     ylab = "Median Hours")
+abline(a = quantile(median_all$hours, probs = seq(0, 1, 0.05), na.rm = TRUE)[19], b = 0, col = "red")
+
+######################################################################################################
+
+# BAD OR NAH
+
+# 2 vs 4 vs 6 vs 8 
+
+for (dataset in c("avg", "max", "median")) {
+  for (var in c("total_relevant_violations", "total_violations", "total_injuries", "dv")) {
+    for (q in c("90", "95", "975")) {
+      
+      two = eval(parse(text = paste(paste(paste(dataset, "2", sep = "_"), var, sep = "_"), q, sep = "_")))
+      print("two")
+      print(length(two))
+      
+      four = eval(parse(text =  paste(paste(paste(dataset, "4", sep = "_"), var, sep = "_"), q, sep = "_")))
+      print("four")
+      print(length(four))
+      
+      six = eval(parse(text = paste(paste(paste(dataset, "6", sep = "_"), var, sep = "_"), q, sep = "_")))
+      print("six")
+      print(length(six))
+      
+      eight = eval(parse(text = paste(paste(paste(dataset, "8", sep = "_"), var, sep = "_"), q, sep = "_")))
+      print("eight")
+      print(length(eight))
+      
+      
+      print(paste(paste(var, dataset, sep = "_"), q, sep = "_"))
+      
+      print("2 vs. 4")
+      print(length(setdiff(two, four)))
+      
+      print("2 vs. 6")
+      print(length(setdiff(two, six)))
+      
+      print("2 vs. 8")
+      print(length(setdiff(two, eight)))
+      
+      print("4 vs. 6")
+      print(length(setdiff(four, six)))
+      
+      print("4 vs. 8")
+      print(length(setdiff(four, eight)))
+      
+      print("6 vs. 8")
+      print(length(setdiff(six, eight)))
+      
+    }
+    
+  }
+  
+}
 
 ######################################################################################################
