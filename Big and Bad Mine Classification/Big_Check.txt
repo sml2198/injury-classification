@@ -1,0 +1,40 @@
+Big Mines - Evaluating Differences in Specifications
+
+Average vs. Maximum vs. Median Specifications
+
+90 Specifications:
+
+Number of Mines in Each Specification
+average - 159
+maximum - 159
+median - 159
+
+Number of Non-Overlapping Mines
+average vs. maximum - 19
+average vs. median - 10
+maximum vs. median - 25
+
+95 Specifications:
+
+Number of Mines in Each Specification
+average - 80
+maximum - 80
+median - 80
+
+Number of Non-Overlapping Mines
+average vs. maximum - 8
+average vs. median - 4
+maximum vs. median - 9
+
+97 Specifications:
+
+Number of Mines in Each Specification
+average - 48
+maximum - 48
+median - 48
+
+Number of Non-Overlapping Mines
+average vs. maximum - 4
+average vs. median - 2
+maximum vs. median - 6
+

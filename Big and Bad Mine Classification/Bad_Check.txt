@@ -1,0 +1,377 @@
+Bad Mines - Evaluating Differences in Specifications
+
+4 vs. 6 vs. 8 Specifications
+
+total_violations_avg_90 Specifications:
+
+Number of Mines in Each Specification
+4 - 207
+6 - 199
+8 - 199
+
+Number of Non-Overlapping Mines
+4 vs. 6 - 29
+4 vs. 8 - 39
+6 vs. 8 - 17
+
+total_violations_avg_95 Specifications:
+
+Number of Mines in Each Specification
+4 - 131
+6 - 121
+8 - 120
+
+Number of Non-Overlapping Mines
+4 vs. 6 - 11
+4 vs. 8 - 20
+6 vs. 8 - 15
+
+total_violations_avg_97 Specifications:
+
+Number of Mines in Each Specification
+4 - 100
+6 - 91
+8 - 90
+
+Number of Non-Overlapping Mines
+4 vs. 6 - 7
+4 vs. 8 - 13
+6 vs. 8 - 8
+
+total_injuries_avg_90 Specifications:
+
+Number of Mines in Each Specification
+4 - 166
+6 - 171
+8 - 167
+
+Number of Non-Overlapping Mines
+4 vs. 6 - 21
+4 vs. 8 - 30
+6 vs. 8 - 14
+
+total_injuries_avg_95 Specifications:
+
+Number of Mines in Each Specification
+4 - 81
+6 - 83
+8 - 83
+
+Number of Non-Overlapping Mines
+4 vs. 6 - 7
+4 vs. 8 - 13
+6 vs. 8 - 8
+
+total_injuries_avg_97 Specifications:
+
+Number of Mines in Each Specification
+4 - 48
+6 - 48
+8 - 50
+
+Number of Non-Overlapping Mines
+4 vs. 6 - 7
+4 vs. 8 - 8
+6 vs. 8 - 4
+
+total_violations_max_90 Specifications:
+
+Number of Mines in Each Specification
+4 - 161
+6 - 160
+8 - 161
+
+Number of Non-Overlapping Mines
+4 vs. 6 - 41
+4 vs. 8 - 52
+6 vs. 8 - 26
+
+total_violations_max_95 Specifications:
+
+Number of Mines in Each Specification
+4 - 81
+6 - 81
+8 - 83
+
+Number of Non-Overlapping Mines
+4 vs. 6 - 22
+4 vs. 8 - 26
+6 vs. 8 - 11
+
+total_violations_max_97 Specifications:
+
+Number of Mines in Each Specification
+4 - 48
+6 - 50
+8 - 49
+
+Number of Non-Overlapping Mines
+4 vs. 6 - 10
+4 vs. 8 - 15
+6 vs. 8 - 13
+
+total_injuries_max_90 Specifications:
+
+Number of Mines in Each Specification
+4 - 164
+6 - 207
+8 - 189
+
+Number of Non-Overlapping Mines
+4 vs. 6 - 0
+4 vs. 8 - 35
+6 vs. 8 - 45
+
+total_injuries_max_95 Specifications:
+
+Number of Mines in Each Specification
+4 - 99
+6 - 85
+8 - 87
+
+Number of Non-Overlapping Mines
+4 vs. 6 - 29
+4 vs. 8 - 33
+6 vs. 8 - 11
+
+total_injuries_max_97 Specifications:
+
+Number of Mines in Each Specification
+4 - 55
+6 - 48
+8 - 52
+
+Number of Non-Overlapping Mines
+4 vs. 6 - 15
+4 vs. 8 - 17
+6 vs. 8 - 3
+
+total_violations_median_90 Specifications:
+
+Number of Mines in Each Specification
+4 - 211
+6 - 198
+8 - 198
+
+Number of Non-Overlapping Mines
+4 vs. 6 - 29
+4 vs. 8 - 42
+6 vs. 8 - 18
+
+total_violations_median_95 Specifications:
+
+Number of Mines in Each Specification
+4 - 135
+6 - 127
+8 - 123
+
+Number of Non-Overlapping Mines
+4 vs. 6 - 11
+4 vs. 8 - 25
+6 vs. 8 - 14
+
+total_violations_median_97 Specifications:
+
+Number of Mines in Each Specification
+4 - 100
+6 - 91
+8 - 91
+
+Number of Non-Overlapping Mines
+4 vs. 6 - 8
+4 vs. 8 - 10
+6 vs. 8 - 7
+
+total_injuries_median_90 Specifications:
+
+Number of Mines in Each Specification
+4 - 165
+6 - 162
+8 - 168
+
+Number of Non-Overlapping Mines
+4 vs. 6 - 31
+4 vs. 8 - 34
+6 vs. 8 - 11
+
+total_injuries_median_95 Specifications:
+
+Number of Mines in Each Specification
+4 - 90
+6 - 83
+8 - 93
+
+Number of Non-Overlapping Mines
+4 vs. 6 - 17
+4 vs. 8 - 17
+6 vs. 8 - 3
+
+total_injuries_median_97 Specifications:
+
+Number of Mines in Each Specification
+4 - 48
+6 - 51
+8 - 56
+
+Number of Non-Overlapping Mines
+4 vs. 6 - 7
+4 vs. 8 - 9
+6 vs. 8 - 2
+
+Violations vs. Injuries Specifications
+
+avg_8_90 Specifications:
+
+Number of Mines in Each Specification
+Violations - 199
+Injuries - 167
+
+Number of Non_Overlapping Mines
+Violations vs. Injuries - 82
+
+max_8_90 Specifications:
+
+Number of Mines in Each Specification
+Violations - 161
+Injuries - 189
+
+Number of Non_Overlapping Mines
+Violations vs. Injuries - 83
+
+median_8_90 Specifications:
+
+Number of Mines in Each Specification
+Violations - 198
+Injuries - 168
+
+Number of Non_Overlapping Mines
+Violations vs. Injuries - 87
+
+avg_8_95 Specifications:
+
+Number of Mines in Each Specification
+Violations - 120
+Injuries - 83
+
+Number of Non_Overlapping Mines
+Violations vs. Injuries - 32
+
+max_8_95 Specifications:
+
+Number of Mines in Each Specification
+Violations - 83
+Injuries - 87
+
+Number of Non_Overlapping Mines
+Violations vs. Injuries - 46
+
+median_8_95 Specifications:
+
+Number of Mines in Each Specification
+Violations - 123
+Injuries - 93
+
+Number of Non_Overlapping Mines
+Violations vs. Injuries - 36
+
+avg_8_97 Specifications:
+
+Number of Mines in Each Specification
+Violations - 90
+Injuries - 50
+
+Number of Non_Overlapping Mines
+Violations vs. Injuries - 24
+
+max_8_97 Specifications:
+
+Number of Mines in Each Specification
+Violations - 49
+Injuries - 52
+
+Number of Non_Overlapping Mines
+Violations vs. Injuries - 28
+
+median_8_97 Specifications:
+
+Number of Mines in Each Specification
+Violations - 91
+Injuries - 56
+
+Number of Non_Overlapping Mines
+Violations vs. Injuries - 23
+
+Average vs. Max vs. Median Specifications
+
+total_violations_8_90 Specifications:
+
+Number of Mines in Each Specification
+average - 199
+maximum - 161
+median - 198
+
+Number of Non-Overlapping Mines
+average vs. maximum - 29
+average vs. median - 18
+maximum vs. median - 49
+
+total_violations_8_95 Specifications:
+
+Number of Mines in Each Specification
+average - 120
+maximum - 83
+median - 123
+
+Number of Non-Overlapping Mines
+average vs. maximum - 14
+average vs. median - 10
+maximum vs. median - 26
+
+total_violations_8_97 Specifications:
+
+Number of Mines in Each Specification
+average - 90
+maximum - 49
+median - 91
+
+Number of Non-Overlapping Mines
+average vs. maximum - 8
+average vs. median - 9
+maximum vs. median - 16
+
+total_injuries_8_90 Specifications:
+
+Number of Mines in Each Specification
+average - 167
+maximum - 189
+median - 168
+
+Number of Non-Overlapping Mines
+average vs. maximum - 25
+average vs. median - 12
+maximum vs. median - 57
+
+total_injuries_8_95 Specifications:
+
+Number of Mines in Each Specification
+average - 83
+maximum - 87
+median - 93
+
+Number of Non-Overlapping Mines
+average vs. maximum - 14
+average vs. median - 5
+maximum vs. median - 20
+
+total_injuries_8_97 Specifications:
+
+Number of Mines in Each Specification
+average - 50
+maximum - 52
+median - 56
+
+Number of Non-Overlapping Mines
+average vs. maximum - 7
+average vs. median - 3
+maximum vs. median - 10
+
