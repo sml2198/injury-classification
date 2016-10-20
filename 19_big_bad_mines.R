@@ -2,7 +2,7 @@
 
 # 19 - The Big Bad Mines
 
-# Last edit 10/19/16
+# Last edit 10/20/16
 
 ######################################################################################################
 
@@ -10,6 +10,12 @@ data_file_name = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/MR_p
 
 big_check_out_path = "C:/Users/jbodson/Dropbox (Stanford Law School)/R-code/Injury-Classification/Big and Bad Mine Classification/Big_Check.txt"
 bad_check_out_path = "C:/Users/jbodson/Dropbox (Stanford Law School)/R-code/Injury-Classification/Big and Bad Mine Classification/Bad_Check.txt"
+
+big_mines_out = "C:/Users/jbodson/Dropbox (Stanford Law School)/R-code/Injury-Classification/Big and Bad Mine Classification/Big_Mines.txt"
+bad_mines_viol_out = "C:/Users/jbodson/Dropbox (Stanford Law School)/R-code/Injury-Classification/Big and Bad Mine Classification/Bad_Mines_Viol.txt"
+bad_mines_inj_out = "C:/Users/jbodson/Dropbox (Stanford Law School)/R-code/Injury-Classification/Big and Bad Mine Classification/Bad_Mines_Inj.txt"
+big_bad_mines_viol_out = "C:/Users/jbodson/Dropbox (Stanford Law School)/R-code/Injury-Classification/Big and Bad Mine Classification/Big_Bad_Mines_Viol.txt"
+big_bad_mines_inj_out = "C:/Users/jbodson/Dropbox (Stanford Law School)/R-code/Injury-Classification/Big and Bad Mine Classification/Big_Bad_Mines_Inj.txt"
 
 ######################################################################################################
 
@@ -312,10 +318,22 @@ BAD_VIOL_R2_MAX = max_8_total_violations_90 # 161
 BAD_VIOL_R3_MEDIAN = median_8_total_violations_90 # 198
 BAD_VIOL_R4_ALL = union(union(avg_8_total_violations_90, max_8_total_violations_90), median_8_total_violations_90) # 206
 
-BAD_INJ_R1_AVG = avg_8_total_injuries_90
-BAD_INJ_R2_MAX = max_8_total_injuries_90
-BAD_INJ_R3_MEDIAN = median_8_total_injuries_90
-BAD_INJ_R4_ALL = union(union(avg_8_total_injuries_90, max_8_total_injuries_90), median_8_total_injuries_90)
+BAD_MINES_VIOL_R5_6 = intersect(intersect(avg_6_total_violations_90, max_6_total_violations_90), median_6_total_violations_90) # 107
+BAD_VIOL_R6_AVG_6 = avg_6_total_violations_90 # 199
+BAD_VIOL_R7_MAX_6 = max_6_total_violations_90 # 160
+BAD_VIOL_R8_MEDIAN_6 = median_6_total_violations_90 # 198
+BAD_VIOL_R9_ALL_6 = union(union(avg_6_total_violations_90, max_6_total_violations_90), median_6_total_violations_90) # 209
+
+BAD_INJ_R1_AVG = avg_8_total_injuries_90 # 167
+BAD_INJ_R2_MAX = max_8_total_injuries_90 # 189
+BAD_INJ_R3_MEDIAN = median_8_total_injuries_90 # 168
+BAD_INJ_R4_ALL = union(union(avg_8_total_injuries_90, max_8_total_injuries_90), median_8_total_injuries_90) # 226
+
+BAD_MINES_INJ_R5_6 = intersect(intersect(avg_6_total_injuries_90, max_6_total_injuries_90), median_6_total_injuries_90) # 135
+BAD_INJ_R6_AVG_6 = avg_6_total_injuries_90 # 171
+BAD_INJ_R7_MAX_6 = max_6_total_injuries_90 # 207
+BAD_INJ_R8_MEDIAN_6 = median_6_total_injuries_90 # 162
+BAD_INJ_R9_ALL_6 = union(union(avg_6_total_injuries_90, max_6_total_injuries_90), median_6_total_injuries_90) # 234
 
 # check that sample size won't be a problem
 temp = data[data$mineid %in% BAD_MINES_VIOL, ]
@@ -332,6 +350,17 @@ nrow(temp[temp$quarter > 8, ]) # 3884 observations
 temp = data[data$mineid %in% BAD_VIOL_R4_ALL, ]
 nrow(temp[temp$quarter > 8, ]) # 5094 observations
 
+temp = data[data$mineid %in% BAD_MINES_VIOL_R5_6, ]
+nrow(temp[temp$quarter > 6, ]) # 2853 observations
+temp = data[data$mineid %in% BAD_VIOL_R6_AVG_6, ]
+nrow(temp[temp$quarter > 6, ]) # 4039 observations
+temp = data[data$mineid %in% BAD_VIOL_R7_MAX_6, ]
+nrow(temp[temp$quarter > 6, ]) # 4184 observations
+temp = data[data$mineid %in% BAD_VIOL_R8_MEDIAN_6, ]
+nrow(temp[temp$quarter > 6, ]) # 3850 observations
+temp = data[data$mineid %in% BAD_VIOL_R9_ALL_6, ]
+nrow(temp[temp$quarter > 6, ]) # 5181 observations
+
 temp = data[data$mineid %in% BAD_INJ_R1_AVG, ]
 nrow(temp[temp$quarter > 8, ]) # 5516 observations
 temp = data[data$mineid %in% BAD_INJ_R2_MAX, ]
@@ -341,26 +370,94 @@ nrow(temp[temp$quarter > 8, ]) # 5608 observations
 temp = data[data$mineid %in% BAD_INJ_R4_ALL, ]
 nrow(temp[temp$quarter > 8, ]) # 7164 observations
 
+temp = data[data$mineid %in% BAD_MINES_INJ_R5_6, ]
+nrow(temp[temp$quarter > 8, ]) # 4693 observations
+temp = data[data$mineid %in% BAD_INJ_R6_AVG_6, ]
+nrow(temp[temp$quarter > 8, ]) # 5524 observations
+temp = data[data$mineid %in% BAD_INJ_R7_MAX_6, ]
+nrow(temp[temp$quarter > 8, ]) # 6384 observations
+temp = data[data$mineid %in% BAD_INJ_R8_MEDIAN_6, ]
+nrow(temp[temp$quarter > 8, ]) # 5326 observations
+temp = data[data$mineid %in% BAD_INJ_R9_ALL_6, ]
+nrow(temp[temp$quarter > 8, ]) # 7017 observations
+
 # bye
 rm(d, dataset, p, var, avg, max, median, four, six, eight, inj, viol, temp)
 
 ######################################################################################################
 
-# FINISH LATER
-
 # BIG & BAD OR NAH
 
 # grab big & bad mines
-BIG_BAD_MINES_VIOL = (intersect(BIG_MINES, BAD_MINES_VIOL_8))
-BIG_BAD_MINES_INJ = (intersect(BIG_MINES, BAD_MINES_INJ_8))
+BIG_BAD_MINES_VIOL = (intersect(BIG_MINES, BAD_MINES_VIOL)) # 55
+BIG_BAD_MINES_INJ = (intersect(BIG_MINES, BAD_MINES_INJ)) # 79
 
 # robustness checks
+BIG_BAD_VIOL_R1_AVG = intersect(BIG_MINES, BAD_VIOL_R1_AVG) # 64
+BIG_BAD_VIOL_R2_MAX = intersect(BIG_MINES, BAD_VIOL_R2_MAX) # 68
+BIG_BAD_VIOL_R3_MEDIAN = intersect(BIG_MINES, BAD_VIOL_R3_MEDIAN) # 61
+BIG_BAD_VIOL_R4_ALL = intersect(BIG_MINES, BAD_VIOL_R4_ALL) # 73
+BIG_BAD_VIOL_R5_ALL_DOUBLE = intersect(BIG_R4_ALL, BAD_VIOL_R4_ALL) # 89
+
+BIG_BAD_MINES_VIOL_R6_6 = intersect(BIG_MINES, BAD_MINES_VIOL_R5_6) # 52
+BIG_BAD_VIOL_R7_AVG_6 = intersect(BIG_MINES, BAD_VIOL_R6_AVG_6) # 60
+BIG_BAD_VIOL_R8_MAX_6 = intersect(BIG_MINES, BAD_VIOL_R7_MAX_6) # 65
+BIG_BAD_VIOL_R9_MEDIAN_6 = intersect(BIG_MINES, BAD_VIOL_R8_MEDIAN_6) # 57
+BIG_BAD_VIOL_R10_ALL_6 = intersect(BIG_MINES, BAD_VIOL_R9_ALL_6) # 70
+BIG_BAD_VIOL_R11_ALL_DOUBLE_6 = intersect(BIG_R4_ALL, BAD_VIOL_R9_ALL_6) # 84
+
+BIG_BAD_INJ_R1_AVG = intersect(BIG_MINES, BAD_INJ_R1_AVG) # 83
+BIG_BAD_INJ_R2_MAX = intersect(BIG_MINES, BAD_INJ_R2_MAX) # 88
+BIG_BAD_INJ_R3_MEDIAN = intersect(BIG_MINES, BAD_INJ_R3_MEDIAN) # 88
+BIG_BAD_INJ_R4_ALL = intersect(BIG_MINES, BAD_INJ_R4_ALL) # 73
+BIG_BAD_INJ_R5_ALL_DOUBLE = intersect(BIG_R4_ALL, BAD_INJ_R4_ALL) # 119
+
+BIG_BAD_MINES_INJ_R6_6 = intersect(BIG_MINES, BAD_MINES_INJ_R5_6) # 75
+BIG_BAD_INJ_R7_AVG_6 = intersect(BIG_MINES, BAD_INJ_R6_AVG_6) # 82
+BIG_BAD_INJ_R8_MAX_6 = intersect(BIG_MINES, BAD_INJ_R7_MAX_6) # 81
+BIG_BAD_INJ_R9_MEDIAN_6 = intersect(BIG_MINES, BAD_INJ_R8_MEDIAN_6) # 81
+BIG_BAD_INJ_R10_ALL_6 = intersect(BIG_MINES, BAD_INJ_R9_ALL_6) # 87
+BIG_BAD_INJ_R11_ALL_DOUBLE_6 = intersect(BIG_R4_ALL, BAD_INJ_R9_ALL_6) # 112
 
 # check that sample size won't be a problem
-temp = data[data$mineid %in% BIG_BAD_MINES_VIOL_8, ]
+temp = data[data$mineid %in% BIG_BAD_MINES_VIOL, ]
 nrow(temp[temp$quarter > 8, ]) # 1947 observations
+temp = data[data$mineid %in% BIG_BAD_MINES_INJ, ]
+nrow(temp[temp$quarter > 8, ]) # 3177 observations
+
+temp = data[data$mineid %in% BIG_BAD_VIOL_R1_AVG, ]
+nrow(temp[temp$quarter > 8, ]) # 2320 observations
+temp = data[data$mineid %in% BIG_BAD_VIOL_R2_MAX, ]
+nrow(temp[temp$quarter > 8, ]) # 2413 observations
+temp = data[data$mineid %in% BIG_BAD_VIOL_R3_MEDIAN, ]
+nrow(temp[temp$quarter > 8, ]) # 2197 observations
+temp = data[data$mineid %in% BIG_BAD_VIOL_R4_ALL, ]
+nrow(temp[temp$quarter > 8, ]) # 2625 observations
+temp = data[data$mineid %in% BIG_BAD_VIOL_R5_ALL_DOUBLE, ]
+nrow(temp[temp$quarter > 8, ]) # 3172 observations
+
+temp = data[data$mineid %in% BIG_BAD_INJ_R1_AVG, ]
+nrow(temp[temp$quarter > 8, ]) # 3343 observations
+temp = data[data$mineid %in% BIG_BAD_INJ_R2_MAX, ]
+nrow(temp[temp$quarter > 8, ]) # 3535 observations
+temp = data[data$mineid %in% BIG_BAD_INJ_R3_MEDIAN, ]
+nrow(temp[temp$quarter > 8, ]) # 3388 observations
+temp = data[data$mineid %in% BIG_BAD_INJ_R4_ALL, ]
+nrow(temp[temp$quarter > 8, ]) # 3746 observations
+temp = data[data$mineid %in% BIG_BAD_INJ_R5_ALL_DOUBLE, ]
+nrow(temp[temp$quarter > 8, ]) # 4687 observations
 
 # bye
 rm(temp)
+
+######################################################################################################
+
+# OUTPUT MINE LISTS
+
+write(paste(BIG_MINES, collapse = ", "), file = big_mines_out, ncolumns = 1, sep = ",")
+write(paste(BAD_MINES_VIOL, collapse = ", "), file = bad_mines_viol_out, ncolumns = 1, sep = ",")
+write(paste(BAD_MINES_INJ, collapse = ", "), file = bad_mines_inj_out, ncolumns = 1, sep = ",")
+write(paste(BIG_BAD_MINES_VIOL, collapse = ", "), file = big_bad_mines_viol_out, ncolumns = 1, sep = ",")
+write(paste(BIG_BAD_MINES_INJ, collapse = ", "), file = big_bad_mines_inj_out, ncolumns = 1, sep = ",")
 
 ######################################################################################################
