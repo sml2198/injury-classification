@@ -156,8 +156,8 @@ longwall$mineid = str_pad(longwall$mineid, 7, pad = "0")
 # append eia and longwall data
 eia = merge(eia, longwall, by = c("mineid", "year"), all = T)
 
-# replace longwall with zero if it's not a 1 and the year is one for which we have data (2000-2012)
-eia$longwall = ifelse(is.na(eia$longwall) & eia$year < 2013, 0, eia$longwall)
+# replace longwall with zero if it's not a 1 and the year is one for which we have data (2000-2015)
+eia$longwall = ifelse(is.na(eia$longwall) & eia$year < 2016, 0, eia$longwall)
 
 # replace union with zero if it's not a 1 and the year is one for which we have data (2000-2013)
 eia$union = ifelse(is.na(eia$union) & eia$year < 2014, 0, eia$union)
