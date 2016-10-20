@@ -32,6 +32,8 @@ PS_accidents_coded_file_name = "X:/Projects/Mining/NIOSH/analysis/data/4_collaps
 mines_quarters_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_mines.rds"
   # input: cleaned mine-types key produced in produced in 1_clean_mines.R
 mine_types_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/mine_types.rds"
+  # input: cleaned union and production category variables (at the mine-year level) from 1b_clean_union_data.R
+eia_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_eia.rds"
   
   # output: prediction-ready data containing all relevant and maybe relevant vars - MR
 MR_prediction_data_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/MR_prediction_data.rds"
@@ -834,6 +836,28 @@ for (i in 1:length(violation_vars)) {
 
 ######################################################################################################################################
 
+# merge EIA and longwall info
+
+prediction_data = readRDS(PS_prediction_data_out_file_name) # 30289
+eia = readRDS(eia_file_name)
+
+prediction_data$quarter = as.yearqtr(prediction_data$quarter, format = "%Y-%q")
+prediction_data$year = format(prediction_data$quarter, "%Y")
+
+# merge on mine-year specific union & longwall data
+prediction_data = merge(prediction_data, eia, by = c("mineid", "year"), all = T)
+prediction_data = prediction_data[!is.na(prediction_data$quarter),]
+
+# replace longwall with zero if it's not a 1 and the year is one for which we have data (2000-2015)
+prediction_data$longwall = ifelse(is.na(prediction_data$longwall) & 
+                                    prediction_data$year < 2016, 0, prediction_data$longwall)
+
+# replace union with zero if it's not a 1 and the year is one for which we have data (2000-2013)
+prediction_data$union = ifelse(is.na(prediction_data$union) & 
+                                 prediction_data$year < 2014, 0, prediction_data$union)
+
+######################################################################################################################################
+
 # Set the file name (MR/PS, relevant or all vars, Stata-friendly or not.)
 if (relevant.only.option == "on" & injury.type == "MR") {
   saveRDS(prediction_data, file = MR_relevant_prediction_data_out_file_name)
@@ -875,6 +899,7 @@ if (relevant.only.option == "off" & injury.type == "PS") {
       # Also save a csv for this so that we can do prelimary analysis in Stata (clustering is easier in Stata)
       write.csv(stata.data, file = PS_prediction_data_out_csv_name)
       write.dta(stata.data, file = PS_prediction_data_out_dta_name)
+      rm(stata.names, stata.data)
     }
 }
 
