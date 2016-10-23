@@ -2,7 +2,7 @@
 
 // 15 - Model Specification Exploration
 
-// Last edit 10/12/16
+// Last edit 10/22/16
 
 ********************************************************************************
 ********************************************************************************
@@ -13,18 +13,7 @@ pause off
 
 set more off
 
-* local directory "C:\Users\jbodson\Dropbox (Stanford Law School)\R-code\Injury-Classification\Model Summaries 10-12\MR\Estout\"
-local directory "C:\Users\jbodson\Dropbox (Stanford Law School)\R-code\Injury-Classification\Model Summaries 10-12\PS\Estout\"
-
-* log using "C:\Users\jbodson\Dropbox (Stanford Law School)\R-code\Injury-Classification\Model Summaries 10-12\MR\Log Files\MR_log_part_year.txt", text
-* log using "C:\Users\jbodson\Dropbox (Stanford Law School)\R-code\Injury-Classification\Model Summaries 10-12\MR\Log Files\MR_log_part_quarter.txt", text
-* log using "C:\Users\jbodson\Dropbox (Stanford Law School)\R-code\Injury-Classification\Model Summaries 10-12\MR\Log Files\MR_log_subpart_year.txt", text
-* log using "C:\Users\jbodson\Dropbox (Stanford Law School)\R-code\Injury-Classification\Model Summaries 10-12\MR\Log Files\MR_log_subpart_quarter.txt", text
-
-* log using "C:\Users\jbodson\Dropbox (Stanford Law School)\R-code\Injury-Classification\Model Summaries 10-12\PS\Log Files\PS_log_part_year.txt", text
-* log using "C:\Users\jbodson\Dropbox (Stanford Law School)\R-code\Injury-Classification\Model Summaries 10-12\PS\Log Files\PS_log_part_quarter.txt", text
-* log using "C:\Users\jbodson\Dropbox (Stanford Law School)\R-code\Injury-Classification\Model Summaries 10-12\PS\Log Files\PS_log_subpart_year.txt", text
-log using "C:\Users\jbodson\Dropbox (Stanford Law School)\R-code\Injury-Classification\Model Summaries 10-12\PS\Log Files\PS_log_subpart_quarter.txt", text
+local date "10-22"
 
 * local injury_type "MR"
 local injury_type "PS"
@@ -36,18 +25,80 @@ local unit_of_analysis "quarter"
 * local violation_level "part"
 local violation_level "subpart"
 
+* local union_status "on"
+local union_status "off"
+
+local mine_sample "all"
+* local mine_sample "big"
+* local mine_sample "bad"
+* local mine_sample "big_bad"
+
+if "`mine_sample'" == "bad" | "`mine_sample'" == "big_bad" { 
+	local badness "inj"
+	* local badness "viol"
+}
+
+if "`mine_sample'" != "all" { 
+	local version "V1"
+	* local version "V2"
+}
+
 ********************************************************************************
 ********************************************************************************
-// DATA SET-UP
+// INPUT + OUTPUT SET-UP
 
 // read data 
 if "`injury_type'" == "MR" {
-	use "X:\Projects\Mining\NIOSH\analysis\data\5_prediction-ready\MR_prediction_data.dta", clear
+	if "`mine_sample'" == "all" { 
+		use "X:\Projects\Mining\NIOSH\analysis\data\5_prediction-ready\MR_prediction_data.dta", clear
+	}
+	if "`mine_sample'" == "big" { 
+		use "X:\Projects\Mining\NIOSH\analysis\data\5_prediction-ready\Big + Bad Data\MR\MR_prediction_data_big_`version'.dta", clear
+	}
+	if "`mine_sample'" == "bad" | "`mine_sample'" == "big_bad" { 
+		use "X:\Projects\Mining\NIOSH\analysis\data\5_prediction-ready\Big + Bad Data\MR\MR_prediction_data_`mine_sample'_`badness'_`version'.dta", clear
+	}
 }
 
 if "`injury_type'" == "PS" {
-	use "X:\Projects\Mining\NIOSH\analysis\data\5_prediction-ready\PS_prediction_data.dta", clear
+	if "`mine_sample'" == "all" { 
+		use "X:\Projects\Mining\NIOSH\analysis\data\5_prediction-ready\PS_prediction_data.dta", clear
+	}
+	if "`mine_sample'" == "big" { 
+		use "X:\Projects\Mining\NIOSH\analysis\data\5_prediction-ready\Big + Bad Data\PS\PS_prediction_data_big_`version'.dta", clear
+	}
+	if "`mine_sample'" == "bad" | "`mine_sample'" == "big_bad" { 
+		use "X:\Projects\Mining\NIOSH\analysis\data\5_prediction-ready\Big + Bad Data\PS\PS_prediction_data_`mine_sample'_`badness'_`version'.dta", clear
+	}
 }
+
+// name outputs
+local log_time "quarter"
+if "`unit_of_analysis'" != "quarter" {
+	local log_time "year"
+}
+
+if "`mine_sample'" == "all" { 
+	local directory "C:/Users/jbodson/Dropbox (Stanford Law School)/R-code/Injury-Classification/Model Output + Summaries/all/`injury_type'/estout `date'/"
+	capture log close
+	log using "C:/Users/jbodson/Dropbox (Stanford Law School)/R-code/Injury-Classification/Model Output + Summaries/all/`injury_type'/log `date'/log_`violation_level'_`log_time'.txt", text
+}
+
+if "`mine_sample'" == "big" { 
+	local directory "C:/Users/jbodson/Dropbox (Stanford Law School)/R-code/Injury-Classification/Model Output + Summaries/big/`version'/`injury_type'/estout `date'/"
+	capture log close
+	log using "C:/Users/jbodson/Dropbox (Stanford Law School)/R-code/Injury-Classification/Model Output + Summaries/big/`version'/`injury_type'/log `date'/log_`violation_level'_`log_time'.txt", text
+}	
+	
+if "`mine_sample'" == "bad" | "`mine_sample'" == "big_bad" { 
+	local directory "C:/Users/jbodson/Dropbox (Stanford Law School)/R-code/Injury-Classification/Model Output + Summaries/`mine_sample'/`badness'/`version'/`injury_type'/estout `date'/"
+	capture log close
+	log using "C:/Users/jbodson/Dropbox (Stanford Law School)/R-code/Injury-Classification/Model Output + Summaries/`mine_sample'/`/`badness'/`version'/`injury_type'/log `date'/log_`violation_level'_`log_time'.txt", text
+}
+
+********************************************************************************
+********************************************************************************
+// DATA SET-UP
 
 // format variables
 if "`injury_type'" == "MR" {
@@ -72,13 +123,11 @@ if "`violation_level'" == "subpart" {
 	local violation_level_label "SP"
 }
 
-* recast int p* sp* total_violations total_mine_act_violations num_good_faith num_no_terminations num_insp total_injuries dv dv_indicator
-
 gen sample_pp = quarter >= 2007 // flag obs after or equal to 2007 to use in penlaty points analyses (assessments changed for the last time in 2007)
 
 tostring quarter, replace
 encode quarter, gen(quart)
-drop quarter
+drop quarter year
 rename quart time
 
 local time_label "Q" // will be overwritten if unit_of_analysis is year_sum or year_avg
@@ -103,7 +152,7 @@ if "`unit_of_analysis'" == "year_sum" { // collapse to mine years - sums
 	drop if num_quarts < 4
 	
 	// collapse to the mine-year 
-	collapse (sum) p* sp* onsite_insp_hours hours dv* (firstnm) state sample_pp, by(mineid year)
+	collapse (sum) p* sp* onsite_insp_hours hours dv* (firstnm) state sample_pp union longwall, by(mineid year)
 	rename year time
 	encode time, gen(time2)
 	drop time
@@ -118,7 +167,7 @@ if "`unit_of_analysis'" == "year_avg" { // collapse on mine years - averages
 	decode time, gen(year)
 	replace year = regexs(0) if(regexm(year, "^[0-9][0-9][0-9][0-9]"))
 	pause "collapsing to mine-year"
-	collapse (mean) p* sp* onsite_insp_hours hours dv* (firstnm) state sample_pp, by(mineid year)
+	collapse (mean) p* sp* onsite_insp_hours hours dv* (firstnm) state sample_pp union longwall, by(mineid year)
 	rename year time
 	encode time, gen(time2)
 	drop time
@@ -138,7 +187,11 @@ gen lnhours = log(hours)
 pause "complete: data formatting"
 
 // group variables
-local covariates "mine_time onsite_insp_hours"
+local covariates "mine_time onsite_insp_hours longwall"
+
+if "`union_status'" == "on" {
+	local covariates "`covariates' union"
+}
 
 *** lag 0 ***
 if "`violation_level'" == "part" {
@@ -163,7 +216,6 @@ if "`violation_level'" == "part" {
 	pause "complete: variable groups - part no lag"
 }
 
-
 if "`violation_level'" == "subpart" {
 
 	foreach x in 1 2 3 4 5 6 7 8 9 0 {
@@ -185,7 +237,6 @@ if "`violation_level'" == "subpart" {
 	
 	pause "complete: variable groups - subpart no lag"
 }
-
 
 *** lag 1 ***
 if "`violation_level'" == "part" {
@@ -209,8 +260,6 @@ if "`violation_level'" == "part" {
 	
 	pause "complete: variable groups - part lag 1"
 }
-
-
 
 if "`violation_level'" == "subpart" {
 
@@ -303,7 +352,6 @@ if "`violation_level'" == "part" {
 	pause "complete: variable groups - part lag all"
 }
 
-*** subpart lag all ***
 if "`violation_level'" == "subpart" {
 
 	foreach x in 1 2 3 4 5 6 7 8 9 0 {
@@ -380,6 +428,7 @@ Model X.Y.Z
 // NULL MODELS (V & SSV)
 
 // count outcome (V & SSV)
+/*
 glm dv, family(poisson) link(log) vce(cl mineid) exposure(hours) eform
 	
 pause "next"	
@@ -392,13 +441,14 @@ pause "next"
 glm dv, family(nbinomial) link(log) vce(cl mineid) exposure(hours) eform
 
 pause "next"
+*/
 
 nbreg dv, vce(cl mineid) exposure(hours) irr
 
 pause "next"
 
 predict c_null_yhat 
-summ dv_indicator c_null_yhat
+summ dv c_null_yhat
 
 pause "complete: null model - count outcome"
 
@@ -429,6 +479,7 @@ pause "complete: null model - binary outcome"
 // NULL MODELS (PP)
 
 // count outcome (PP)
+/*
 glm dv if sample_pp == 1, family(poisson) link(log) vce(cl mineid) exposure(hours) eform
 	
 pause "next"	
@@ -441,6 +492,7 @@ pause "next"
 glm dv if sample_pp == 1, family(nbinomial) link(log) vce(cl mineid) exposure(hours) eform
 
 pause "next"
+*/
 
 nbreg dv if sample_pp == 1, vce(cl mineid) exposure(hours) irr
 
@@ -487,6 +539,7 @@ if "`violation_level'" == "subpart" {
 // Model C.V.1
 
 // poisson model
+/*
 glm dv `count_vars' `covariates' ib(freq).state ib(freq).time, family(poisson) link(log) vce(cl mineid) exposure(hours) iter(50) eform
 	
 quietly poisson dv `count_vars' `covariates' ib(freq).state ib(freq).time, vce(cl mineid) exposure(hours) iter(50) irr
@@ -499,10 +552,11 @@ pause "next"
 glm dv `count_vars' `covariates' ib(freq).state ib(freq).time, family(nbinomial) link(log) vce(cl mineid) exposure(hours) iter(50) eform
 
 pause "next"
-
+*/
 eststo clear
 eststo: nbreg dv `count_vars' `covariates' ib(freq).state ib(freq).time, vce(cl mineid) exposure(hours) iter(50) irr
 esttab using `"`directory'Model.`injury_label'.`time_label'.`violation_level_label'.C.V.1.csv"', replace plain wide p eform
+/* 
 est store nbin
 
 pause "next"
@@ -514,6 +568,7 @@ pause "next"
 
 // final model + diagnostics/assessment
 quietly nbreg dv `count_vars' `covariates' ib(freq).state ib(freq).time, vce(cl mineid) exposure(hours) iter(50) irr
+*/
 predict cv1_yhat 
 gen cv1_res = dv - cv1_yhat
 
@@ -539,6 +594,7 @@ pause "complete: C.V.1"
 // Model C.V.2
 
 // poisson model
+/*
 glm dv `count_lag_1_vars' `covariates' ib(freq).state ib(freq).time, family(poisson) link(log) vce(cl mineid) exposure(hours) iter(50) eform
 	
 quietly poisson dv `count_lag_1_vars' `covariates' ib(freq).state ib(freq).time, vce(cl mineid) exposure(hours) iter(50) irr
@@ -551,10 +607,11 @@ pause "next"
 glm dv `count_lag_1_vars' `covariates' ib(freq).state ib(freq).time, family(nbinomial) link(log) vce(cl mineid) exposure(hours) iter(50) eform
 
 pause "next"
-
+*/
 eststo clear
 eststo: nbreg dv `count_lag_1_vars' `covariates' ib(freq).state ib(freq).time, vce(cl mineid) exposure(hours) iter(50) irr
 esttab using `"`directory'Model.`injury_label'.`time_label'.`violation_level_label'.C.V.2.csv"', replace plain wide p eform
+/*
 est store nbin
 
 pause "next"
@@ -566,6 +623,7 @@ pause "next"
 
 // final model + diagnostics/assessment
 quietly nbreg dv `count_lag_1_vars' `covariates' ib(freq).state ib(freq).time, vce(cl mineid) exposure(hours) iter(50) irr
+*/
 predict cv2_yhat 
 gen cv2_res = dv - cv2_yhat
 
@@ -591,6 +649,7 @@ pause "complete: C.V.2"
 // Model C.V.3
 
 // poisson model
+/*
 glm dv `count_lag_4_vars' `covariates' ib(freq).state ib(freq).time, family(poisson) link(log) vce(cl mineid) exposure(hours) iter(50) eform
 	
 quietly poisson dv `count_lag_4_vars' `covariates' ib(freq).state ib(freq).time, vce(cl mineid) exposure(hours) iter(50) irr
@@ -603,10 +662,11 @@ pause "next"
 glm dv `count_lag_4_vars' `covariates' ib(freq).state ib(freq).time, family(nbinomial) link(log) vce(cl mineid) exposure(hours) iter(50) eform
 
 pause "next"
-
+*/
 eststo clear
 eststo: nbreg dv `count_lag_4_vars' `covariates' ib(freq).state ib(freq).time, vce(cl mineid) exposure(hours) iter(50) irr
 esttab using `"`directory'Model.`injury_label'.`time_label'.`violation_level_label'.C.V.3.csv"', replace plain wide p eform
+/*
 est store nbin
 
 pause "next"
@@ -618,6 +678,7 @@ pause "next"
 
 // final model + diagnostics/assessment
 quietly nbreg dv `count_lag_4_vars' `covariates' ib(freq).state ib(freq).time, vce(cl mineid) exposure(hours) iter(50) irr
+*/
 predict cv3_yhat 
 gen cv3_res = dv - cv3_yhat
 
@@ -643,6 +704,7 @@ pause "complete: C.V.3"
 // Model C.V.4
 
 // poisson model
+/*
 glm dv `count_lag_all_vars' `covariates' ib(freq).state ib(freq).time, family(poisson) link(log) vce(cl mineid) exposure(hours) iter(50) eform
 	
 quietly poisson dv `count_lag_all_vars' `covariates' ib(freq).state ib(freq).time, vce(cl mineid) exposure(hours) iter(50) irr
@@ -655,10 +717,11 @@ pause "next"
 glm dv `count_lag_all_vars' `covariates' ib(freq).state ib(freq).time, family(nbinomial) link(log) vce(cl mineid) exposure(hours) iter(50) eform
 
 pause "next"
-
+*/
 eststo clear
 eststo: nbreg dv `count_lag_all_vars' `covariates' ib(freq).state ib(freq).time, vce(cl mineid) exposure(hours) iter(50) irr
 esttab using `"`directory'Model.`injury_label'.`time_label'.`violation_level_label'.C.V.4.csv"', replace plain wide p eform
+/*
 est store nbin
 
 pause "next"
@@ -670,6 +733,7 @@ pause "next"
 
 // final model + diagnostics/assessment
 quietly nbreg dv `count_lag_all_vars' `covariates' ib(freq).state ib(freq).time, vce(cl mineid) exposure(hours) iter(50) irr
+*/
 predict cv4_yhat 
 gen cv4_res = dv - cv4_yhat
 
@@ -695,6 +759,7 @@ pause "complete: C.V.4"
 // Model C.SSV.1
 
 // poisson model
+/*
 glm dv `ss_vars' `covariates' ib(freq).state ib(freq).time, family(poisson) link(log) vce(cl mineid) exposure(hours) iter(50) eform
 	
 quietly poisson dv `count_vars' `covariates' ib(freq).state ib(freq).time, vce(cl mineid) exposure(hours) iter(50) irr
@@ -707,10 +772,11 @@ pause "next"
 glm dv `ss_vars' `covariates' ib(freq).state ib(freq).time, family(nbinomial) link(log) vce(cl mineid) exposure(hours) iter(50) eform
 
 pause "next"
-
+*/
 eststo clear
 eststo: nbreg dv `ss_vars' `covariates' ib(freq).state ib(freq).time, vce(cl mineid) exposure(hours) iter(50) irr
 esttab using `"`directory'Model.`injury_label'.`time_label'.`violation_level_label'.C.SSV.1.csv"', replace plain wide p eform
+/*
 est store nbin
 
 pause "next"
@@ -722,6 +788,7 @@ pause "next"
 
 // final model + diagnostics/assessment
 quietly nbreg dv `ss_vars' `covariates' ib(freq).state ib(freq).time, vce(cl mineid) exposure(hours) iter(50) irr
+*/
 predict cssv1_yhat 
 gen cssv1_res = dv - cssv1_yhat
 
@@ -747,6 +814,7 @@ pause "complete: C.SSV.1"
 // Model C.SSV.2
 
 // poisson model
+/*
 glm dv `ss_lag_1_vars' `covariates' ib(freq).state ib(freq).time, family(poisson) link(log) vce(cl mineid) exposure(hours) iter(50) eform
 	
 quietly poisson dv `ss_lag_1_vars' `covariates' ib(freq).state ib(freq).time, vce(cl mineid) exposure(hours) iter(50) irr
@@ -759,10 +827,11 @@ pause "next"
 glm dv `ss_lag_1_vars' `covariates' ib(freq).state ib(freq).time, family(nbinomial) link(log) vce(cl mineid) exposure(hours) iter(50) eform
 
 pause "next"
-
+*/
 eststo clear
 eststo: nbreg dv `ss_lag_1_vars' `covariates' ib(freq).state ib(freq).time, vce(cl mineid) exposure(hours) iter(50) irr
 esttab using `"`directory'Model.`injury_label'.`time_label'.`violation_level_label'.C.SSV.2.csv"', replace plain wide p eform
+/*
 est store nbin
 
 pause "next"
@@ -774,6 +843,7 @@ pause "next"
 
 // final model + diagnostics/assessment
 quietly nbreg dv `ss_lag_1_vars' `covariates' ib(freq).state ib(freq).time, vce(cl mineid) exposure(hours) iter(50) irr
+*/
 predict cssv2_yhat 
 gen cssv2_res = dv - cssv2_yhat
 
@@ -799,6 +869,7 @@ pause "complete: C.SSV.2"
 // Model C.SSV.3
 
 // poisson model
+/*
 glm dv `ss_lag_4_vars' `covariates' ib(freq).state ib(freq).time, family(poisson) link(log) vce(cl mineid) exposure(hours) iter(50) eform
 	
 quietly poisson dv `ss_lag_4_vars' `covariates' ib(freq).state ib(freq).time, vce(cl mineid) exposure(hours) iter(50) irr
@@ -811,10 +882,11 @@ pause "next"
 glm dv `ss_lag_4_vars' `covariates' ib(freq).state ib(freq).time, family(nbinomial) link(log) vce(cl mineid) exposure(hours) iter(50) eform
 
 pause "next"
-
+*/
 eststo clear
 eststo: nbreg dv `ss_lag_4_vars' `covariates' ib(freq).state ib(freq).time, vce(cl mineid) exposure(hours) iter(50) irr
 esttab using `"`directory'Model.`injury_label'.`time_label'.`violation_level_label'.C.SSV.3.csv"', replace plain wide p eform
+/*
 est store nbin
 
 pause "next"
@@ -826,6 +898,7 @@ pause "next"
 
 // final model + diagnostics/assessment
 quietly nbreg dv `ss_lag_4_vars' `covariates' ib(freq).state ib(freq).time, vce(cl mineid) exposure(hours) iter(50) irr
+*/
 predict cssv3_yhat 
 gen cssv3_res = dv - cssv3_yhat
 
@@ -851,6 +924,7 @@ pause "complete: C.SSV.3"
 // Model C.SSV.4
 
 // poisson model
+/*
 glm dv `ss_lag_all_vars' `covariates' ib(freq).state ib(freq).time, family(poisson) link(log) vce(cl mineid) exposure(hours) iter(50) eform
 	
 quietly poisson dv `ss_lag_all_vars' `covariates' ib(freq).state ib(freq).time, vce(cl mineid) exposure(hours) iter(50) irr
@@ -863,10 +937,11 @@ pause "next"
 glm dv `ss_lag_all_vars' `covariates' ib(freq).state ib(freq).time, family(nbinomial) link(log) vce(cl mineid) exposure(hours) iter(50) eform
 
 pause "next"
-
+*/
 eststo clear
 eststo: nbreg dv `ss_lag_all_vars' `covariates' ib(freq).state ib(freq).time, vce(cl mineid) exposure(hours) iter(50) irr
 esttab using `"`directory'Model.`injury_label'.`time_label'.`violation_level_label'.C.SSV.4.csv"', replace plain wide p eform
+/*
 est store nbin
 
 pause "next"
@@ -878,6 +953,7 @@ pause "next"
 
 // final model + diagnostics/assessment
 quietly nbreg dv `ss_lag_all_vars' `covariates' ib(freq).state ib(freq).time, vce(cl mineid) exposure(hours) iter(50) irr
+*/
 predict cssv4_yhat 
 gen cssv4_res = dv - cssv4_yhat
 
@@ -903,6 +979,7 @@ pause "complete: C.SSV.4"
 // Model C.PP.1
 
 // poisson model
+/*
 glm dv `pp_vars' `covariates' ib(freq).state ib(freq).time if sample_pp == 1, family(poisson) link(log) vce(cl mineid) exposure(hours) iter(50) eform
 	
 quietly poisson dv `pp_vars' `covariates' ib(freq).state ib(freq).time if sample_pp == 1, vce(cl mineid) exposure(hours) iter(50) irr
@@ -915,10 +992,11 @@ pause "next"
 glm dv `pp_vars' `covariates' ib(freq).state ib(freq).time if sample_pp == 1, family(nbinomial) link(log) vce(cl mineid) exposure(hours) iter(50) eform
 
 pause "next"
-
+*/
 eststo clear
 eststo: nbreg dv `pp_vars' `covariates' ib(freq).state ib(freq).time if sample_pp == 1, vce(cl mineid) exposure(hours) iter(50) irr
 esttab using `"`directory'Model.`injury_label'.`time_label'.`violation_level_label'.C.PP.1.csv"', replace plain wide p eform
+/*
 est store nbin
 
 pause "next"
@@ -930,6 +1008,7 @@ pause "next"
 
 // final model + diagnostics/assessment
 quietly nbreg dv `pp_vars' `covariates' ib(freq).state ib(freq).time if sample_pp == 1, vce(cl mineid) exposure(hours) iter(50) irr
+*/
 predict cpp1_yhat 
 gen cpp1_res = dv - cpp1_yhat
 
@@ -955,6 +1034,7 @@ pause "complete: C.PP.1"
 // Model C.PP.2
 
 // poisson model
+/*
 glm dv `pp_lag_1_vars' `covariates' ib(freq).state ib(freq).time if sample_pp == 1, family(poisson) link(log) vce(cl mineid) exposure(hours) iter(50) eform
 	
 quietly poisson dv `pp_lag_1_vars' `covariates' ib(freq).state ib(freq).time if sample_pp == 1, vce(cl mineid) exposure(hours) iter(50) irr
@@ -967,10 +1047,11 @@ pause "next"
 glm dv `pp_lag_1_vars' `covariates' ib(freq).state ib(freq).time if sample_pp == 1, family(nbinomial) link(log) vce(cl mineid) exposure(hours) iter(50) eform
 
 pause "next"
-
+*/
 eststo clear
 eststo: nbreg dv `pp_lag_1_vars' `covariates' ib(freq).state ib(freq).time if sample_pp == 1, vce(cl mineid) exposure(hours) iter(50) irr
 esttab using `"`directory'Model.`injury_label'.`time_label'.`violation_level_label'.C.PP.2.csv"', replace plain wide p eform
+/*
 est store nbin
 
 pause "next"
@@ -982,6 +1063,7 @@ pause "next"
 
 // final model + diagnostics/assessment
 quietly nbreg dv `pp_lag_1_vars' `covariates' ib(freq).state ib(freq).time if sample_pp == 1, vce(cl mineid) exposure(hours) iter(50) irr
+*/
 predict cpp2_yhat 
 gen cpp2_res = dv - cpp2_yhat
 
@@ -1007,6 +1089,7 @@ pause "complete: C.PP.2"
 // Model C.PP.3
 
 // poisson model
+/*
 glm dv `pp_lag_4_vars' `covariates' ib(freq).state ib(freq).time if sample_pp == 1, family(poisson) link(log) vce(cl mineid) exposure(hours) iter(50) eform
 	
 quietly poisson dv `pp_lag_4_vars' `covariates' ib(freq).state ib(freq).time if sample_pp == 1, vce(cl mineid) exposure(hours) iter(50) irr
@@ -1019,10 +1102,11 @@ pause "next"
 glm dv `pp_lag_4_vars' `covariates' ib(freq).state ib(freq).time if sample_pp == 1, family(nbinomial) link(log) vce(cl mineid) exposure(hours) iter(50) eform
 
 pause "next"
-
+*/
 eststo clear
 eststo: nbreg dv `pp_lag_4_vars' `covariates' ib(freq).state ib(freq).time if sample_pp == 1, vce(cl mineid) exposure(hours) iter(50) irr
 esttab using `"`directory'Model.`injury_label'.`time_label'.`violation_level_label'.C.PP.3.csv"', replace plain wide p eform
+/*
 est store nbin
 
 pause "next"
@@ -1034,6 +1118,7 @@ pause "next"
 
 // final model + diagnostics/assessment
 quietly nbreg dv `pp_lag_4_vars' `covariates' ib(freq).state ib(freq).time if sample_pp == 1, vce(cl mineid) exposure(hours) iter(50) irr
+*/
 predict cpp3_yhat 
 gen cpp3_res = dv - cpp3_yhat
 
@@ -1059,6 +1144,7 @@ pause "complete: C.PP.3"
 // Model C.PP.4
 
 // poisson model
+/*
 glm dv `pp_lag_all_vars' `covariates' ib(freq).state ib(freq).time if sample_pp == 1, family(poisson) link(log) vce(cl mineid) exposure(hours) iter(50) eform
 	
 quietly poisson dv `pp_lag_all_vars' `covariates' ib(freq).state ib(freq).time if sample_pp == 1, vce(cl mineid) exposure(hours) iter(50) irr
@@ -1071,10 +1157,11 @@ pause "next"
 glm dv `pp_lag_all_vars' `covariates' ib(freq).state ib(freq).time if sample_pp == 1, family(nbinomial) link(log) vce(cl mineid) exposure(hours) iter(50) eform
 
 pause "next"
-
+*/ 
 eststo clear
 eststo: nbreg dv `pp_lag_all_vars' `covariates' ib(freq).state ib(freq).time if sample_pp == 1, vce(cl mineid) exposure(hours) iter(50) irr
 esttab using `"`directory'Model.`injury_label'.`time_label'.`violation_level_label'.C.PP.4.csv"', replace plain wide p eform
+/*
 est store nbin
 
 pause "next"
@@ -1082,10 +1169,11 @@ pause "next"
 // test for over-dispersion
 lrtest pois nbin, stats force 
 
-pause "next" 
+pause "next"
 
 // final model + diagnostics/assessment
 quietly nbreg dv `pp_lag_all_vars' `covariates' ib(freq).state ib(freq).time if sample_pp == 1, vce(cl mineid) exposure(hours) iter(50) irr
+*/
 predict cpp4_yhat 
 gen cpp4_res = dv - cpp4_yhat
 
