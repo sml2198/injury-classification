@@ -2,11 +2,18 @@
 
 # 19 - Choose Selection-Training Divider
 
-# Last edit 10/22/16
+# Last edit 10/24/16
 
 ######################################################################################################
 
 library(plyr)
+
+num_quarters_in_selection = 6
+percentile_big = 85
+percentile_bad_v1 = 60
+percentile_bad_v2 = 75
+num_q_percentile_big = 6
+num_q_percentile_bad = 3
 
 data_file_path = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/MR_prediction_data.rds"
 out_file_path = "C:/Users/jbodson/Dropbox (Stanford Law School)/R-code/Injury-Classification/Mine Classification/Choose Selection-Training Cutoff.txt"
@@ -30,8 +37,6 @@ rm(keep_vars)
 
 ######################################################################################################
 
-num_quarters_in_selection = 6
-
 test = data[data$quarter >= 2015, ]
 not_test = data[data$quarter < 2015, ]
 
@@ -49,18 +54,15 @@ for (type in c("big", "bad_viol", "bad_inj")) {
   
   if (type == "big") {
     var = "hours"
-    percentile = 85
+    percentile = percentile_big
   }
   
   if (type == "bad_viol") {
     var = "viol_rate"
-    percentile = 50
-    
   }
   
   if (type == "bad_inj") {
     var = "inj_rate"
-    percentile = 50
   }
   
   for (cutoff in c(2002:2005)) {
@@ -88,8 +90,12 @@ for (type in c("big", "bad_viol", "bad_inj")) {
                        FUN = function(x) median(as.numeric(x), na.rm = TRUE))
     
     
-    # our Way
+    # our way
     write("V1 - Our Way:", file = out_file_path, append = TRUE)
+    
+    if (type != "big") {
+      percentile = percentile_bad_v1
+    }
     
     mines_avg = avg$mineid[avg[, var] >= quantile(avg[, var], probs = seq(0, 1, 0.01), na.rm = TRUE)[percentile + 1]]
     mines_max = max$mineid[max[, var] >= quantile(max[, var], probs = seq(0, 1, 0.01), na.rm = TRUE)[percentile + 1]]
@@ -104,8 +110,12 @@ for (type in c("big", "bad_viol", "bad_inj")) {
     write(paste(paste("Number of observations:", num_obs, sep = " "), "\n", sep = ""), file = out_file_path, append = TRUE)
     
     
-    # Alison's Way
+    # Alison's way
     write("V2 - Alison's Way:", file = out_file_path, append = TRUE)
+    
+    if (type != "big") {
+      percentile = percentile_bad_v2
+    }
     
     mine_info = data.frame(unique(select$mineid))
     names(mine_info) = "mineid"
@@ -118,7 +128,13 @@ for (type in c("big", "bad_viol", "bad_inj")) {
     
     mine_info$sum = rowSums(mine_info[, -1])
     
-    mines = mine_info[mine_info$sum == num_quarters_in_selection, "mineid"]
+    if (type == "big") {
+      mines = mine_info[mine_info$sum >= num_q_percentile_big, "mineid"]
+    }
+    else {
+      mines = mine_info[mine_info$sum >= num_q_percentile_bad, "mineid"]
+    }
+    
     num_obs = nrow(train[train$mineid %in% mines, ])
     
     assign(paste(paste(type, cutoff, sep = "_"), "v2", sep = "_"), as.character(mines))
@@ -137,7 +153,7 @@ for (type in c("inj", "viol")) {
     
     write(paste(paste("Cutoff:", cutoff, sep = " "), "\n", sep = ""), file = out_file_path, append = TRUE)
     
-    # our Way
+    # Our Way
     write("V1 - Our Way:", file = out_file_path, append = TRUE)
     
     big_mines = eval(parse(text = paste(paste("big", cutoff, sep = "_"), "v1", sep = "_")))

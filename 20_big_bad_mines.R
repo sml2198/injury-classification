@@ -2,28 +2,36 @@
 
 # 20 - Generate Big + Bad Mines
 
-# Last edit 10/22/16
+# Last edit 10/24/16
 
 ######################################################################################################
 
 library(plyr)
-# library(foreign)
+library(foreign)
 
-injury = "MR"
-# injury = "PS"
+# injury = "MR"
+injury = "PS"
+
+num_quarters_in_selection = 6
+cutoff = 2003
+percentile_big = 85
+percentile_bad_v1 = 60
+percentile_bad_v2 = 75
+num_q_percentile_big = 6
+num_q_percentile_bad = 3
 
 if (injury == "MR") {
   data_in_file_path = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/MR_prediction_data.rds"
 }
 if (injury == "PS") {
-  data_in_file_path = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/MR_prediction_data.rds"
+  data_in_file_path = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/PS_prediction_data.rds"
 }
 
 ######################################################################################################
 
 # read in data 
 data = readRDS(data_in_file_path)
-out = readRDS(data_in_file_path)
+out = data
 
 # drop lagged variables
 keep_vars = names(data)[!grepl("lag", names(data))]
@@ -34,19 +42,24 @@ data$viol_rate = data$total_violations / data$onsite_insp_hours
 data$inj_rate = data$total_injuries / data$hours
 data = data[, c("quarter", "mineid", "mine_time", "hours", "viol_rate", "inj_rate")]
 
+# prepare data to output
+out$set = ifelse(out$quarter < cutoff, 0, 
+                 ifelse(out$quarter >= 2015, 2, 1))
+
+stata_names = names(out)
+stata_names = gsub("\\.", "_", stata_names)
+stata_names = gsub("-", "_", stata_names)
+stata_names = gsub("penaltypoints", "pp", stata_names)
+stata_names = gsub("sigandsub", "ss", stata_names)
+names(out) = stata_names
+
 # bye
 rm(keep_vars)
 
 ######################################################################################################
 
-num_quarters_in_selection = 6
-cutoff = 2003
-
 test = data[data$quarter >= 2015, ]
 not_test = data[data$quarter < 2015, ]
-
-out_not_test = out[out$quarter < 2015, ]
-out_train = out_not_test[out_not_test$quarter >= cutoff, ]
 
 get_most_recent_only = function(mine_data) {
   mine_data = mine_data[order(mine_data$quarter, decreasing = TRUE), ]
@@ -62,18 +75,15 @@ for (type in c("big", "bad_viol", "bad_inj")) {
   
   if (type == "big") {
     var = "hours"
-    percentile = 85
+    percentile = percentile_big
   }
   
   if (type == "bad_viol") {
     var = "viol_rate"
-    percentile = 50
-    
   }
   
   if (type == "bad_inj") {
     var = "inj_rate"
-    percentile = 50
   }
 
   # define selection and training sets
@@ -96,7 +106,11 @@ for (type in c("big", "bad_viol", "bad_inj")) {
                      by = list(select$mineid), 
                      FUN = function(x) median(as.numeric(x), na.rm = TRUE))
   
-  # our Way
+  # our way
+  if (type != "big") {
+    percentile = percentile_bad_v1
+  }
+  
   mines_avg = avg$mineid[avg[, var] >= quantile(avg[, var], probs = seq(0, 1, 0.01), na.rm = TRUE)[percentile + 1]]
   mines_max = max$mineid[max[, var] >= quantile(max[, var], probs = seq(0, 1, 0.01), na.rm = TRUE)[percentile + 1]]
   mines_median = median$mineid[median[, var] >= quantile(median[, var], probs = seq(0, 1, 0.01), na.rm = TRUE)[percentile + 1]]
@@ -104,9 +118,13 @@ for (type in c("big", "bad_viol", "bad_inj")) {
   mines = intersect(intersect(mines_avg, mines_max), mines_median)
   assign(paste(paste(type, cutoff, sep = "_"), "v1", sep = "_"), as.character(mines))
 
-  # write.dta(out_train[out_train$mineid %in% mines, ], file = out_file_path_v1)
+  write.dta(out[out$mineid %in% mines, ], file = out_file_path_v1)
   
-  # Alison's Way
+  # Alison's way
+  if (type != "big") {
+    percentile = percentile_bad_v2
+  }
+  
   mine_info = data.frame(unique(select$mineid))
   names(mine_info) = "mineid"
   
@@ -118,10 +136,16 @@ for (type in c("big", "bad_viol", "bad_inj")) {
   
   mine_info$sum = rowSums(mine_info[, -1])
   
-  mines = mine_info[mine_info$sum == num_quarters_in_selection, "mineid"]
+  if (type == "big") {
+    mines = mine_info[mine_info$sum >= num_q_percentile_big, "mineid"]
+  }
+  else {
+    mines = mine_info[mine_info$sum >= num_q_percentile_bad, "mineid"]
+  }
+  
   assign(paste(paste(type, cutoff, sep = "_"), "v2", sep = "_"), as.character(mines))
   
-  # write.dta(out_train[out_train$mineid %in% mines, ], file = out_file_path_v2)
+  write.dta(out[out$mineid %in% mines, ], file = out_file_path_v2)
   
 }
 
@@ -137,15 +161,15 @@ for (type in c("inj", "viol")) {
   
   mines = intersect(big_mines, bad_mines)
   
-  # write.dta(out_train[out_train$mineid %in% mines, ], file = out_file_path_v1)
+  write.dta(out[out$mineid %in% mines, ], file = out_file_path_v1)
   
   # Alison's Way
   big_mines = eval(parse(text = paste(paste("big", cutoff, sep = "_"), "v2", sep = "_")))
   bad_mines = eval(parse(text = paste(paste(paste("bad", type, sep = "_"), cutoff, sep = "_"), "v2", sep = "_")))
     
   mines = intersect(big_mines, bad_mines)
-  
-  # write.dta(out_train[out_train$mineid %in% mines, ], file = out_file_path_v1)
+
+  write.dta(out[out$mineid %in% mines, ], file = out_file_path_v1)
   
 }
 
