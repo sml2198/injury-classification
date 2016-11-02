@@ -121,7 +121,7 @@ names(open_data_mines)[names(open_data_mines) == "PILLAR_RECOVERY_USED"] = "room
 names(open_data_mines)[names(open_data_mines) == "HIGHWALL_MINER_USED"] = "highwallminerindicator"
 names(open_data_mines)[names(open_data_mines) == "MULTIPLE_PITS"] = "multiplepitsindicator"
 names(open_data_mines)[names(open_data_mines) == "MINERS_REP_IND"] = "minersrepindicator"
-names(open_data_mines)[names(open_data_mines) == "SAFETY_COMMITTEE_IND"] = "safetycommitteeindicator"
+names(open_data_mines)[names(open_data_mines) == "SAFETY_COMMITTEE_IND"] = "safetycommittee"
 names(open_data_mines)[names(open_data_mines) == "MILES_FROM_OFFICE"] = "milesfromoffice"
 names(open_data_mines)[names(open_data_mines) == "DIRECTIONS_TO_MINE"] = "directionstominemodified"
 names(open_data_mines)[names(open_data_mines) == "NEAREST_TOWN"] = "nearesttown"
@@ -136,6 +136,13 @@ mine_types = open_data_mines[, c(match("mineid", names(open_data_mines)),
                                      match("coalcormetalmmine", names(open_data_mines)))]
 saveRDS(mine_types, file = mine_types_file_name) #86,362 obs unique on mineid, 3 vars
 rm(mine_types)
+
+# ######################################################################################################
+# 
+# # GENERATE MINE AGE VARIABLE
+# 
+# mines_quarters$statusquarter = as.yearqtr(mines_quarters$minestatusdate)
+# mines_quarters$minestartdate = ifelse(mines_quarters$minestatus == "Active")
 
 ######################################################################################################
 
@@ -216,21 +223,21 @@ mines_quarters$statusyear =
 
 ######################################################################################################
 
-# COLLAPSE MERGED DATA TO THE MINE-QUARTER LEVEL, THEN OUTPUT
+# COLLAPSE MERGED DATA TO THE MINE-QUARTER LEVEL
 
 # collapse data to mine-quarter level to make sure nothing weird has happened
 # we wind up with 36,916 obs which is the same as before, as it should be, wahoo!
 temp = mines_quarters[, c("mineid", 
                           "year",
                           "quarter",
+                          "district",
                           "minetype",
                           "minename",
                           "minestatus",
                           "minestatusdate",
-                          "operatorid",
-                          "operatorname",
                           "coalcormetalmmine",
                           "stateabbreviation",
+                          "safetycommittee",
                           "idate",
                           "idesc",
                           "daysperweek",
@@ -246,6 +253,9 @@ mines_quarters = ddply(mines_quarters[, c("hours_qtr",
                                                   match("employment_qtr", names(x)), 
                                                   match("coal_prod_qtr", names(x)))], na.rm = TRUE))
 mines_quarters = merge(mines_quarters, temp, by = c("mineid", "quarter"), all = T)
+rm(temp)
+
+######################################################################################################
 
 # drop observations with no hours - wind up with 30,551 obs unique on mineid-quarter, 18 vars, 1583 unique mines
 mines_quarters = mines_quarters[(mines_quarters$hours_qtr != 0), ]
