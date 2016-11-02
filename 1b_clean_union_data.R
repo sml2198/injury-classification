@@ -51,6 +51,7 @@ names(eia) = tolower(names(eia))
 eia = eia[, c(match("mineid", names(eia)),
               match("year", names(eia)),
               match("mine_type_code", names(eia)),
+              match("company_type", names(eia)),
               match("operation_type", names(eia)),
               match("longwall_pct", names(eia)),
               match("union_id", names(eia)))]
@@ -60,6 +61,11 @@ eia$mineid = str_pad(eia$mineid, 7, pad = "0")
 
 # Drop years before study period
 eia = eia[eia$year > 1999, ]
+
+# Rename company-type categories
+eia$company_type = ifelse(eia$mine_type == 1, "independent", eia$mine_type)
+eia$company_type = ifelse(eia$mine_type == 2, "subsidiary", eia$mine_type)
+eia$company_type = ifelse(eia$mine_type == 3, "contractor", eia$mine_type)
 
 # Rename mine_type categories
 eia$mine_type = ifelse(eia$mine_type == 0, "prep plant", eia$mine_type)
