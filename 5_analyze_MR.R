@@ -53,8 +53,8 @@ imputation.method = 3
 falling.accidents = "included"
 
 # set preferences - data type - either training data for model selection, or real accidents data for classification
-#data.type = "training data"
-data.type = "real accidents data"
+data.type = "training data"
+# data.type = "real accidents data"
 
 dummies.option = "off"
 
@@ -609,7 +609,7 @@ simple.data = mr.data[, c(match("MR", names(mr.data)), match("repair", names(mr.
 
 if (falling.accidents == "excluded") {
 simple.data[, "likely.occup"] = ifelse(grepl("maintenance", simple.data[,"occupation"]) & 
-                                       simple.data$accident.only == 0  & 
+                                       simple.data$falling.accident == 0  & 
                                        simple.data$accident.only == 0, 1, 0)
 }
 if (falling.accidents == "included") {
