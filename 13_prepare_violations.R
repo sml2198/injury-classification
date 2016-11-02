@@ -245,14 +245,6 @@ for (i in 1:length(cfr_codes)) {
     merged_violations[, paste(cfr_codes[i], "sigandsub", sep = ".")] = apply(cbind(merged_violations[, "sigandsub"], merged_violations[, cfr_codes[i]]), 1, prod)
 # 
 #     # PTS VARS FOR ASSESSMENT CHARACTERISTICS & CONSTRUCTED PTS VARS FOR ASSESSMENT CHARACTERISTICS  
-#     merged_violations[, paste(cfr_codes[i], "negligence.pts", sep = ".")] = apply(cbind(merged_violations[, "negligence.pts"], merged_violations[, cfr_codes[i]]), 1, prod)
-#     merged_violations[, paste(cfr_codes[i], "injuryillness.pts", sep = ".")] = apply(cbind(merged_violations[, "injuryillness.pts"], merged_violations[, cfr_codes[i]]), 1, prod)
-#     merged_violations[, paste(cfr_codes[i], "likelihood.pts", sep = ".")] = apply(cbind(merged_violations[, "likelihood.pts"], merged_violations[, cfr_codes[i]]), 1, prod)
-#     merged_violations[, paste(cfr_codes[i], "personsaffected.pts", sep = ".")] = apply(cbind(merged_violations[, "personsaffected.pts"], merged_violations[, cfr_codes[i]]), 1, prod)
-#     merged_violations[, paste(cfr_codes[i], "negligence.pts.con", sep = ".")] = apply(cbind(merged_violations[, "negligence.pts.con"], merged_violations[, cfr_codes[i]]), 1, prod)
-#     merged_violations[, paste(cfr_codes[i], "injuryillness.pts.con", sep = ".")] = apply(cbind(merged_violations[, "injuryillness.pts.con"], merged_violations[, cfr_codes[i]]), 1, prod)
-#     merged_violations[, paste(cfr_codes[i], "likelihood.pts.con", sep = ".")] = apply(cbind(merged_violations[, "likelihood.pts.con"], merged_violations[, cfr_codes[i]]), 1, prod)
-#     merged_violations[, paste(cfr_codes[i], "personsaffected.pts.con", sep = ".")] = apply(cbind(merged_violations[, "personsaffected.pts.con"], merged_violations[, cfr_codes[i]]), 1, prod)
 #     merged_violations[, paste(cfr_codes[i], "personsaffected", sep = ".")] = apply(cbind(merged_violations[, "personsaffected"], merged_violations[, cfr_codes[i]]), 1, prod)
 #       for (j in 1:length(inspactycodes)) {
 #         merged_violations[, paste(cfr_codes[i], "inspacty", inspactycodes[j], sep = ".")] = ifelse(merged_violations[, cfr_codes[i]] == 1 & merged_violations[, paste("inspacty", inspactycodes[j], sep = ".")] == 1, 1, 0)
@@ -284,8 +276,7 @@ for (i in 1:length(cfr_codes)) {
   
 # Remove things we won't use again.
 rm(relevant_subsectcodes, relevant_partcodes, cfr_codes)
-#   violationtypecodes, assessmenttypecodes, inspactycodes,
-#   likelihoodcodes, injuryillnesscodes, negligencecodes)
+# violationtypecodes, assessmenttypecodes, inspactycodes, likelihoodcodes, injuryillnesscodes, negligencecodes)
 
 ######################################################################################################################################
 
@@ -485,8 +476,8 @@ collapsed_violations$row_id = seq.int(nrow(collapsed_violations))
 # MERGE VIOLATIONS DATA ONTO MINES
 
 # Read in data and drop obs not in study period
-mines_quarters = readRDS(mines_quarters_file_name)
-mines_quarters = mines_quarters[mines_quarters$quarter < "2016 Q2",]
+mines_quarters = readRDS(mines_quarters_file_name) # 30551 obs 21 vars
+mines_quarters = mines_quarters[mines_quarters$quarter < "2016 Q2",] # 30289 obs
 
 # Merge mine-specific contractor info onto mine quarters & drop 140 obs that were added but not merged (there were no nonmissing hours until this)
 merged_quarters_contractors = merge(mines_quarters, contractor_vars, by = c("mineid", "quarter"), all = T)
@@ -523,6 +514,7 @@ merged_mines_violations_accidents = merged_mines_violations_accidents[!is.na(mer
 # Replace missings (mine quarters without accidents data) with zeroes (see next section for zero violations)
 merged_mines_violations_accidents$total_injuries = ifelse(is.na(merged_mines_violations_accidents$total_injuries), 
                                                          0, merged_mines_violations_accidents$total_injuries)
+
 # Replace MR/PS with zero where missing (these all occur in quarters that had zero total accidents)
 if (injury.type == "MR") {
   merged_mines_violations_accidents$MR = ifelse(is.na(merged_mines_violations_accidents$MR), 
@@ -837,7 +829,6 @@ for (i in 1:length(violation_vars)) {
 ######################################################################################################################################
 
 # merge EIA and longwall info
-
 prediction_data = readRDS(PS_prediction_data_out_file_name) # 30289
 eia = readRDS(eia_file_name)
 
