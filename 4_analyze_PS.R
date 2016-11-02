@@ -542,7 +542,7 @@ ps_data[, "operating"] = ifelse((grepl("( |^|was|while|had)(tr(a)*m(m)*[^ ]{0,3}
                                (!grepl("(side of|right|left|beside).{1,10}VEHICLE", ps_data$narrative) | 
                                  grepl("remote.{1,5}control", ps_data$narrative))), 1, 0)
 
-# Use head/roof to remove driver hitting head against vehicle roof - REQUIRES OPEATING
+# Use head/roof to remove driver hitting head against vehicle roof - REQUIRES OPERATING
 ps_data[, "headroof"] = ifelse((grepl("(head|neck).{1,5}(on|str(ike|uck)|hit|against).{1,5}(roof|top)", ps_data[,"old_narrative"]) |
                                 grepl("(bump|str(ike|uck)|hit).{1,5}(head|neck).{1,5}(roof|top)", ps_data[,"old_narrative"]) | 
                                (grepl("whip( )*lash", ps_data[,"old_narrative"]) & 
