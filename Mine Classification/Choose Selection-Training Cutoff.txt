@@ -1,0 +1,213 @@
+Choose Selection-Training Cutoff
+
+
+big:
+
+Cutoff: 2002
+
+V1 - Our Way:
+Number of mines: 64
+Number of observations: 2211
+
+V2 - Alison's Way:
+Number of mines: 52
+Number of observations: 2207
+
+Cutoff: 2003
+
+V1 - Our Way:
+Number of mines: 81
+Number of observations: 2541
+
+V2 - Alison's Way:
+Number of mines: 58
+Number of observations: 2270
+
+Cutoff: 2004
+
+V1 - Our Way:
+Number of mines: 90
+Number of observations: 2442
+
+V2 - Alison's Way:
+Number of mines: 56
+Number of observations: 1944
+
+Cutoff: 2005
+
+V1 - Our Way:
+Number of mines: 100
+Number of observations: 2331
+
+V2 - Alison's Way:
+Number of mines: 65
+Number of observations: 1992
+
+bad_viol:
+
+Cutoff: 2002
+
+V1 - Our Way:
+Number of mines: 140
+Number of observations: 1942
+
+V2 - Alison's Way:
+Number of mines: 111
+Number of observations: 1768
+
+Cutoff: 2003
+
+V1 - Our Way:
+Number of mines: 167
+Number of observations: 1838
+
+V2 - Alison's Way:
+Number of mines: 131
+Number of observations: 2086
+
+Cutoff: 2004
+
+V1 - Our Way:
+Number of mines: 181
+Number of observations: 1559
+
+V2 - Alison's Way:
+Number of mines: 140
+Number of observations: 1872
+
+Cutoff: 2005
+
+V1 - Our Way:
+Number of mines: 206
+Number of observations: 1440
+
+V2 - Alison's Way:
+Number of mines: 157
+Number of observations: 1791
+
+bad_inj:
+
+Cutoff: 2002
+
+V1 - Our Way:
+Number of mines: 116
+Number of observations: 2042
+
+V2 - Alison's Way:
+Number of mines: 111
+Number of observations: 2214
+
+Cutoff: 2003
+
+V1 - Our Way:
+Number of mines: 138
+Number of observations: 2098
+
+V2 - Alison's Way:
+Number of mines: 129
+Number of observations: 2277
+
+Cutoff: 2004
+
+V1 - Our Way:
+Number of mines: 151
+Number of observations: 1964
+
+V2 - Alison's Way:
+Number of mines: 143
+Number of observations: 1993
+
+Cutoff: 2005
+
+V1 - Our Way:
+Number of mines: 171
+Number of observations: 1837
+
+V2 - Alison's Way:
+Number of mines: 169
+Number of observations: 2191
+
+big_bad_inj:
+
+Cutoff: 2002
+
+V1 - Our Way:
+Number of mines: 8
+Number of observations: 234
+
+V2 - Alison's Way:
+Number of mines: 6
+Number of observations: 152
+
+Cutoff: 2003
+
+V1 - Our Way:
+Number of mines: 9
+Number of observations: 256
+
+V2 - Alison's Way:
+Number of mines: 9
+Number of observations: 261
+
+Cutoff: 2004
+
+V1 - Our Way:
+Number of mines: 12
+Number of observations: 249
+
+V2 - Alison's Way:
+Number of mines: 7
+Number of observations: 240
+
+Cutoff: 2005
+
+V1 - Our Way:
+Number of mines: 12
+Number of observations: 138
+
+V2 - Alison's Way:
+Number of mines: 12
+Number of observations: 303
+
+big_bad_viol:
+
+Cutoff: 2002
+
+V1 - Our Way:
+Number of mines: 21
+Number of observations: 422
+
+V2 - Alison's Way:
+Number of mines: 17
+Number of observations: 426
+
+Cutoff: 2003
+
+V1 - Our Way:
+Number of mines: 27
+Number of observations: 539
+
+V2 - Alison's Way:
+Number of mines: 20
+Number of observations: 672
+
+Cutoff: 2004
+
+V1 - Our Way:
+Number of mines: 21
+Number of observations: 446
+
+V2 - Alison's Way:
+Number of mines: 20
+Number of observations: 651
+
+Cutoff: 2005
+
+V1 - Our Way:
+Number of mines: 23
+Number of observations: 434
+
+V2 - Alison's Way:
+Number of mines: 26
+Number of observations: 815
+

@@ -47,23 +47,34 @@ history = history[(history$COAL_METAL_IND == "C"), ] # down to 63143 obs
 
 # rename variables
 names(history)[names(history) == "CONTROLLER_ID"] = "controllerid"
-names(history)[names(history) == "CONTROLLER_NAME"] = "controllername"
 names(history)[names(history) == "OPERATOR_ID"] = "operatorid"
-names(history)[names(history) == "OPERATOR_NAME"] = "operatorname"
 names(history)[names(history) == "MINE_ID"] = "mineid"
 names(history)[names(history) == "CONTROLLER_START_DT"] = "controllerstartdt"
 names(history)[names(history) == "OPERATOR_START_DT"] = "operatorstartdt"
 names(history)[names(history) == "CONTROLLER_END_DT"] = "controllerenddt"
 names(history)[names(history) == "OPERATOR_END_DT"] = "operatorenddt"
+history = history[, c("controllerid", "operatorid", "mineid", "controllerstartdt", "operatorstartdt", "controllerenddt", "operatorenddt")]
 
 # Format mineid
 history$mineid = str_pad(history$mineid, 7, pad = "0")
 
-# convert start/end dates into quarters
+# convert start/end dates into quarters & replace end quarter with 2016 if missing
+enddtvars = c("controllerenddt", "operatorenddt")
+for (i in 1:length(enddtvars)) {
+  history[, enddtvars[i]] = as.character(history[, enddtvars[i]])
+  history[, enddtvars[i]] = ifelse(history[, enddtvars[i]] == "", NA, history[, enddtvars[i]])
+  history[, enddtvars[i]] = ifelse(is.na(history[, enddtvars[i]]), "01/01/2016", history[, enddtvars[i]]) # Q1 2016
+}
 datevars = c("controllerstartdt", "operatorstartdt", "controllerenddt", "operatorenddt")
 for (i in 1:length(datevars)) {
   history[, datevars[i]] = as.Date(as.character(history[, datevars[i]]), "%m/%d/%Y")
   history[, datevars[i]] = as.yearqtr(history[, datevars[i]])
+}
+history = history[order(history$mineid),]
+
+# NOW FILL IN MINES DATASET WITH OPERATOR HISTORY
+for (i in 1:nrow(mines)) {
+  mines[, operatorid[i]] = ifelse(mines[, mineid[i]] == history[, mineid] & (mines[, quarter[i]] >= history[, operatorstartdt] & mines[, quarter[i]] <= history[, operatorenddt]), history[, operatorid], mines[, operatorid])
 }
 
 ######################################################################################################
