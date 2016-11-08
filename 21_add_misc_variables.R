@@ -88,8 +88,6 @@ for (i in 1:length(datevars)) {
 old_data = read.table(old_mines_data_in_file_name, na.strings=c("","NA"), sep = "|", header = T)
 
 names(old_data)[names(old_data) == "mine_id"] = "mineid"
-names(old_data)[names(old_data) == "total_employees"] = "old_employment"
-names(old_data)[names(old_data) == "total_coal_prod"] = "old_coal_prod"
 names(old_data)[names(old_data) == "total_hours_worked"] = "old_hours"
 
 # format quarters
@@ -102,13 +100,11 @@ old_data = old_data[old_data$quarter < "2000 Q1", ]
 # add empty columns so we can append
 old_data$district = NA
 old_data$safetycommittee = NA
-mines$old_coal_prod = NA
-mines$old_employment = NA
-mines$old_hours = NA
 
 # drop quarters with no hours (non-active)
 old_data$old_hours = as.numeric(old_data$old_hours)
 old_data = old_data[which(old_data$old_hours > 0), ] 
+old_data = old_data[, c("mineid", "quarter", "district", "safetycommittee")]
 
 # append with mines data
 mines = rbind(mines, old_data)
