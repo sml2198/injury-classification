@@ -46,10 +46,8 @@ mines = mines[, c("mineid", "quarter", "district", "safetycommittee")]
 ######################################################################################################
 
 # FROM CONTROLLER/OPERATOR HISORY DATA, VARIABLES TO ADD: 
-# controller dummies (controllerid)
 # operator dummies (operatorid)
 # mine age (to be constructed from mine status and operator history)
-# controller production (to be generated from production and controller id - logged and unlogged)
 
 # read controller history data - 144,065 obs, 13 vars 
 # dataset downloaded on 9/13/2016 from http://arlweb.msha.gov/OpenGovernmentData/OGIMSHA.asp
@@ -113,6 +111,11 @@ old_data = old_data[, c("mineid", "quarter", "district", "safetycommittee")]
 # append with mines data
 mines = rbind(mines, old_data)
 rm(old_data)
+
+# keep one obsevration from each year 
+mines$year = year(mines$quarter)
+mines = subset(mines, !duplicated(mines[, c("mineid", "year")]))
+mines = mines[, c("mineid", "year", "district", "safetycommittee")]
 
 ######################################################################################################
 
@@ -264,7 +267,7 @@ if (injury.type == "PS") {
 }
 
 # merge on new vars from mines and history datasets 
-data = merge(data, mines_final2, by = c("mineid", "quarter"))
+data = merge(data, mines_final2, by = c("mineid", "year"))
 
 # save new .dtas for Stata analysi 
 if (injury.type == "MR") {
