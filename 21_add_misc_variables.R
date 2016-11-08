@@ -6,14 +6,24 @@
 
 ######################################################################################################
 
+library(foreign)
+
   # input: clean mine-quarter level data (has observations dropped in preparation for prediction)
 mines_quarters_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_mines.rds"
   # input: controller/operator history data downloaded on 9/13/2016 from MSHA open data 
 controller_operator_history_in_file_name = "X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA/open_data/ControllerOperatorHistory.txt"
-  # input (and output): prediction-ready data containing all relevant and maybe relevant vars  - PS
-PS_prediction_data_file_name = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/PS_prediction_data.rds"
-  # input (and output): prediction-ready data containing all relevant and maybe relevant vars  - MR
-MR_prediction_data_file_name = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/MR_prediction_data.rds"
+  # input: prediction-ready data containing all relevant and maybe relevant vars  - PS
+PS_prediction_data_in_file_name = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/PS_prediction_data.rds"
+  # input: prediction-ready data containing all relevant and maybe relevant vars  - MR
+MR_prediction_data_in_file_name = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/MR_prediction_data.rds"
+
+# input: old data from last project (1983-2000)
+old_mines_data_in_file_name = "X:/Projects/Mining/Targeting_Pilot/analysis/data/5_prepped/0_prepped_for_CART_unlagged/coal_unlagged_mine_quarter_CART.csv"
+
+# output: prediction-ready data containing all relevant and maybe relevant vars  - PS (dta)
+PS_prediction_data_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/PS_prediction_data.dta"
+# output: prediction-ready data containing all relevant and maybe relevant vars  - MR (dta)
+MR_prediction_data_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/MR_prediction_data.dta"
 
 injury.type = "PS"
 #injury.type = "MR"
@@ -70,29 +80,256 @@ for (i in 1:length(datevars)) {
   history[, datevars[i]] = as.Date(as.character(history[, datevars[i]]), "%m/%d/%Y")
   history[, datevars[i]] = as.yearqtr(history[, datevars[i]])
 }
-history = history[order(history$mineid),]
+
+######################################################################################################
+
+# MERGE IN DATA FROM OLD PROJECT 
+
+old_data = read.table(old_mines_data_in_file_name, na.strings=c("","NA"), sep = "|", header = T)
+
+names(old_data)[names(old_data) == "mine_id"] = "mineid"
+names(old_data)[names(old_data) == "total_employees"] = "old_employment"
+names(old_data)[names(old_data) == "total_coal_prod"] = "old_coal_prod"
+names(old_data)[names(old_data) == "total_hours_worked"] = "old_hours"
+
+# format quarters
+old_data$quarter = as.character(old_data$quarter)
+old_data$quarter = as.yearqtr(old_data$quarter)
+
+# only keep if it's for a year for which we're missing data
+old_data = old_data[old_data$quarter < "2000 Q1", ]
+
+# add empty columns so we can append
+old_data$district = NA
+old_data$safetycommittee = NA
+mines$old_coal_prod = NA
+mines$old_employment = NA
+mines$old_hours = NA
+
+# drop quarters with no hours (non-active)
+old_data$old_hours = as.numeric(old_data$old_hours)
+old_data = old_data[which(old_data$old_hours > 0), ] 
+
+# append with mines data
+mines = rbind(mines, old_data)
+rm(old_data)
+
+######################################################################################################
 
 # NOW FILL IN MINES DATASET WITH OPERATOR HISTORY
-for (i in 1:nrow(mines)) {
-  mines[, operatorid[i]] = ifelse(mines[, mineid[i]] == history[, mineid] & (mines[, quarter[i]] >= history[, operatorstartdt] & mines[, quarter[i]] <= history[, operatorenddt]), history[, operatorid], mines[, operatorid])
+
+history = history[order(history$mineid),]
+history$controllerid = as.character(history$controllerid)
+history$operatorid = as.character(history$operatorid)
+history = history[!duplicated(history), ]
+
+# how many controller/operator columns?
+check_c = history[, c("mineid", "controllerid", "controllerstartdt", "controllerenddt")]
+check_o = history[, c("mineid", "operatorid", "operatorstartdt", "operatorenddt")]
+
+num_controllers = 0
+num_operators = 0
+for (mine in unique(mines$mineid)) {
+  temp_c = check_c[check_c$mineid == mine, ]
+  temp_c = temp_c[!duplicated(temp_c), ]
+  
+  temp_o = check_o[check_o$mineid == mine, ]
+  temp_o = temp_o[!duplicated(temp_o), ]
+  
+  num_controllers_temp = nrow(temp_c)
+  num_controllers = max(num_controllers, num_controllers_temp)
+  
+  num_operators_temp = nrow(temp_o)
+  num_operators = max(num_operators, num_operators_temp)
+  
 }
+num_controllers # 21
+num_operators # 21
+
+# make new operator and controller columns in mines
+controller = data.frame(matrix(NA, nrow = nrow(mines), ncol = num_controllers))  
+names(controller) = paste("controllerid", 1:num_controllers, sep = "_")
+mines = cbind(mines, controller)
+
+operator = data.frame(matrix(NA, nrow = nrow(mines), ncol = num_operators))  
+names(operator) = paste("operatorid", 1:num_operators, sep = "_")
+mines = cbind(mines, operator)
+
+# fill in operator and controller ids
+fill_in_mines = function(t_mines) {
+  
+  mine = unique(t_mines$mineid)[1]
+  t_history = history[history$mineid == mine, ]
+  t_history_c = t_history[, c("controllerid", "controllerstartdt", "controllerenddt")]
+  t_history_c = t_history_c[!duplicated(t_history_c), ]
+  t_history_o = t_history[, c("operatorid", "operatorstartdt", "operatorenddt")]
+  t_history_o = t_history_o[!duplicated(t_history_o), ]
+  
+  for (i in 1:nrow(t_mines)) {
+    for (j in 1:nrow(t_history_c)) {
+      t_mines[i, paste("controllerid", j, sep = "_")] = 
+        ifelse(t_mines$quarter[i] >= t_history_c$controllerstartdt[j]
+               & t_mines$quarter[i] < t_history_c$controllerenddt[j], 
+               t_history_c$controllerid[j], NA)
+    }
+    for (k in 1:nrow(t_history_o)) {
+      t_mines[i, paste("operatorid", k, sep = "_")] = 
+        ifelse(t_mines$quarter[i] >= t_history_o$operatorstartdt[k] 
+               & t_mines$quarter[i] < t_history_o$operatorenddt[k], 
+               t_history_o$operatorid[k], NA)
+    }
+  }
+  return(t_mines)
+}
+
+mines_new = ddply(mines, "mineid", fill_in_mines)
+
+sapply(mines_new, function(x)all(is.na(x))) 
+# weird results here...
+# controller - ALL NA
+# 19
+# operator - ALL NA
+# 16, 17, 18, 19, 21
+
+# let's get to the bottom of this...
+for (mine in unique(mines$mineid)) {
+  
+  t_history = history[history$mineid == mine, ]
+  t_history_c = t_history[, c("controllerid", "controllerstartdt", "controllerenddt")]
+  t_history_c = t_history_c[!duplicated(t_history_c), ]
+  t_history_o = t_history[, c("operatorid", "operatorstartdt", "operatorenddt")]
+  t_history_o = t_history_o[!duplicated(t_history_o), ]
+  
+  if (nrow(t_history_c) >= 19) {
+    print(mine)
+    print(paste("t_history_c", nrow(t_history_c), sep = " "))
+  }
+  
+  if (nrow(t_history_o) >= 16) {
+    print(mine)
+    print(paste("t_history_o", nrow(t_history_o), sep = " "))
+  } 
+  
+}
+
+# check controller row 19 should be blank
+t = history[history$mineid == "4403317", c("controllerid", "controllerstartdt", "controllerenddt")]
+t = t[!duplicated(t), ]
+
+t = history[history$mineid == "4403524", c("controllerid", "controllerstartdt", "controllerenddt")]
+t = t[!duplicated(t), ]
+
+# check operator row 16, 17, 18, 19, 21 should be blank
+t = history[history$mineid == "1516404", c("operatorid", "operatorstartdt", "operatorenddt")]
+t = t[!duplicated(t), ]
+
+t = history[history$mineid == "4403317", c("operatorid", "operatorstartdt", "operatorenddt")]
+t = t[!duplicated(t), ]
+
+t = history[history$mineid == "4403524", c("operatorid", "operatorstartdt", "operatorenddt")]
+t = t[!duplicated(t), ]
+
+t = history[history$mineid == "4405510", c("operatorid", "operatorstartdt", "operatorenddt")]
+t = t[!duplicated(t), ]
+
+t = history[history$mineid == "4406859", c("operatorid", "operatorstartdt", "operatorenddt")]
+t = t[!duplicated(t), ]
+
+# how many controllers/operators at once?
+c = mines_new[, grep("controller", names(mines_new))]
+max(rowSums(!is.na(c))) # 13
+o = mines_new[, grep("operator", names(mines_new))]
+max(rowSums(!is.na(o))) # 1
+
+# collapse non-overlapping controllers/operators into the same column
+mines_new2 = mines_new
+
+mines_final = mines[c("mineid", "quarter", "district", "safetycommittee")]
+
+mines_final$operatorid = NA
+
+controller = data.frame(matrix(NA, nrow = nrow(mines_final), ncol = max(rowSums(!is.na(c)))))  
+names(controller) = paste("controllerid", 1:max(rowSums(!is.na(c))), sep = "_")
+mines_final = cbind(mines_final, controller)
+
+# this takes a while to run
+# we are all works in progress
+for (i in 1:nrow(mines_final)) {
+  print(i) # gives you an idea how far along you are...
+  
+  mines_final$operatorid[i] = ifelse(sum(!is.na(mines_new[i, grep("operator", names(mines_new))])) == 0, 
+                                     NA, mines_new[i, grep("operator", names(mines_new))[!is.na(mines_new[i, grep("operator", names(mines_new))])]])
+  
+  cont = mines_new[i, grep("controller", names(mines_new))[!is.na(mines_new[i, grep("controller", names(mines_new))])]]
+  cont = c(cont, rep(NA, max(rowSums(!is.na(c))) - length(cont)))
+  mines_final[i, paste("controllerid", 1:max(rowSums(!is.na(c))), sep = "_")] = cont
+  
+}
+
+######################################################################################################
+
+# age of current operator
+operator_history = history[, c("operatorid", "operatorstartdt")]
+operator_history = operator_history[!duplicated(operator_history), ]
+
+get_min = function(op_hist) {
+  return(op_hist[op_hist$operatorstartdt == min(op_hist$operatorstartdt), ])
+}
+
+operator_first = ddply(operator_history, "operatorid", get_min)
+
+# this will take a while to run
+# we are all works in progress
+mines_final$operator_age = NA
+for (i in 1:nrow(mines_final)) {
+  mines_final$operator_age[i] = ifelse(is.na(mines_final$operatorid[i]), NA,
+                                       mines_final$quarter[i] - operator_first[operator_first$operatorid == mines_final$operatorid[i], "operatorstartdt"])
+}
+
+# number of years operator has been at given mine
+operator_mine_history = history[, c("mineid", "operatorid", "operatorstartdt")]
+operator_mine_history = operator_mine_history[!duplicated(operator_mine_history), ]
+
+operator_mine_dups = operator_mine_history[, c("mineid", "operatorid")]
+operator_mine_dups = operator_mine_dups[duplicated(operator_mine_dups), ]
+operator_mine_dups = operator_mine_dups[!duplicated(operator_mine_dups), ]
+
+fill_in_mine_op_history = function(temp) {
+  for (i in 1:nrow(temp)) {
+    if (is.na(temp$operatorid[i])) {
+      temp$operator_mine_age[i] = NA
+    }
+    else {
+      if(temp$mineid[i] %in% operator_mine_dups$mineid & temp$operatorid[i] %in% operator_mine_dups[operator_mine_dups$mineid == temp$mineid[i], "operatorid"]) {
+        years = operator_mine_history[operator_mine_history$mineid == temp$mineid[i] & operator_mine_history$operatorid == temp$operatorid[i], "operatorstartdt"]
+        years = years[years <= temp$quarter[i]]
+        temp$operator_mine_age[i] = min(temp$quarter[i] - years)
+      }
+      else {
+        first = operator_mine_history[operator_mine_history$mineid == temp$mineid[i] & operator_mine_history$operatorid == temp$operatorid[i], "operatorstartdt"]
+        temp$operator_mine_age[i] = temp$quarter[i] - first
+      }
+    }
+  }
+  return(temp)
+}
+
+mines_final$operator_mine_age = NA
+mines_final2 = ddply(mines_final, "mineid", fill_in_mine_op_history)
 
 ######################################################################################################
 
 # BRING IN REAL DATA, MERGE ON NEW VARS, OUTPUT
 
 if (injury.type == "MR") {
-  data = readRDS(MR_prediction_data_file_name)
+  data = readRDS(MR_prediction_data_in_file_name)
 }
 if (injury.type == "PS") {
-  data = readRDS(PS_prediction_data_file_name)
+  data = readRDS(PS_prediction_data_in_file_name)
 }
-
-# merge on new vars from mine dataset
-data = merge(data, mines, by = c("mineid", "quarter"))
              
-# merge on new vars from history dataset - WHAT'S THE UNIT HERE?
-data = merge(data, history, by = c(???????????????????????))
+# merge on new vars from mines and history datasets 
+data = merge(data, mines_final2, by = c("mineid", "quarter"))
 
 # save new .dtas for Stata analysi 
 if (injury.type == "MR") {
@@ -102,7 +339,7 @@ if (injury.type == "MR") {
     stata.names = gsub("penaltypoints", "pp", stata.names)
     stata.names = gsub("sigandsub", "ss", stata.names)
     names(data) = stata.names
-    write.dta(data, file = MR_prediction_data_file_name)
+    write.dta(data, file = MR_prediction_data_out_file_name)
 }
 if (injury.type == "PS") {
     stata.names = names(data)
@@ -111,7 +348,7 @@ if (injury.type == "PS") {
     stata.names = gsub("penaltypoints", "pp", stata.names)
     stata.names = gsub("sigandsub", "ss", stata.names)
     names(data) = stata.names
-    write.dta(data, file = PS_prediction_data_file_name)
+    write.dta(data, file = PS_prediction_data_out_file_name)
 }
 
 ######################################################################################################
