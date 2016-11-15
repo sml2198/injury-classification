@@ -7,6 +7,8 @@
 ######################################################################################################
 
 library(foreign)
+library(plyr)
+library(zoo)
 
   # input: clean mine-quarter level data (has observations dropped in preparation for prediction)
 mines_quarters_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_mines.rds"
