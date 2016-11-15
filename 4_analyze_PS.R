@@ -50,8 +50,8 @@ false_pos_file_name = "C:/Users/slevine2/Desktop/ps_false_positives.csv"
 # SET PREFERENCES 
 
 # Set preferences - data type - either training data for model selection, or real accidents data for classification
-# data.type = "training data"
-data.type = "real accidents data"
+data.type = "training data"
+# data.type = "real accidents data"
 
 # Specify imputation method - not used in final boosting algorithm
 imputation_method = 3
@@ -1203,30 +1203,45 @@ if (data.type == "training data" ) {
   simple.ps = simple.ps[,c(-grep("type", names(simple.ps)))]
   
   # CART
-  cart <- rpart(PS ~ ., data = simple.ps[1:600, !(names(simple.ps) %in% c('documentno'))], method = "class")
-  cart.predictions = predict(cart, simple.ps[601:1000,], type = "class")
-  table(simple.ps[601:1000,81], predicted = cart.predictions)
+  cart = rpart(PS ~ ., data = simple.ps[1:700, !(names(simple.ps) %in% c('documentno'))], method = "class")
+  cart.predictions = predict(cart, simple.ps[701:1000,], type = "class")
+  table(simple.ps[701:1000,76], predicted = cart.predictions)
+  #   NO  213  15
+  #   YES  22  50
   
   # RANDOM FOREST
-  rf <- randomForest(PS ~ . -documentno, data = simple.ps[1:600,], mtry = 11, importance = TRUE, type = "class", ntree = 800)
-  rf.predictions = predict(rf, simple.ps[601:1000,], type="class")
-  table(simple.ps[601:1000,81], predicted = rf.predictions)
-  
+  rf = randomForest(PS ~ . -documentno, data = simple.ps[1:700,], mtry = 3, importance = TRUE, type = "class", ntree = 800)
+  rf.predictions = predict(rf, simple.ps[701:1000,], type="class")
+  table(simple.ps[701:1000,76], predicted = rf.predictions)
+  #   NO  215  10
+  #   YES  26  56
+
   # RANDOM FOREST WITH SMOTE
-  smote.trainx = simple.ps[1:600,]
-  smote.test = simple.ps[601:1000,]
-  smote <- SMOTE(PS ~ ., smote.trainx, perc.over = 100, perc.under = 100)
-  rf.smo <- randomForest(PS ~ . -documentno, data = smote, mtry = 10, ntree = 800)
+  smote.trainx = simple.ps[1:700,]
+  smote.test = simple.ps[701:1000,]
+  smote = SMOTE(PS ~ ., smote.trainx, perc.over = 100, perc.under = 100)
+  rf.smo = randomForest(PS ~ . -documentno, data = smote, mtry = 10, ntree = 800)
   rf.smo.pred = predict(rf.smo, smote.test, type = "class")
-  table(simple.ps[601:1000,81], predicted = rf.smo.pred)
+  table(simple.ps[701:1000,76], predicted = rf.smo.pred)
+  #   NO  190  38
+  #   YES   8  64
   
+  # RANDOM FOREST WITH ROSE
+  simple.rosex = ROSE(PS ~ ., data = simple.ps[1:700,])$data
+  rand3 = runif(nrow(simple.rosex))
+  simple.rose = simple.rosex[order(rand3),]
+  rf.rose = randomForest(PS ~ . -documentno, data = simple.rose, mtry = 15, ntree = 1000)
+  rf.rose.pred = predict(rf.rose, simple.ps[701:1000,], type = "class")
+  table(simple.ps[701:1000,76], predicted = rf.rose.pred)
+  #   NO  200  28
+  #   YES   8  64
+   
   # BOOSTING
-  ps.adaboost = boosting(PS ~ ., data = simple.ps[1:600, !(names(simple.ps) %in% c('documentno'))], boos = T, mfinal = 400, coeflearn = 'Freund')
-  simple.adaboost.pred = predict.boosting(ps.adaboost, newdata = simple.ps[601:1000,])
+  ps.adaboost = boosting(PS ~ ., data = simple.ps[1:700, !(names(simple.ps) %in% c('documentno'))], boos = T, mfinal = 800, coeflearn = 'Freund')
+  simple.adaboost.pred = predict.boosting(ps.adaboost, newdata = simple.ps[701:1000,])
   simple.adaboost.pred$confusion
-  # # Predicted Class  NO YES
-  #  NO  282  20
-  #  YES  21  77
+  #   NO  210  19
+  #   YES  18  53
   
   # Generate variable with boosting predictions
   simple.adaboost.pred$class = as.factor(simple.adaboost.pred$class)
