@@ -137,6 +137,10 @@ names(mr.data)[names(mr.data) == "MR"] = "MR"
 # Here we manually recode this one observation. 
 mr.data$MR[mr.data$documentno=="219932950056"] = "NO"
 
+if (data.type == "training data") {
+  mr.data$type = "training"
+}
+
 ######################################################################################################
 
 # DO THIS CODE IF YOU'RE RUNNING ON THE REAL ACCIDENTS DATA (NOT THE TRAINING SET)
@@ -784,7 +788,7 @@ if (data.type == "training" ) {
   
       ######################################################################################################
       # CREATE CART FUNCTION WITH RPART AND EXECUTE ON 1ST 600 OBSERVATIONS
-      cart <- rpart(MR ~ ., data = simple[1:700,!(names(simple) %in% c('documentno','narrative'))], method="class")
+      cart = rpart(MR ~ ., data = simple[1:700,!(names(simple) %in% c('documentno','narrative'))], method="class")
       cart 
       
       # PLOT RESULTS & DETAILED PLOT OF SPLITS
@@ -793,7 +797,7 @@ if (data.type == "training" ) {
       
       ######################################################################################################
       # DEFINE RANDOM FOREST (ON TRUE PROPORTION OF NO'S AND YES'S)
-      rf <- randomForest(MR ~ ., data = simple[1:700,!(names(simple) %in% c('documentno','narrative'))], mtry = 15, importance=TRUE, type="class",
+      rf = randomForest(MR ~ ., data = simple[1:700,!(names(simple) %in% c('documentno','narrative'))], mtry = 15, importance=TRUE, type="class",
                          ntree = 1000)
       rf
       
@@ -806,8 +810,7 @@ if (data.type == "training" ) {
       nmin = sum(simple$MR == "YES")
       nmin
       
-      ctrl <- trainControl(method = "cv", classProbs = TRUE, summaryFunction = twoClassSummary)
-      
+      ctrl = trainControl(method = "cv", classProbs = TRUE, summaryFunction = twoClassSummary)
       rf.downsampled = train(MR ~ ., data = simple[1:700,!(names(simple) %in% c('documentno','narrative'))], method = "rf", ntree = 800,
                              tuneLength = 10, metric = "ROC", trControl = ctrl, 
                              strata = simple$MR, sampsize = rep(nmin, 2))
@@ -824,48 +827,35 @@ if (data.type == "training" ) {
       plot(down.ROC, col = rgb(1, 0, 0, .5), lwd = 2)
       plot(base.ROC, col = rgb(0, 0, 1, .5), lwd = 2, add = TRUE)
       legend(.4, .4, c("Down-Sampled", "Normal"), lwd = rep(2, 1), col = c(rgb(1, 0, 0, .5), rgb(0, 0, 1, .5)))
-      # sensitivity = true-positive rate
-      # specificity = false-positive rate
       
       ######################################################################################################
       # OVERSAMPLE POSITIVE OUTCOMES (MR=YES) FOR RANDOM FOREST: GENERATE BALANCED DATA W ROSE
-      simple.rosex <- ROSE(MR ~ ., data=simple[1:700,!(names(simple) %in% c('documentno','narrative'))])$data
+      simple.rosex = ROSE(MR ~ ., data=simple[1:700,!(names(simple) %in% c('documentno','narrative'))])$data
       
-      # CHECK IMBALANCE AND SORT RANDOMLY (FOR SHITZNGIGGLES)
-      table(simple.rosex$MR)
-      rand3 <- runif(nrow(simple.rosex))
-      simple.rose <- simple.rosex[order(rand3),]
+      # CHECK IMBALANCE AND SORT RANDOMLY
+      rand3 = runif(nrow(simple.rosex))
+      simple.rose = simple.rosex[order(rand3),]
       remove(simple.rosex)
       
       # DEFINE RF ON ROSE OVERSAMPLED DATA
-      rf.rose <- randomForest(MR ~ ., data = simple.rose, mtry = 15, ntree = 1000)
+      rf.rose = randomForest(MR ~ ., data = simple.rose, mtry = 15, ntree = 1000)
       rf.rose
       
       ######################################################################################################
       # OVERSAMPLE POSITIVE OUTCOMES (MR=YES) FOR RANDOM FOREST: GENERATE BALANCED DATA W SMOTE
       
-      prop.table(table(simple$MR))
-      #0.6470588 0.3529412 
-      
-      set.seed(625)
-      splitIndex = createDataPartition(simple$MR, p =.50, list = FALSE, times = 1)
-      smote.trainx = simple[splitIndex,]
-      smote.test = simple[-splitIndex,]
-      prop.table(table(smote.trainx$MR))
-      #0.6470588 0.3529412 
+      smote.trainx = simple[1:700, !(names(simple) %in% c('documentno','narrative'))]
+      smote.test = simple[701:1019, !(names(simple) %in% c('documentno','narrative'))]
       
       # USE SMOTE TO OVERSAMPLE DATA
-      smote.train <- SMOTE(MR ~ ., smote.trainx[,!(names(smote.trainx) %in% c('documentno','narrative'))], perc.over = 500,perc.under=100)
-      table(smote.train$MR)
+      smote = SMOTE(MR ~ ., smote.trainx, perc.over = 100, perc.under = 100)
       
       # DEFINE RF ON SMOTE OVERSAMPLED DATA
-      rf.smote <- randomForest(MR ~ ., data = smote.train, mtry = 15, ntree = 1000)
-      rf.smote
+      rf.smo = randomForest(MR ~ ., data = smote, mtry = 10, ntree = 800)
       
       ######################################################################################################
       # USE ADABOOST TO IMPLEMENT BOOSTING ALGORITHM 
       
-      set.seed(625)
       mr.adaboost = boosting(MR ~ . , data = simple[1:700,!(names(simple) %in% c('documentno','narrative'))], boos = T, mfinal = 300, coeflearn = 'Freund')
       adaboost.pred = predict.boosting(mr.adaboost, newdata = simple[701:1019,!(names(simple) %in% c('documentno','narrative'))])
       
@@ -873,8 +863,10 @@ if (data.type == "training" ) {
       # PRINT ALL PREDICTIONS 
       
       # SMOTE
-      rf.smote.pred = predict(rf.smote, smote.test, type="class")
-      table(smote.test$MR, predicted = rf.smote.pred)
+      rf.smo.pred = predict(rf.smo, smote.test, type = "class")
+      table(simple[701:1019,1], predicted = rf.smo.pred)
+      # NO  181  16
+      # YES  10 111
       
       # ROSE
       rf.rose.pred = predict(rf.rose, simple[701:1019,!(names(simple) %in% c('documentno','narrative'))],type="class")
