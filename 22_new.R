@@ -10,6 +10,7 @@ library(foreign)
 library(plyr)
 library(zoo)
 library(stringr)
+library(lubridate)
 
 # input: clean mine-quarter level data (has observations dropped in preparation for prediction)
 mines_quarters_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_mines.rds"
@@ -28,8 +29,8 @@ PS_prediction_data_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/5_pre
 # output: prediction-ready data containing all relevant and maybe relevant vars  - MR (dta)
 MR_prediction_data_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/MR_prediction_data.dta"
 
-# injury.type = "PS"
-injury.type = "MR"
+injury.type = "PS"
+#injury.type = "MR"
 
 ######################################################################################################
 
@@ -129,13 +130,11 @@ fill_in_mines = function(t_mines) {
     t_history_o = t_history_o[!duplicated(t_history_o), ]
     
     for (i in 1:nrow(t_mines)) {
-      id = NA
       for (j in 1:nrow(t_history_o)) {
-        if (t_mines$quarter[i] >= t_history_o$operatorstartdt[j] 
-               & t_mines$quarter[i] <= t_history_o$operatorenddt[j]) {
-          id = t_history_o$operatorid[j]
-        }
-        t_mines$operatorid[i] = id
+        t_mines$operatorid = 
+          ifelse(t_mines$quarter[i] >= t_history_o$operatorstartdt[j] 
+                 & t_mines$quarter[i] < t_history_o$operatorenddt[j], 
+                 t_history_o$operatorid[j], NA)
       }
     }
   }
@@ -164,8 +163,11 @@ mines_new_full$operator_time = NA
   
 make_op_time = function(mine_data) {
   
+  print(mine_data$mineid[1])
+  
   for (i in 1:nrow(mine_data)) {
-
+    print(i)
+    
     if (is.na(mine_data$operatorid[i])) {
       mine_data$operator_time[i] = NA
     }
@@ -222,25 +224,24 @@ mines_out = mines_with_ops[mines_with_ops$quarter >= 2000, ]
 # BRING IN REAL DATA, MERGE ON NEW VARS, OUTPUT
 
 if (injury.type == "MR") {
-  # data = readRDS(MR_prediction_data_in_file_name)
+  #data = readRDS(MR_prediction_data_in_file_name)
   data = read.dta(MR_prediction_data_out_file_name)
-  data = data[, c(-grep("controller", names(data)),
+  data = data[, c(-grep("district", names(data)),
                   -grep("operator", names(data)),
-                  -grep("safety", names(data)),
-                  -grep("district", names(data)))]
+                  -grep("safetycommittee", names(data)),
+                  -grep("controller", names(data)))]
 }
-
 if (injury.type == "PS") {
-  # data = readRDS(PS_prediction_data_in_file_name)
+  #data = readRDS(PS_prediction_data_in_file_name)
   data = read.dta(PS_prediction_data_out_file_name)
-  data = data[, c(-grep("controller", names(data)),
+  data = data[, c(-grep("district", names(data)),
                   -grep("operator", names(data)),
-                  -grep("safety", names(data)),
-                  -grep("district", names(data)))]
+                  -grep("safetycommittee", names(data)),
+                  -grep("controller", names(data)))]
 }
 
 # merge on new vars from mines and history datasets 
-data = merge(data, mines_out, by = c("mineid", "quarter"))
+data = merge(data, mines_out, by = c("mineid", "quarter"), all = F)
 
 # save new .dtas for Stata analysi 
 if (injury.type == "MR") {
