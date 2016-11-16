@@ -17,6 +17,10 @@ library(stringr)
 cfr_key_in_file_name = "X:/Projects/Mining/NIOSH/analysis/data/0_originals/MSHA/cfr_key/cfr_key.csv"
   # output: clean cfr key with PS and MR relevance markings
 cfr_key_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/clean_cfr_key.rds"
+  # output: clean cfr key csv with PS relevance markings (and only relevant and maybe relevant observations - used to make table)
+PS_cfr_key_csv_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/PS_clean_cfr_key.csv"
+  # output: clean cfr key csv with MR relevance markings (and only relevant and maybe relevant observations - used to make table)
+MR_cfr_key_csv_out_file_name = "X:/Projects/Mining/NIOSH/analysis/data/2_cleaned/MR_clean_cfr_key.csv"
 
 ######################################################################################################
 
@@ -188,5 +192,21 @@ cfr_key$MR_maybe_relevant = ifelse(cfr_key$cfr_part_code == "77" & (cfr_key$cfr_
 
 # output clean cfr key with PS and MR relevance markings
 saveRDS(cfr_key, file = cfr_key_out_file_name)
+
+# anything with a 0 in the relevant column is now "maybe relevant" - sort "1"s to the top (relevant subparts)
+PS_cfr_key = cfr_key[which(cfr_key$PS_relevant == 1 | cfr_key$PS_maybe_relevant == 1), c("cfr_section_code_desc", "PS_relevant", "subsection_code")]
+MR_cfr_key = cfr_key[which(cfr_key$MR_relevant == 1 | cfr_key$MR_maybe_relevant == 1), c("cfr_section_code_desc", "MR_relevant", "subsection_code")]
+
+# order by relevance and then subsection code
+PS_cfr_key = PS_cfr_key[order(-PS_cfr_key$PS_relevant, PS_cfr_key$subsection_code),]
+MR_cfr_key = MR_cfr_key[order(-MR_cfr_key$MR_relevant, MR_cfr_key$subsection_code),]
+
+# replace relevant columns with the words
+PS_cfr_key$PS_relevant = ifelse(PS_cfr_key$PS_relevant == 0, "Maybe Relevant", "Relevant")
+MR_cfr_key$MR_relevant = ifelse(MR_cfr_key$MR_relevant == 0, "Maybe Relevant", "Relevant")
+
+# output clean cfr key with PS and MR relevance markings
+write.csv(PS_cfr_key[, c("cfr_section_code_desc", "PS_relevant")], file = PS_cfr_key_csv_out_file_name, row.names = FALSE, na = "")
+write.csv(MR_cfr_key[, c("cfr_section_code_desc", "MR_relevant")], file = MR_cfr_key_csv_out_file_name, row.names = FALSE, na = "")
 
 ######################################################################################################
