@@ -1235,6 +1235,23 @@ if (data.type == "training data" ) {
   table(simple.ps[701:1000,76], predicted = rf.rose.pred)
   #   NO  200  28
   #   YES   8  64
+  
+  # DOWNSAMPLE NEGATIVE OUTCOMES (PS=NO) FOR RANDOM FOREST
+  nmin = sum(simple.ps$PS == "YES")
+  nmin
+  ctrl = trainControl(method = "cv", classProbs = TRUE, summaryFunction = twoClassSummary)
+  rf.downsampled = train(PS ~ ., data = simple.ps[1:700,!(names(simple.ps) %in% c('documentno','narrative'))], method = "rf", ntree = 800,
+                         tuneLength = 10, metric = "ROC", trControl = ctrl, 
+                         strata = simple.ps$PS, sampsize = rep(nmin, 2))
+  rf.baseline = train(PS ~ ., data = simple.ps[1:700,!(names(simple.ps) %in% c('documentno','narrative'))], method = "rf", ntree = 800,
+                      tuneLength = 10, metric = "ROC", trControl = ctrl)
+  down.prob = predict(rf.downsampled, simple.ps[701:1000,!(names(simple.ps) %in% c('documentno','narrative'))], type = "prob")[,1]
+  down.ROC = roc(response = simple.ps[701:1000,1], predictor = down.prob, levels = rev(levels(simple.ps[701:1000,1])))
+  base.prob = predict(rf.baseline, simple.ps[701:1000,!(names(simple.ps) %in% c('documentno','narrative'))], type = "prob")[,1]
+  base.ROC = roc(response = simple.ps[701:1000,1], predictor = base.prob, levels = rev(levels(simple.ps[701:1000,1])))
+  plot(down.ROC, col = rgb(1, 0, 0, .5), lwd = 2)
+  plot(base.ROC, col = rgb(0, 0, 1, .5), lwd = 2, add = TRUE)
+  legend(.4, .4, c("Down-Sampled", "Normal"), lwd = rep(2, 1), col = c(rgb(1, 0, 0, .5), rgb(0, 0, 1, .5)))
    
   # BOOSTING
   ps.adaboost = boosting(PS ~ ., data = simple.ps[1:700, !(names(simple.ps) %in% c('documentno'))], boos = T, mfinal = 800, coeflearn = 'Freund')
