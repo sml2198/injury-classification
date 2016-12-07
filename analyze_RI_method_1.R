@@ -1,8 +1,9 @@
 # NIOSH Project 2014-N-15776
 
-# 24 - Inspect Randomization Inference Output
+# analyze_RI_method_1.R
+# Inspect Randomization Inference (Method 1) Output
 
-# Last edit 11/14/16
+# Last edit 12/07/16 - SML
 
 ######################################################################################################
 
