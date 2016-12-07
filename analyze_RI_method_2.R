@@ -9,13 +9,26 @@
 library(foreign)
 
 # set preferences
-date = "11-14/"
+date = "12-6/"
 
-injtype = "PS"
-# injtype = "MR"
+# WHICH MODELS DO YOU WANT TO RUN?
 
-subpart.form = "rate"
-# subpart.form = "not-a-rate"
+  # injtype = "PS"
+  injtype = "MR"
+  
+  subpart.form = "rate"
+  # subpart.form = "not-a-rate"
+  
+  # specification.test = "on" # analyze results from models with union & longwall indicators
+  specification.test = "off"
+  
+  lag_3 = "on" # cannot be on at same time as ulw specification test. will also run lag 5.
+  #lag_3 = "off"
+  
+  lag_5 = "on" # cannot be on at same time as ulw specification test. will also run lag 3.
+  #lag_5 = "off"
+
+######################################################################################################
 
 # define file names
 dtaroot = paste0("X:/Projects/Mining/NIOSH/analysis/results/dta/", date, "method_2/", collapse = NULL)
@@ -60,16 +73,16 @@ if (subpart.form == "not-a-rate") {
 ######################################################################################################
 
 if (subpart.form == "rate") {
-  B_1_out_file = paste0(csvroot, injtype, "_B_1_method_2_output", ext, ".csv", collapse = NULL)
-  B_4_out_file = paste0(csvroot, injtype, "_B_4_method_2_output", ext, ".csv", collapse = NULL)
-  C_1_out_file = paste0(csvroot, injtype, "_C_1_method_2_output", ext, ".csv", collapse = NULL)
-  C_4_out_file = paste0(csvroot, injtype, "_C_4_method_2_output", ext, ".csv", collapse = NULL)
+  B_1_out_file = paste0(csvroot, injtype, "_B_1_method_2_output.csv", collapse = NULL)
+  B_4_out_file = paste0(csvroot, injtype, "_B_4_method_2_output.csv", collapse = NULL)
+  C_1_out_file = paste0(csvroot, injtype, "_C_1_method_2_output.csv", collapse = NULL)
+  C_4_out_file = paste0(csvroot, injtype, "_C_4_method_2_output.csv", collapse = NULL)
 }
 if (subpart.form == "not-a-rate") {
-  B_1_out_file = paste0(csvroot, injtype, "_B_1_non-rate_method_2_output", ext, ".csv", collapse = NULL)
-  B_4_out_file = paste0(csvroot, injtype, "_B_4_non-rate_method_2_output", ext, ".csv", collapse = NULL)
-  C_1_out_file = paste0(csvroot, injtype, "_C_1_non-rate_method_2_output", ext, ".csv", collapse = NULL)
-  C_4_out_file = paste0(csvroot, injtype, "_C_4_non-rate_method_2_output", ext, ".csv", collapse = NULL)
+  B_1_out_file = paste0(csvroot, injtype, "_B_1_non-rate_method_2_output.csv", collapse = NULL)
+  B_4_out_file = paste0(csvroot, injtype, "_B_4_non-rate_method_2_output.csv", collapse = NULL)
+  C_1_out_file = paste0(csvroot, injtype, "_C_1_non-rate_method_2_output.csv", collapse = NULL)
+  C_4_out_file = paste0(csvroot, injtype, "_C_4_non-rate_method_2_output.csv", collapse = NULL)
 }
 
 ######################################################################################################
@@ -88,7 +101,7 @@ B_4_sig = read.table(B_4_sig, sep = ",", header = T)
 C_1_sig = read.table(C_1_sig, sep = ",", header = T)
 C_4_sig = read.table(C_4_sig, sep = ",", header = T)
 
-# create lists of the subparts that were tested in method 2 & file paths
+# create lists of the subparts that were tested in method 2 (and their file paths)
 B_1_sig_list = B_1_sig$subpart
 B_1_sig_files = paste0(dtaroot, injtype, "_B_1_", ext, B_1_sig_list, ".dta", collapse = NULL)
 B_4_sig_list = B_4_sig$subpart
@@ -100,11 +113,38 @@ C_4_sig_files = paste0(dtaroot, injtype, "_C_4_", ext, C_4_sig_list, ".dta", col
 
 ######################################################################################################
 
+# format coefficients and subparts
+
 names = c("subpart", "b", "p")
 names(B_1) = names
+names(B_4) = names
+names(C_1) = names
+names(C_4) = names
 B_1$b = as.numeric(as.character(B_1$b))
+B_4$b = as.numeric(as.character(B_4$b))
+C_1$b = as.numeric(as.character(C_1$b))
+C_4$b = as.numeric(as.character(C_4$b))
 
-# load in RI results & CALCULATE P VALUES FOR EACH SUBPART
+B_1 = B_1[which(B_1$p != "."), ]
+B_1 = B_1[-1, ]
+B_1 = B_1[-1, ]
+
+B_4 = B_4[which(B_4$p != "."), ]
+B_4 = B_4[-1, ]
+B_4 = B_4[-1, ]
+
+C_1 = C_1[which(C_1$p != "."), ]
+C_1 = C_1[-1, ]
+C_1 = C_1[-1, ]
+
+C_4 = C_4[which(C_4$p != "."), ]
+C_4 = C_4[-1, ]
+C_4 = C_4[-1, ]
+
+######################################################################################################
+
+# LOAD IN RI METHOD 2 RESULTS & CALCULATE P VALUES FOR EACH SUBPART
+
 names = "fake_coef"
 B_1_sig$new_p = NA
 for (a in B_1_sig_list) {
@@ -150,7 +190,9 @@ for (a in C_4_sig_list) {
   C_4_sig[C_4_sig$subpart == a, "new_p"] = p
 }
 
-# SAVE CSVS WITH NAMES OF ROBUSTLY SIGNIFICANT SUBPARTS
+######################################################################################################
+
+# SAVE CSVS WITH ROBUSTLY SIGNIFICANT SUBPARTS (AFTER METHOD 2)
 
 B_1_sig = B_1_sig[which(B_1_sig$new_p < 0.05) ,]
 B_4_sig = B_4_sig[which(B_4_sig$new_p < 0.05) ,]
