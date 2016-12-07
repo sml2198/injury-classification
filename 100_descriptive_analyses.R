@@ -10,17 +10,17 @@
 
 library(plyr)
 
-injury = "MR"
-# injury = "PS"
+# injury = "MR"
+injury = "PS"
 
 if (injury == "MR") {
   data_file_name = "C:/Users/jbodson/Dropbox (Stanford Law School)/R-code/data/MR-data.csv"
+  out_directory = "C:/Users/jbodson/Dropbox (Stanford Law School)/R-code/MR Plots/Plot"
 }
 if (injury == "PS") {
   data_file_name ="C:/Users/jbodson/Dropbox (Stanford Law School)/R-code/data/PS-data.csv"
+  out_directory = "C:/Users/jbodson/Dropbox (Stanford Law School)/R-code/PS Plots/Plot"
 }
-
-out_directory = "C:/Users/jbodson/Dropbox (Stanford Law School)/R-code/Plots/Plot"
 
 plot_num = 1
 
@@ -517,5 +517,7 @@ for (dv in c("dv", "dv_exp", "dv_rel", "dv_rel_exp")) {
   
   }
 }
+
+rm(list = ls())
 
 ######################################################################################################
