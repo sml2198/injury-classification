@@ -1,0 +1,546 @@
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  C:/Users/slevine2/Dropbox (Stanford Law School)/R-code/Injury-Classification/Model Output + Summaries/all/MR/log 10-24/log_part_year.txt
+  log type:  text
+ opened on:  26 Oct 2016, 16:34:37
+. }
+
+. 
+. if "`mine_sample'" == "big" { 
+.         // make directories 
+.         capture mkdir "C:/Users/`fellow'/Dropbox (Stanford Law School)/R-code/Injury-Classification/Model Output + Summaries/`mine_sample'/`version'/`injury_type'/log `date'/"
+.         capture mkdir "C:/Users/`fellow'/Dropbox (Stanford Law School)/R-code/Injury-Classification/Model Output + Summaries/`mine_sample'/`version'/`injury_type'/estout `date'/"
+.         // make logs    
+.         local directory "C:/Users/`fellow'/Dropbox (Stanford Law School)/R-code/Injury-Classification/Model Output + Summaries/`mine_sample'/`version'/`injury_type'/estout `date'/"
+.         capture log close
+.         log using "C:/Users/`fellow'/Dropbox (Stanford Law School)/R-code/Injury-Classification/Model Output + Summaries/`mine_sample'/`version'/`injury_type'/log `date'/log_`violation_
+> level'_`log_time'.txt", text replace
+. }       
+
+.         
+. if "`mine_sample'" == "bad" | "`mine_sample'" == "big_bad" { 
+.         // make directories 
+.         capture mkdir "C:/Users/`fellow'/Dropbox (Stanford Law School)/R-code/Injury-Classification/Model Output + Summaries/`mine_sample'/`badness'/`version'/`injury_type'/estout `date
+> '/"
+.         capture mkdir "C:/Users/`fellow'/Dropbox (Stanford Law School)/R-code/Injury-Classification/Model Output + Summaries/`mine_sample'/`badness'/`version'/`injury_type'/log `date'/"
+.         // make logs                    
+.         local directory "C:/Users/`fellow'/Dropbox (Stanford Law School)/R-code/Injury-Classification/Model Output + Summaries/`mine_sample'/`badness'/`version'/`injury_type'/estout `da
+> te'/"
+.         capture log close
+.         log using "C:/Users/`fellow'/Dropbox (Stanford Law School)/R-code/Injury-Classification/Model Output + Summaries/`mine_sample'/`badness'/`version'/`injury_type'/log `date'/log_`
+> violation_level'_`log_time'.txt", text replace
+. }
+
+. 
+end of do-file
+
+. tab quarter
+
+    quarter |      Freq.     Percent        Cum.
+------------+-----------------------------------
+       2000 |        588        1.94        1.94
+    2000.25 |        567        1.87        3.81
+     2000.5 |        556        1.84        5.65
+    2000.75 |        561        1.85        7.50
+       2001 |        574        1.90        9.40
+    2001.25 |        577        1.90       11.30
+     2001.5 |        585        1.93       13.23
+    2001.75 |        571        1.89       15.12
+       2002 |        553        1.83       16.94
+    2002.25 |        529        1.75       18.69
+     2002.5 |        502        1.66       20.35
+    2002.75 |        492        1.62       21.97
+       2003 |        475        1.57       23.54
+    2003.25 |        473        1.56       25.10
+     2003.5 |        464        1.53       26.63
+    2003.75 |        465        1.54       28.17
+       2004 |        478        1.58       29.75
+    2004.25 |        481        1.59       31.33
+     2004.5 |        497        1.64       32.98
+    2004.75 |        499        1.65       34.62
+       2005 |        516        1.70       36.33
+    2005.25 |        511        1.69       38.01
+     2005.5 |        514        1.70       39.71
+    2005.75 |        515        1.70       41.41
+       2006 |        520        1.72       43.13
+    2006.25 |        508        1.68       44.81
+     2006.5 |        512        1.69       46.50
+    2006.75 |        507        1.67       48.17
+       2007 |        494        1.63       49.80
+    2007.25 |        483        1.59       51.39
+     2007.5 |        482        1.59       52.99
+    2007.75 |        481        1.59       54.57
+       2008 |        483        1.59       56.17
+    2008.25 |        492        1.62       57.79
+     2008.5 |        493        1.63       59.42
+    2008.75 |        512        1.69       61.11
+       2009 |        503        1.66       62.77
+    2009.25 |        481        1.59       64.36
+     2009.5 |        444        1.47       65.83
+    2009.75 |        437        1.44       67.27
+       2010 |        430        1.42       68.69
+    2010.25 |        448        1.48       70.17
+     2010.5 |        449        1.48       71.65
+    2010.75 |        459        1.52       73.17
+       2011 |        465        1.54       74.70
+    2011.25 |        476        1.57       76.27
+     2011.5 |        473        1.56       77.83
+    2011.75 |        470        1.55       79.39
+       2012 |        468        1.55       80.93
+    2012.25 |        445        1.47       82.40
+     2012.5 |        429        1.42       83.82
+    2012.75 |        418        1.38       85.20
+       2013 |        396        1.31       86.50
+    2013.25 |        394        1.30       87.80
+     2013.5 |        387        1.28       89.08
+    2013.75 |        366        1.21       90.29
+       2014 |        358        1.18       91.47
+    2014.25 |        358        1.18       92.65
+     2014.5 |        353        1.17       93.82
+    2014.75 |        347        1.15       94.97
+       2015 |        336        1.11       96.07
+    2015.25 |        323        1.07       97.14
+     2015.5 |        303        1.00       98.14
+    2015.75 |        296        0.98       99.12
+       2016 |        267        0.88      100.00
+------------+-----------------------------------
+      Total |     30,289      100.00
+
+. gen year = regexs(0) if(regexm(quarter, "^[0-9][0-9][0-9][0-9]"))
+variable year already defined
+r(110);
+
+. tab year
+
+       year |      Freq.     Percent        Cum.
+------------+-----------------------------------
+       2000 |      2,272        7.50        7.50
+       2001 |      2,307        7.62       15.12
+       2002 |      2,076        6.85       21.97
+       2003 |      1,877        6.20       28.17
+       2004 |      1,955        6.45       34.62
+       2005 |      2,056        6.79       41.41
+       2006 |      2,047        6.76       48.17
+       2007 |      1,940        6.40       54.57
+       2008 |      1,980        6.54       61.11
+       2009 |      1,865        6.16       67.27
+       2010 |      1,786        5.90       73.17
+       2011 |      1,884        6.22       79.39
+       2012 |      1,760        5.81       85.20
+       2013 |      1,543        5.09       90.29
+       2014 |      1,416        4.67       94.97
+       2015 |      1,258        4.15       99.12
+       2016 |        267        0.88      100.00
+------------+-----------------------------------
+      Total |     30,289      100.00
+
+. tab year quarter
+
+           |                                                                          quarter
+      year |      2000    2000.25     2000.5    2000.75       2001    2001.25     2001.5    2001.75       2002    2002.25     2002.5    2002.75       2003    2003.25 |     Total
+-----------+----------------------------------------------------------------------------------------------------------------------------------------------------------+----------
+      2000 |       588        567        556        561          0          0          0          0          0          0          0          0          0          0 |     2,272 
+      2001 |         0          0          0          0        574        577        585        571          0          0          0          0          0          0 |     2,307 
+      2002 |         0          0          0          0          0          0          0          0        553        529        502        492          0          0 |     2,076 
+      2003 |         0          0          0          0          0          0          0          0          0          0          0          0        475        473 |     1,877 
+      2004 |         0          0          0          0          0          0          0          0          0          0          0          0          0          0 |     1,955 
+      2005 |         0          0          0          0          0          0          0          0          0          0          0          0          0          0 |     2,056 
+      2006 |         0          0          0          0          0          0          0          0          0          0          0          0          0          0 |     2,047 
+      2007 |         0          0          0          0          0          0          0          0          0          0          0          0          0          0 |     1,940 
+      2008 |         0          0          0          0          0          0          0          0          0          0          0          0          0          0 |     1,980 
+      2009 |         0          0          0          0          0          0          0          0          0          0          0          0          0          0 |     1,865 
+      2010 |         0          0          0          0          0          0          0          0          0          0          0          0          0          0 |     1,786 
+      2011 |         0          0          0          0          0          0          0          0          0          0          0          0          0          0 |     1,884 
+      2012 |         0          0          0          0          0          0          0          0          0          0          0          0          0          0 |     1,760 
+      2013 |         0          0          0          0          0          0          0          0          0          0          0          0          0          0 |     1,543 
+      2014 |         0          0          0          0          0          0          0          0          0          0          0          0          0          0 |     1,416 
+      2015 |         0          0          0          0          0          0          0          0          0          0          0          0          0          0 |     1,258 
+      2016 |         0          0          0          0          0          0          0          0          0          0          0          0          0          0 |       267 
+-----------+----------------------------------------------------------------------------------------------------------------------------------------------------------+----------
+     Total |       588        567        556        561        574        577        585        571        553        529        502        492        475        473 |    30,289 
+
+
+           |                                                                          quarter
+      year |    2003.5    2003.75       2004    2004.25     2004.5    2004.75       2005    2005.25     2005.5    2005.75       2006    2006.25     2006.5    2006.75 |     Total
+-----------+----------------------------------------------------------------------------------------------------------------------------------------------------------+----------
+      2000 |         0          0          0          0          0          0          0          0          0          0          0          0          0          0 |     2,272 
+      2001 |         0          0          0          0          0          0          0          0          0          0          0          0          0          0 |     2,307 
+      2002 |         0          0          0          0          0          0          0          0          0          0          0          0          0          0 |     2,076 
+      2003 |       464        465          0          0          0          0          0          0          0          0          0          0          0          0 |     1,877 
+      2004 |         0          0        478        481        497        499          0          0          0          0          0          0          0          0 |     1,955 
+      2005 |         0          0          0          0          0          0        516        511        514        515          0          0          0          0 |     2,056 
+      2006 |         0          0          0          0          0          0          0          0          0          0        520        508        512        507 |     2,047 
+      2007 |         0          0          0          0          0          0          0          0          0          0          0          0          0          0 |     1,940 
+      2008 |         0          0          0          0          0          0          0          0          0          0          0          0          0          0 |     1,980 
+      2009 |         0          0          0          0          0          0          0          0          0          0          0          0          0          0 |     1,865 
+      2010 |         0          0          0          0          0          0          0          0          0          0          0          0          0          0 |     1,786 
+      2011 |         0          0          0          0          0          0          0          0          0          0          0          0          0          0 |     1,884 
+      2012 |         0          0          0          0          0          0          0          0          0          0          0          0          0          0 |     1,760 
+      2013 |         0          0          0          0          0          0          0          0          0          0          0          0          0          0 |     1,543 
+      2014 |         0          0          0          0          0          0          0          0          0          0          0          0          0          0 |     1,416 
+      2015 |         0          0          0          0          0          0          0          0          0          0          0          0          0          0 |     1,258 
+      2016 |         0          0          0          0          0          0          0          0          0          0          0          0          0          0 |       267 
+-----------+----------------------------------------------------------------------------------------------------------------------------------------------------------+----------
+     Total |       464        465        478        481        497        499        516        511        514        515        520        508        512        507 |    30,289 
+
+
+           |                                                                          quarter
+      year |      2007    2007.25     2007.5    2007.75       2008    2008.25     2008.5    2008.75       2009    2009.25     2009.5    2009.75       2010    2010.25 |     Total
+-----------+----------------------------------------------------------------------------------------------------------------------------------------------------------+----------
+      2000 |         0          0          0          0          0          0          0          0          0          0          0          0          0          0 |     2,272 
+      2001 |         0          0          0          0          0          0          0          0          0          0          0          0          0          0 |     2,307 
+      2002 |         0          0          0          0          0          0          0          0          0          0          0          0          0          0 |     2,076 
+      2003 |         0          0          0          0          0          0          0          0          0          0          0          0          0          0 |     1,877 
+      2004 |         0          0          0          0          0          0          0          0          0          0          0          0          0          0 |     1,955 
+      2005 |         0          0          0          0          0          0          0          0          0          0          0          0          0          0 |     2,056 
+      2006 |         0          0          0          0          0          0          0          0          0          0          0          0          0          0 |     2,047 
+      2007 |       494        483        482        481          0          0          0          0          0          0          0          0          0          0 |     1,940 
+      2008 |         0          0          0          0        483        492        493        512          0          0          0          0          0          0 |     1,980 
+      2009 |         0          0          0          0          0          0          0          0        503        481        444        437          0          0 |     1,865 
+      2010 |         0          0          0          0          0          0          0          0          0          0          0          0        430        448 |     1,786 
+      2011 |         0          0          0          0          0          0          0          0          0          0          0          0          0          0 |     1,884 
+      2012 |         0          0          0          0          0          0          0          0          0          0          0          0          0          0 |     1,760 
+      2013 |         0          0          0          0          0          0          0          0          0          0          0          0          0          0 |     1,543 
+      2014 |         0          0          0          0          0          0          0          0          0          0          0          0          0          0 |     1,416 
+      2015 |         0          0          0          0          0          0          0          0          0          0          0          0          0          0 |     1,258 
+      2016 |         0          0          0          0          0          0          0          0          0          0          0          0          0          0 |       267 
+-----------+----------------------------------------------------------------------------------------------------------------------------------------------------------+----------
+     Total |       494        483        482        481        483        492        493        512        503        481        444        437        430        448 |    30,289 
+
+
+           |                                                                          quarter
+      year |    2010.5    2010.75       2011    2011.25     2011.5    2011.75       2012    2012.25     2012.5    2012.75       2013    2013.25     2013.5    2013.75 |     Total
+-----------+----------------------------------------------------------------------------------------------------------------------------------------------------------+----------
+      2000 |         0          0          0          0          0          0          0          0          0          0          0          0          0          0 |     2,272 
+      2001 |         0          0          0          0          0          0          0          0          0          0          0          0          0          0 |     2,307 
+      2002 |         0          0          0          0          0          0          0          0          0          0          0          0          0          0 |     2,076 
+      2003 |         0          0          0          0          0          0          0          0          0          0          0          0          0          0 |     1,877 
+      2004 |         0          0          0          0          0          0          0          0          0          0          0          0          0          0 |     1,955 
+      2005 |         0          0          0          0          0          0          0          0          0          0          0          0          0          0 |     2,056 
+      2006 |         0          0          0          0          0          0          0          0          0          0          0          0          0          0 |     2,047 
+      2007 |         0          0          0          0          0          0          0          0          0          0          0          0          0          0 |     1,940 
+      2008 |         0          0          0          0          0          0          0          0          0          0          0          0          0          0 |     1,980 
+      2009 |         0          0          0          0          0          0          0          0          0          0          0          0          0          0 |     1,865 
+      2010 |       449        459          0          0          0          0          0          0          0          0          0          0          0          0 |     1,786 
+      2011 |         0          0        465        476        473        470          0          0          0          0          0          0          0          0 |     1,884 
+      2012 |         0          0          0          0          0          0        468        445        429        418          0          0          0          0 |     1,760 
+      2013 |         0          0          0          0          0          0          0          0          0          0        396        394        387        366 |     1,543 
+      2014 |         0          0          0          0          0          0          0          0          0          0          0          0          0          0 |     1,416 
+      2015 |         0          0          0          0          0          0          0          0          0          0          0          0          0          0 |     1,258 
+      2016 |         0          0          0          0          0          0          0          0          0          0          0          0          0          0 |       267 
+-----------+----------------------------------------------------------------------------------------------------------------------------------------------------------+----------
+     Total |       449        459        465        476        473        470        468        445        429        418        396        394        387        366 |    30,289 
+
+
+           |                                              quarter
+      year |      2014    2014.25     2014.5    2014.75       2015    2015.25     2015.5    2015.75       2016 |     Total
+-----------+---------------------------------------------------------------------------------------------------+----------
+      2000 |         0          0          0          0          0          0          0          0          0 |     2,272 
+      2001 |         0          0          0          0          0          0          0          0          0 |     2,307 
+      2002 |         0          0          0          0          0          0          0          0          0 |     2,076 
+      2003 |         0          0          0          0          0          0          0          0          0 |     1,877 
+      2004 |         0          0          0          0          0          0          0          0          0 |     1,955 
+      2005 |         0          0          0          0          0          0          0          0          0 |     2,056 
+      2006 |         0          0          0          0          0          0          0          0          0 |     2,047 
+      2007 |         0          0          0          0          0          0          0          0          0 |     1,940 
+      2008 |         0          0          0          0          0          0          0          0          0 |     1,980 
+      2009 |         0          0          0          0          0          0          0          0          0 |     1,865 
+      2010 |         0          0          0          0          0          0          0          0          0 |     1,786 
+      2011 |         0          0          0          0          0          0          0          0          0 |     1,884 
+      2012 |         0          0          0          0          0          0          0          0          0 |     1,760 
+      2013 |         0          0          0          0          0          0          0          0          0 |     1,543 
+      2014 |       358        358        353        347          0          0          0          0          0 |     1,416 
+      2015 |         0          0          0          0        336        323        303        296          0 |     1,258 
+      2016 |         0          0          0          0          0          0          0          0        267 |       267 
+-----------+---------------------------------------------------------------------------------------------------+----------
+     Total |       358        358        353        347        336        323        303        296        267 |    30,289 
+
+
+. do "C:\Users\slevine2\AppData\Local\Temp\STD1n000000.tmp"
+
+.         gen marker = 1
+
+.         bysort mineid year: egen num_quarts = sum(marker)
+
+.         drop if num_quarts < 4
+(5,277 observations deleted)
+
+.         
+. 
+end of do-file
+
+. do "C:\Users\slevine2\AppData\Local\Temp\STD1n000000.tmp"
+
+.         encode year, gen(time)
+
+.         bys mineid: gen mine_time = _n
+variable mine_time already defined
+r(110);
+
+end of do-file
+
+r(110);
+
+. do "C:\Users\slevine2\AppData\Local\Temp\STD1n000000.tmp"
+
+. local inj_type "MR"
+
+.         use "X:\Projects\Mining\NIOSH\analysis\data\5_prediction-ready\`inj_type'_prediction_data.dta", clear
+file X:\Projects\Mining\NIOSH\analysis\data\5_prediction-ready`inj_type'_prediction_data.dta not found
+r(601);
+
+end of do-file
+
+r(601);
+
+. do "C:\Users\slevine2\AppData\Local\Temp\STD1n000000.tmp"
+
+. local inj_type "MR"
+
+.         use "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/`inj_type'_prediction_data.dta", clear
+(Written by R.              )
+
+. 
+end of do-file
+
+. do "C:\Users\slevine2\AppData\Local\Temp\STD1n000000.tmp"
+
+.         gen marker = 1
+
+.         bysort mineid year: egen num_quarts = sum(marker)
+
+.         drop if num_quarts < 4
+(5,277 observations deleted)
+
+.         
+. 
+end of do-file
+
+. do "C:\Users\slevine2\AppData\Local\Temp\STD1n000000.tmp"
+
+.         collapse (sum) p* sp* onsite_insp_hours hours dv* (firstnm) state sample_pp union longwall, by(mineid year)
+variable dv* not found
+r(111);
+
+end of do-file
+
+r(111);
+
+. do "C:\Users\slevine2\AppData\Local\Temp\STD1n000000.tmp"
+
+.         *+- format variables
+.         if "`injury_type'" == "MR" {
+.                 rename MR dv
+.                 rename MR_indicator dv_indicator
+.                 local relevant_parts "47 48 71 72 75 77"
+.         }
+
+.         if "`injury_type'" == "PS" {
+.                 rename PS dv
+.                 rename PS_indicator dv_indicator
+.                 local relevant_parts "48 75"
+.         }
+
+.         
+.         *+- collapse to the mine-year 
+.         collapse (sum) p* sp* onsite_insp_hours hours dv* (firstnm) state sample_pp union longwall, by(mineid year)
+variable dv* not found
+r(111);
+
+end of do-file
+
+r(111);
+
+. do "C:\Users\slevine2\AppData\Local\Temp\STD1n000000.tmp"
+
+.         gen set = 0 if year < 2012
+type mismatch
+r(109);
+
+end of do-file
+
+r(109);
+
+. do "C:\Users\slevine2\AppData\Local\Temp\STD1n000000.tmp"
+
+.         gen set = 0 if time < 2012
+time not found
+r(111);
+
+end of do-file
+
+r(111);
+
+. do "C:\Users\slevine2\AppData\Local\Temp\STD1n000000.tmp"
+
+. local inj_type "MR"
+
+.         use "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/`inj_type'_prediction_data.dta", clear
+(Written by R.              )
+
+.         
+.         *+- count number of complete quarters per year
+.         gen marker = 1
+
+.         bysort mineid year: egen num_quarts = sum(marker)
+
+.         drop if num_quarts < 4
+(5,277 observations deleted)
+
+.         
+.         *+- format variables
+.         if "`inj_type'" == "MR" {
+.                 rename MR dv
+.                 rename MR_indicator dv_indicator
+.                 local relevant_parts "47 48 71 72 75 77"
+.         }
+
+.         if "`inj_type'" == "PS" {
+.                 rename PS dv
+.                 rename PS_indicator dv_indicator
+.                 local relevant_parts "48 75"
+.         }
+
+.         
+.         *+- collapse to the mine-year 
+.         collapse (sum) p* sp* onsite_insp_hours hours dv* (firstnm) state sample_pp union longwall, by(mineid year)
+variable sample_pp not found
+r(111);
+
+end of do-file
+
+r(111);
+
+. do "C:\Users\slevine2\AppData\Local\Temp\STD1n000000.tmp"
+
+. local inj_type "MR"
+
+.         use "X:/Projects/Mining/NIOSH/analysis/data/5_prediction-ready/`inj_type'_prediction_data.dta", clear
+(Written by R.              )
+
+.         
+.         *+- count number of complete quarters per year
+.         gen marker = 1
+
+.         bysort mineid year: egen num_quarts = sum(marker)
+
+.         drop if num_quarts < 4
+(5,277 observations deleted)
+
+.         
+.         *+- format variables
+.         if "`inj_type'" == "MR" {
+.                 rename MR dv
+.                 rename MR_indicator dv_indicator
+.                 local relevant_parts "47 48 71 72 75 77"
+.         }
+
+.         if "`inj_type'" == "PS" {
+.                 rename PS dv
+.                 rename PS_indicator dv_indicator
+.                 local relevant_parts "48 75"
+.         }
+
+.         
+.         *+- collapse to the mine-year 
+.         collapse (sum) p* sp* onsite_insp_hours hours dv* (firstnm) state union longwall, by(mineid year)
+--Break--
+r(1);
+
+end of do-file
+
+--Break--
+r(1);
+
+. BREAK
+command BREAK is unrecognized
+r(199);
+
+. collapse (sum) p* sp* onsite_insp_hours hours dv* (firstnm) state union longwall, by(mineid year)
+--Break--
+r(1);
+
+. decode year, gen time
+not possible with string variable
+r(108);
+
+. collapse (sum) p* sp* onsite_insp_hours hours dv* (firstnm) state union longwall, by(mineid year)
+--Break--
+r(1);
+
+. do "C:\Users\slevine2\AppData\Local\Temp\STD1n000000.tmp"
+
+. /*** NIOSH STUDY ***********************/
+. /*** Professor Alison Morantz **********/
+. /*** Stanford Law School ***************/
+. 
+. *** Coded by Sarah Levine.
+. 
+. /********************************************************************************
+> ********************************************************************************
+> * File: preferred_and_null_models.do
+> 
+> In this file we estimate our preferred and null models.
+> 
+> ********************************************************************************
+> ********************************************************************************/
+. local this_file = "preferred_and_null_models"
+
+. local this_parent_folder = "$PROJECT_ROOT\programs\4_analyze\"
+
+. 
+. include "X:/Projects/Mining/NIOSH/analysis/header.do"
+
+. /************************************************
+> This file contains code that is included at the beginning of every program in the project.
+> ************************************************/
+. *+ Tell Stata which Stata environment to avoid compatability issues.
+. version 12.1
+
+. 
+. 
+. 
+. set type double, permanently
+(set type preference recorded)
+
+. set varabbrev off
+
+. set more off
+
+. set maxiter 1000, permanently
+(set maxiter preference recorded)
+
+. 
+. *+ Ensure all necessary packages are installed
+. capture which estwrite
+
+. if c(rc) net install estwrite.pkg
+
+. capture which unique
+
+. if c(rc) net install unique.pkg
+
+. capture which estout
+
+. if c(rc) net install estout.pkg
+
+. capture which estadd
+
+. if c(rc) net install estadd.pkg
+
+. 
+. global PROJECT_ROOT "X:\Projects\Mining\NIOSH\analysis"
+
+. 
+. adopath ++ `"$PROJECT_ROOT\ado"'
+  [1]              "X:\Projects\Mining\NIOSH\analysis\ado"
+  [2]  (BASE)      "C:\Program Files (x86)\Stata14\ado\base/"
+  [3]  (SITE)      "C:\Program Files (x86)\Stata14\ado\site/"
+  [4]              "."
+  [5]  (PERSONAL)  "c:\ado\personal/"
+  [6]  (PLUS)      "c:\ado\plus/"
+  [7]  (OLDPLACE)  "c:\ado/"
+
+. 
+. * First close any open log file
+. capture log close

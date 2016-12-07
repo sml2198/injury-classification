@@ -1,0 +1,3887 @@
+-------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  C:/Users/slevine2/Dropbox (Stanford Law School)/R-code/Injur
+> y-Classification/Model Output + Summaries/big/V1/PS/log 10-24/log_part_
+> year.txt
+  log type:  text
+ opened on:  24 Oct 2016, 21:16:23
+. }       
+
+.         
+. if "`mine_sample'" == "bad" | "`mine_sample'" == "big_bad" { 
+.         // make directories 
+.         capture mkdir "C:/Users/`fellow'/Dropbox (Stanford Law School)/
+> R-code/Injury-Classification/Model Output + Summaries/`mine_sample'/`ba
+> dness'/`version'/log `date'/`injury_type'/estout `date'/"
+.         capture mkdir "C:/Users/`fellow'/Dropbox (Stanford Law School)/
+> R-code/Injury-Classification/Model Output + Summaries/`mine_sample'/`ba
+> dness'/`version'/log `date'/`injury_type'/log `date'/"
+.         // make logs                    
+.         local directory "C:/Users/`fellow'/Dropbox (Stanford Law School
+> )/R-code/Injury-Classification/Model Output + Summaries/`mine_sample'/`
+> badness'/`version'/`injury_type'/estout `date'/"
+.         capture log close
+.         log using "C:/Users/`fellow'/Dropbox (Stanford Law School)/R-co
+> de/Injury-Classification/Model Output + Summaries/`mine_sample'/`badnes
+> s'/`version'/`injury_type'/log `date'/log_`violation_level'_`log_time'.
+> txt", text replace
+. }
+
+. 
+. ***********************************************************************
+> *********
+. ***********************************************************************
+> *********
+. // DATA SET-UP
+. 
+. // format variables
+. if "`injury_type'" == "MR" {
+.         rename MR dv
+.         rename MR_indicator dv_indicator
+.         local injury_label "MR"
+.         local relevant_parts "47 48 71 72 75 77"
+. }
+
+. 
+. if "`injury_type'" == "PS" {
+.         rename PS dv
+.         rename PS_indicator dv_indicator
+.         local injury_label "PS"
+.         local relevant_parts "48 75"
+. }
+
+. 
+. if "`violation_level'" == "part" {
+.         local violation_level_label "P"
+. }
+
+. 
+. if "`violation_level'" == "subpart" {
+.         local violation_level_label "SP"
+. }
+
+. 
+. // flag obs after or equal to 2007 to use in penlaty points analyses (a
+> ssessments changed for the last time in 2007)
+. gen sample_pp = quarter >= 2007 
+
+. 
+. // format time
+. tostring quarter, replace
+quarter was double now str7
+
+. encode quarter, gen(quart)
+
+. drop quarter year
+
+. rename quart time
+
+. local time_label "Q" // will be overwritten if unit_of_analysis is year
+> _sum or year_avg
+
+. 
+. // collapse to quarter levels (sums)
+. if "`unit_of_analysis'" == "year_sum" { // collapse to mine years - sum
+> s 
+.         local time_label "Y"
+.         
+.         // count number of complete quarters per year
+.         decode time, gen(year)
+.         replace year = regexs(0) if(regexm(year, "^[0-9][0-9][0-9][0-9]
+> "))
+(2,005 real changes made)
+.         gen marker = 1
+.         bysort mineid year: egen num_quarts = sum(marker)
+.                 /*tab num_quarts
+>                          num_quarts |      Freq.     Percent        Cum
+> .
+>                         ------------+----------------------------------
+> -
+>                                           1 |      1,100        3.63   
+>      3.63
+>                                           2 |      1,666        5.50   
+>      9.13
+>                                           3 |      2,511        8.29   
+>     17.42
+>                                           4 |     25,012       82.58   
+>    100.00
+>                         ------------+----------------------------------
+> -
+>                                   Total |     30,289      100.00 - Sara
+> h 9/21/2016 @ 10:54 PM */
+.         drop if num_quarts < 4
+(110 observations deleted)
+.         
+.         // collapse to the mine-year 
+.         collapse (sum) p* sp* onsite_insp_hours hours dv* (firstnm) sta
+> te sample_pp union longwall, by(mineid year)
+.         rename year time
+.         encode time, gen(time2)
+.         drop time
+.         rename time2 time
+.         bys mineid: gen mine_time = _n
+.         
+.         pause "complete: year_sum collapse"
+. }
+
+. // collapse to quarter levels (means)
+. if "`unit_of_analysis'" == "year_avg" { // collapse on mine years - ave
+> rages
+.         local time_label "Y"
+.         decode time, gen(year)
+.         replace year = regexs(0) if(regexm(year, "^[0-9][0-9][0-9][0-9]
+> "))
+.         pause "collapsing to mine-year"
+.         collapse (mean) p* sp* onsite_insp_hours hours dv* (firstnm) st
+> ate sample_pp union longwall, by(mineid year)
+.         rename year time
+.         encode time, gen(time2)
+.         drop time
+.         rename time2 time
+.         bys mineid: gen mine_time = _n
+.         
+.         pause "complete: year_avg collapse"
+. }
+
+. // format depvars
+. drop dv_indicator
+
+. gen dv_binary = 0 if dv == 0
+(639 missing values generated)
+
+. replace dv_binary = 1 if dv != 0
+(639 real changes made)
+
+. rename dv_binary dv_indicator
+
+.         
+. gen lnhours = log(hours)
+
+. pause "complete: data formatting"
+
+. 
+. // group variables
+. local covariates "mine_time onsite_insp_hours"
+
+. 
+. if "`union_status'" == "on" {
+.         local covariates "`covariates' union longwall"
+. }
+
+. 
+. *** lag 0 ***
+. if "`violation_level'" == "part" {
+. 
+.         foreach x in `relevant_parts' {
+  2.                 foreach var of varlist p`x' {
+  3.                         local count_vars `count_vars' `var'
+  4.                 }
+  5.         }
+.         noi di "`count_vars'"
+p48 p75
+. 
+.         foreach var of varlist p*ss {
+  2.                 local ss_vars `ss_vars' `var'
+  3.         }
+.         noi di "`ss_vars'"
+p48_ss p75_ss
+. 
+.         foreach var of varlist p*pp {
+  2.                 local pp_vars `pp_vars' `var'
+  3.         }
+.         noi di "`pp_vars'"
+p48_pp p75_pp
+.         
+.         pause "complete: variable groups - part no lag"
+. }
+
+. 
+. if "`violation_level'" == "subpart" {
+. 
+.         foreach x in 1 2 3 4 5 6 7 8 9 0 {
+  2.                 foreach var of varlist sp*`x' {
+  3.                         local count_vars `count_vars' `var'
+  4.                 }
+  5.         }
+.         noi di "`count_vars'"
+. 
+.         foreach var of varlist sp*ss {
+  2.                 local ss_vars `ss_vars' `var'
+  3.         }
+.         noi di "`ss_vars'"
+. 
+.         foreach var of varlist sp*pp {
+  2.                 local pp_vars `pp_vars' `var'
+  3.         }
+.         noi di "`pp_vars'"
+.         
+.         pause "complete: variable groups - subpart no lag"
+. }
+
+. 
+. *** lag 1 ***
+. if "`violation_level'" == "part" {
+. 
+.         foreach x in `relevant_parts' {
+  2.                 foreach var of varlist p`x'_1lag  {
+  3.                         local count_lag_1_vars `count_lag_1_vars' `v
+> ar'
+  4.                 }
+  5.         }
+.         noi di "`count_lag_1_vars'"
+p48_1lag p75_1lag
+. 
+.         foreach var of varlist p*ss_1lag  {
+  2.                 local ss_lag_1_vars `ss_lag_1_vars' `var'
+  3.         }
+.         noi di "`ss_lag_1_vars'"
+p48_ss_1lag p75_ss_1lag
+. 
+.         foreach var of varlist p*pp_1lag  {
+  2.                 local pp_lag_1_vars `pp_lag_1_vars' `var'
+  3.         }
+.         noi di "`pp_lag_1_vars'"
+p48_pp_1lag p75_pp_1lag
+.         
+.         pause "complete: variable groups - part lag 1"
+. }
+
+. 
+. if "`violation_level'" == "subpart" {
+. 
+.         foreach x in 1 2 3 4 5 6 7 8 9 0 {
+  2.                 foreach var of varlist sp*`x'_1lag  {
+  3.                         local count_lag_1_vars `count_lag_1_vars' `v
+> ar'
+  4.                 }
+  5.         }
+.         noi di "`count_lag_1_vars'"
+. 
+.         foreach var of varlist sp*ss_1lag  {
+  2.                 local ss_lag_1_vars `ss_lag_1_vars' `var'
+  3.         }
+.         noi di "`ss_lag_1_vars'"
+. 
+. 
+.         foreach var of varlist sp*pp_1lag  {
+  2.                 local pp_lag_1_vars `pp_lag_1_vars' `var'
+  3.         }
+.         noi di "`pp_lag_1_vars'"
+. 
+.         pause "complete: variable groups - subpart lag 1"
+. } 
+
+. 
+. *** lag 4 ***
+. if "`violation_level'" == "part" {
+.         
+.         foreach x in `relevant_parts' {
+  2.                 foreach var of varlist p`x'_c_4lag  {
+  3.                         local count_lag_4_vars `count_lag_4_vars' `v
+> ar'
+  4.                 }
+  5.         }
+.         noi di "`count_lag_4_vars'"
+p48_c_4lag p75_c_4lag
+. 
+.         foreach var of varlist p*ss_c_4lag {
+  2.                 local ss_lag_4_vars `ss_lag_4_vars' `var'
+  3.         }
+.         noi di "`ss_lag_4_vars'"
+p48_ss_c_4lag p75_ss_c_4lag
+. 
+.         foreach var of varlist p*pp_c_4lag {
+  2.                 local pp_lag_4_vars `pp_lag_4_vars' `var'
+  3.         }
+.         noi di "`pp_lag_4_vars'"
+p48_pp_c_4lag p75_pp_c_4lag
+. 
+.         pause "complete: variable groups - part lag 4"
+. }
+
+. 
+. if "`violation_level'" == "subpart" {
+. 
+.         foreach x in 1 2 3 4 5 6 7 8 9 0 {
+  2.                 foreach var of varlist sp*`x'_c_4lag  {
+  3.                         local count_lag_4_vars `count_lag_4_vars' `v
+> ar'
+  4.                 }
+  5.         }
+.         noi di "`count_lag_4_vars'"
+. 
+.         foreach var of varlist sp*ss_c_4lag {
+  2.                 local ss_lag_4_vars `ss_lag_4_vars' `var'
+  3.         }
+.         noi di "`ss_lag_4_vars'"
+. 
+.         foreach var of varlist sp*pp_c_4lag {
+  2.                 local pp_lag_4_vars `pp_lag_4_vars' `var'
+  3.         }
+.         noi di "`pp_lag_4_vars'"
+. 
+.         pause "complete: variable groups - subpart lag 4"
+. }
+
+. 
+. *** lag all ***
+. if "`violation_level'" == "part" {
+. 
+.         foreach x in `relevant_parts' {
+  2.                 foreach var of varlist p`x'_c_lag_all  {
+  3.                         local count_lag_all_vars `count_lag_all_vars
+> ' `var'
+  4.                 }
+  5.         }
+.         noi di "`count_lag_all_vars'"
+p48_c_lag_all p75_c_lag_all
+. 
+.         foreach var of varlist p*ss_c_lag_all {
+  2.                 local ss_lag_all_vars `ss_lag_all_vars' `var'
+  3.         }
+.         noi di "`ss_lag_all_vars'"
+p48_ss_c_lag_all p75_ss_c_lag_all
+. 
+.         foreach var of varlist p*pp_c_lag_all {
+  2.                 local pp_lag_all_vars `pp_lag_all_vars' `var'
+  3.         }
+.         noi di "`pp_lag_all_vars'"
+p48_pp_c_lag_all p75_pp_c_lag_all
+. 
+.         pause "complete: variable groups - part lag all"
+. }
+
+. 
+. if "`violation_level'" == "subpart" {
+. 
+.         foreach x in 1 2 3 4 5 6 7 8 9 0 {
+  2.                 foreach var of varlist sp*`x'_c_lag_all  {
+  3.                         local count_lag_all_vars `count_lag_all_vars
+> ' `var'
+  4.                 }
+  5.         }
+.         noi di "`count_lag_all_vars'"
+.         
+.         foreach var of varlist sp*ss_c_lag_all {
+  2.                 local ss_lag_all_vars `ss_lag_all_vars' `var'
+  3.         }
+.         noi di "`ss_lag_all_vars'"
+.         
+.         foreach var of varlist sp*pp_c_lag_all {
+  2.                 local pp_lag_all_vars `pp_lag_all_vars' `var'
+  3.         }
+.         noi di "`pp_lag_all_vars'"
+. 
+.         pause "complete: variable groups - subpart lag all"
+. }
+
+. 
+. ***********************************************************************
+> *********
+. ***********************************************************************
+> ********
+. // DATA OVERVIEW
+. 
+. // outcome variables
+. summ dv
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+          dv |        654    25.86391    23.17418          0        200
+
+. 
+. pause "next"
+
+. 
+. tab dv_indicator
+
+dv_indicato |
+          r |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          0 |         15        2.29        2.29
+          1 |        639       97.71      100.00
+------------+-----------------------------------
+      Total |        654      100.00
+
+.           
+. pause "next"
+
+. 
+. if "`violation_level'" == "part" {
+.         summ `count_vars' `ss_vars' `pp_vars'
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+         p48 |        654    .6009174    1.242952          0         10
+         p75 |        654    216.9832    171.5569          0       1177
+      p48_ss |        654    .1590214     .600487          0          7
+      p75_ss |        654    64.88226    56.29114          0        311
+      p48_pp |        654    28.53058      64.107          0        499
+-------------+---------------------------------------------------------
+      p75_pp |        654    12321.41    12953.53          0      83190
+.         
+.         pause "next"
+.         
+.         summ `count_lag_1_vars' `ss_lag_1_vars' `pp_lag_1_vars'
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+    p48_1lag |        654    .5993884    1.318405          0         13
+    p75_1lag |        654    215.7936    170.4192          0       1231
+ p48_ss_1lag |        654    .1636086      .64003          0          9
+ p75_ss_1lag |        654    64.99235    56.01286          0        298
+ p48_pp_1lag |        654    28.15902    67.42502          0        702
+-------------+---------------------------------------------------------
+ p75_pp_1lag |        654    12073.91    12901.95          0      95414
+.         
+.         pause "next"
+.         
+.         summ `count_lag_4_vars' `ss_lag_4_vars' `pp_lag_4_vars'
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+  p48_c_4lag |        654    2.353211    4.674948          0         43
+  p75_c_4lag |        654    856.6988     667.984          0       4860
+p48_ss_c_4~g |        654    .6422018    2.137063          0         30
+p75_ss_c_4~g |        654     258.656    217.3424          0       1151
+p48_pp_c_4~g |        654     109.448    240.9134          0       2329
+-------------+---------------------------------------------------------
+p75_pp_c_4~g |        654    47642.67    50729.88          0     378581
+.         
+.         pause "next"
+.         
+.         summ `count_lag_all_vars' `ss_lag_all_vars' `pp_lag_all_vars'
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+p48_c_lag_~l |        654     15.8578    23.45658          0        108
+p75_c_lag_~l |        654    6163.979    6367.649          0      38328
+p48_ss_c_l~l |        654    5.136086    9.955097          0         52
+p75_ss_c_l~l |        654    2047.564    2036.248          0      13253
+p48_pp_c_l~l |        654     560.763    1018.087          0       5444
+-------------+---------------------------------------------------------
+p75_pp_c_l~l |        654    242867.7    325262.3          0    2148250
+. }
+
+. 
+. pause "complete: data overview"
+
+. 
+. ***********************************************************************
+> ********/
+. /**********************************************************************
+> *********
+> // MODEL LABEL KEY
+> 
+> Model X.Y.Z
+>   X
+>     C: response variable is count of injuries
+>     B: response variable is binary of injuries
+>   Y
+>     V: predictors are number of violations
+>     SSV: predictors are number of significant and substantial violation
+> s
+>     PP: predictors are number of penalty points
+>   Z
+>     1: inj_t ~ viol_t
+>     2: inj_t ~ viol_(t_-1)
+>     3: inj_t ~ viol_(annual sum pre_t)
+>     4: inj_t ~ viol_(sum since study period) 
+> 
+> ***********************************************************************
+> ********/
+. ***********************************************************************
+> *********
+. // NULL MODELS (V & SSV)
+. 
+. // count outcome (V & SSV)
+. /*
+> glm dv, family(poisson) link(log) vce(cl mineid) exposure(hours) eform
+>         
+> pause "next"    
+>         
+> quietly poisson dv, vce(cl mineid) exposure(hours) irr
+> estat gof
+> 
+> pause "next"
+>         
+> glm dv, family(nbinomial) link(log) vce(cl mineid) exposure(hours) efor
+> m
+> 
+> pause "next"
+> */
+. 
+. nbreg dv, vce(cl mineid) exposure(hours) irr
+
+Fitting Poisson model:
+
+Iteration 0:   log pseudolikelihood = -4307.9691  
+Iteration 1:   log pseudolikelihood = -4307.9691  
+
+Fitting constant-only model:
+
+Iteration 0:   log pseudolikelihood = -2662.5736  
+Iteration 1:   log pseudolikelihood = -2570.9012  
+Iteration 2:   log pseudolikelihood =  -2534.924  
+Iteration 3:   log pseudolikelihood = -2534.3997  
+Iteration 4:   log pseudolikelihood = -2534.3997  
+
+Fitting full model:
+
+Iteration 0:   log pseudolikelihood = -2534.3997  
+Iteration 1:   log pseudolikelihood = -2534.3997  
+
+Negative binomial regression                    Number of obs     =      
+>   654
+                                                Wald chi2(0)      =      
+>     .
+Dispersion           = mean                     Prob > chi2       =      
+>     .
+Log pseudolikelihood = -2534.3997               Pseudo R2         =     0
+> .0000
+
+                                (Std. Err. adjusted for 64 clusters in mi
+> neid)
+-------------------------------------------------------------------------
+> -----
+             |               Robust
+          dv |        IRR   Std. Err.      z    P>|z|     [95% Conf. Inte
+> rval]
+-------------+-----------------------------------------------------------
+> -----
+       _cons |   .0000514   2.88e-06  -175.89   0.000      .000046    .00
+> 00573
+   ln(hours) |          1  (exposure)
+-------------+-----------------------------------------------------------
+> -----
+    /lnalpha |  -1.091914   .1503284                     -1.386552   -.79
+> 72758
+-------------+-----------------------------------------------------------
+> -----
+       alpha |   .3355736   .0504462                      .2499355    .45
+> 05547
+-------------------------------------------------------------------------
+> -----
+
+. 
+. pause "next"
+
+. 
+. predict c_null_yhat 
+(option n assumed; predicted number of events)
+
+. summ dv c_null_yhat
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+          dv |        654    25.86391    23.17418          0        200
+ c_null_yhat |        654     29.1318    23.45935   .1252295   144.6508
+
+. 
+. pause "complete: null model - count outcome"
+
+. 
+. // binary outcome (V & SSV)
+. logit dv_indicator, vce(cl mineid) offset(lnhours) or
+
+Iteration 0:   log pseudolikelihood = -53.655929  
+Iteration 1:   log pseudolikelihood = -49.125939  
+Iteration 2:   log pseudolikelihood = -49.118499  
+Iteration 3:   log pseudolikelihood = -49.118498  
+
+Logistic regression                             Number of obs     =      
+>   654
+                                                Wald chi2(0)      =      
+>     .
+Log pseudolikelihood = -49.118498               Prob > chi2       =      
+>     .
+
+                                (Std. Err. adjusted for 64 clusters in mi
+> neid)
+-------------------------------------------------------------------------
+> -----
+             |               Robust
+dv_indicator | Odds Ratio   Std. Err.      z    P>|z|     [95% Conf. Inte
+> rval]
+-------------+-----------------------------------------------------------
+> -----
+       _cons |   .0002453   .0000762   -26.77   0.000     .0001335    .00
+> 04508
+     lnhours |          1  (offset)
+-------------------------------------------------------------------------
+> -----
+
+. 
+. pause "next"
+
+. 
+. lfit
+
+Logistic model for dv_indicator, goodness-of-fit test
+
+       number of observations =       654
+ number of covariate patterns =         1
+              Pearson chi2(0) =         0.00
+                  Prob > chi2 =              .
+
+. 
+. pause "next"
+
+. 
+. linktest
+
+Iteration 0:   log likelihood = -71.452508  
+Iteration 1:   log likelihood = -55.809369  
+Iteration 2:   log likelihood = -49.212575  
+Iteration 3:   log likelihood = -47.171207  
+Iteration 4:   log likelihood = -46.989542  
+Iteration 5:   log likelihood = -46.988527  
+Iteration 6:   log likelihood = -46.988527  
+
+Logistic regression                             Number of obs     =      
+>   654
+                                                LR chi2(2)        =      
+> 48.93
+                                                Prob > chi2       =     0
+> .0000
+Log likelihood = -46.988527                     Pseudo R2         =     0
+> .3424
+
+-------------------------------------------------------------------------
+> -----
+dv_indicator |      Coef.   Std. Err.      z    P>|z|     [95% Conf. Inte
+> rval]
+-------------+-----------------------------------------------------------
+> -----
+        _hat |   .2176709   .5646512     0.39   0.700    -.8890251    1.3
+> 24367
+      _hatsq |   .2084756   .1218903     1.71   0.087    -.0304249    .44
+> 73761
+       _cons |   .1394709   .6711577     0.21   0.835    -1.175974    1.4
+> 54916
+-------------------------------------------------------------------------
+> -----
+
+. 
+. pause "next"
+
+. 
+. estat classification
+
+Logistic model for dv_indicator
+
+              -------- True --------
+Classified |         D            ~D  |      Total
+-----------+--------------------------+-----------
+     +     |       637            13  |        650
+     -     |         2             2  |          4
+-----------+--------------------------+-----------
+   Total   |       639            15  |        654
+
+Classified + if predicted Pr(D) >= .5
+True D defined as dv_indicator != 0
+--------------------------------------------------
+Sensitivity                     Pr( +| D)   99.69%
+Specificity                     Pr( -|~D)   13.33%
+Positive predictive value       Pr( D| +)   98.00%
+Negative predictive value       Pr(~D| -)   50.00%
+--------------------------------------------------
+False + rate for true ~D        Pr( +|~D)   86.67%
+False - rate for true D         Pr( -| D)    0.31%
+False + rate for classified +   Pr(~D| +)    2.00%
+False - rate for classified -   Pr( D| -)   50.00%
+--------------------------------------------------
+Correctly classified                        97.71%
+--------------------------------------------------
+
+. 
+. pause "next"
+
+. 
+. predict b_null_yhat 
+(option pr assumed; Pr(dv_indicator))
+
+. summ dv_indicator b_null_yhat
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+dv_indicator |        654    .9770642    .1498134          0          1
+ b_null_yhat |        654    .9770642    .0586947   .3742174   .9985543
+
+. 
+. pause "complete: null model - binary outcome"
+
+. 
+. ***********************************************************************
+> ********/
+. ***********************************************************************
+> *********
+. // NULL MODELS (PP)
+. 
+. // count outcome (PP)
+. /*
+> glm dv if sample_pp == 1, family(poisson) link(log) vce(cl mineid) expo
+> sure(hours) eform
+>         
+> pause "next"    
+>         
+> quietly poisson dv if sample_pp == 1, vce(cl mineid) exposure(hours) ir
+> r
+> estat gof
+> 
+> pause "next"
+>         
+> glm dv if sample_pp == 1, family(nbinomial) link(log) vce(cl mineid) ex
+> posure(hours) eform
+> 
+> pause "next"
+> */
+. 
+. nbreg dv if sample_pp == 1, vce(cl mineid) exposure(hours) irr
+
+Fitting Poisson model:
+
+Iteration 0:   log pseudolikelihood = -2434.0815  
+Iteration 1:   log pseudolikelihood = -2434.0815  
+
+Fitting constant-only model:
+
+Iteration 0:   log pseudolikelihood = -1631.9811  
+Iteration 1:   log pseudolikelihood =  -1564.403  
+Iteration 2:   log pseudolikelihood = -1549.5714  
+Iteration 3:   log pseudolikelihood = -1549.4482  
+Iteration 4:   log pseudolikelihood = -1549.4482  
+
+Fitting full model:
+
+Iteration 0:   log pseudolikelihood = -1549.4482  
+Iteration 1:   log pseudolikelihood = -1549.4482  
+
+Negative binomial regression                    Number of obs     =      
+>   414
+                                                Wald chi2(0)      =      
+>     .
+Dispersion           = mean                     Prob > chi2       =      
+>     .
+Log pseudolikelihood = -1549.4482               Pseudo R2         =     0
+> .0000
+
+                                (Std. Err. adjusted for 55 clusters in mi
+> neid)
+-------------------------------------------------------------------------
+> -----
+             |               Robust
+          dv |        IRR   Std. Err.      z    P>|z|     [95% Conf. Inte
+> rval]
+-------------+-----------------------------------------------------------
+> -----
+       _cons |   .0000425   2.65e-06  -161.11   0.000     .0000376     .0
+> 00048
+   ln(hours) |          1  (exposure)
+-------------+-----------------------------------------------------------
+> -----
+    /lnalpha |  -1.139655   .1863189                     -1.504833   -.77
+> 44766
+-------------+-----------------------------------------------------------
+> -----
+       alpha |   .3199294   .0596089                      .2220543     .4
+> 60945
+-------------------------------------------------------------------------
+> -----
+
+. 
+. pause "next"
+
+. 
+. predict c_pp_null_yhat 
+(option n assumed; predicted number of events)
+
+. summ dv_indicator c_pp_null_yhat
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+dv_indicator |        654    .9770642    .1498134          0          1
+c_pp_null_~t |        654    24.09719    19.40506   .1035871   119.6519
+
+. 
+. pause "complete: null model - count outcome"
+
+. 
+. // binary outcome (PP)
+. logit dv_indicator if sample_pp == 1, vce(cl mineid) offset(lnhours) or
+
+Iteration 0:   log pseudolikelihood = -38.125587  
+Iteration 1:   log pseudolikelihood = -35.813929  
+Iteration 2:   log pseudolikelihood = -35.798833  
+Iteration 3:   log pseudolikelihood = -35.798825  
+Iteration 4:   log pseudolikelihood = -35.798825  
+
+Logistic regression                             Number of obs     =      
+>   414
+                                                Wald chi2(0)      =      
+>     .
+Log pseudolikelihood = -35.798825               Prob > chi2       =      
+>     .
+
+                                (Std. Err. adjusted for 55 clusters in mi
+> neid)
+-------------------------------------------------------------------------
+> -----
+             |               Robust
+dv_indicator | Odds Ratio   Std. Err.      z    P>|z|     [95% Conf. Inte
+> rval]
+-------------+-----------------------------------------------------------
+> -----
+       _cons |   .0001681   .0000487   -29.98   0.000     .0000953    .00
+> 02968
+     lnhours |          1  (offset)
+-------------------------------------------------------------------------
+> -----
+
+. 
+. pause "next"
+
+. 
+. lfit
+
+Logistic model for dv_indicator, goodness-of-fit test
+
+       number of observations =       414
+ number of covariate patterns =         1
+              Pearson chi2(0) =         0.00
+                  Prob > chi2 =              .
+
+. 
+. pause "next"
+
+. 
+. linktest
+
+Iteration 0:   log likelihood = -50.760231  
+Iteration 1:   log likelihood = -48.349502  
+Iteration 2:   log likelihood =  -38.15464  
+Iteration 3:   log likelihood = -34.873572  
+Iteration 4:   log likelihood = -34.324196  
+Iteration 5:   log likelihood = -34.319524  
+Iteration 6:   log likelihood =  -34.31952  
+
+Logistic regression                             Number of obs     =      
+>   414
+                                                LR chi2(2)        =      
+> 32.88
+                                                Prob > chi2       =     0
+> .0000
+Log likelihood =  -34.31952                     Pseudo R2         =     0
+> .3239
+
+-------------------------------------------------------------------------
+> -----
+dv_indicator |      Coef.   Std. Err.      z    P>|z|     [95% Conf. Inte
+> rval]
+-------------+-----------------------------------------------------------
+> -----
+        _hat |   1.679868   1.232545     1.36   0.173    -.7358767    4.0
+> 95612
+      _hatsq |   -.038537   .2204366    -0.17   0.861    -.4705848    .39
+> 35107
+       _cons |  -1.496875   1.541061    -0.97   0.331    -4.517299     1.
+> 52355
+-------------------------------------------------------------------------
+> -----
+
+. 
+. pause "next"
+
+. 
+. estat classification
+
+Logistic model for dv_indicator
+
+              -------- True --------
+Classified |         D            ~D  |      Total
+-----------+--------------------------+-----------
+     +     |       403            11  |        414
+     -     |         0             0  |          0
+-----------+--------------------------+-----------
+   Total   |       403            11  |        414
+
+Classified + if predicted Pr(D) >= .5
+True D defined as dv_indicator != 0
+--------------------------------------------------
+Sensitivity                     Pr( +| D)  100.00%
+Specificity                     Pr( -|~D)    0.00%
+Positive predictive value       Pr( D| +)   97.34%
+Negative predictive value       Pr(~D| -)       .%
+--------------------------------------------------
+False + rate for true ~D        Pr( +|~D)  100.00%
+False - rate for true D         Pr( -| D)    0.00%
+False + rate for classified +   Pr(~D| +)    2.66%
+False - rate for classified -   Pr( D| -)       .%
+--------------------------------------------------
+Correctly classified                        97.34%
+--------------------------------------------------
+
+. 
+. pause "next"
+
+. 
+. predict b_pp_null_yhat 
+(option pr assumed; Pr(dv_indicator))
+
+. summ dv_indicator b_pp_null_yhat
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+dv_indicator |        654    .9770642    .1498134          0          1
+b_pp_null_~t |        654    .9687626    .0706235   .2907417   .9978925
+
+. 
+. pause "complete: null model - binary outcome"
+
+. 
+. ***********************************************************************
+> *********
+. ***********************************************************************
+> *********
+. 
+. if "`violation_level'" == "subpart" {
+.         set matsize 11000, perm
+.         set emptycells drop
+. }
+
+. 
+. ***********************************************************************
+> *********
+. ***********************************************************************
+> *********
+. 
+. // Model C.V.1
+. 
+. // poisson model
+. /*
+> glm dv `count_vars' `covariates' ib(freq).state ib(freq).time, family(p
+> oisson) link(log) vce(cl mineid) exposure(hours) iter(50) eform
+>         
+> quietly poisson dv `count_vars' `covariates' ib(freq).state ib(freq).ti
+> me, vce(cl mineid) exposure(hours) iter(50) irr
+> est store pois
+> estat gof
+>         
+> pause "next"
+> 
+> // negative binomial model
+> glm dv `count_vars' `covariates' ib(freq).state ib(freq).time, family(n
+> binomial) link(log) vce(cl mineid) exposure(hours) iter(50) eform
+> 
+> pause "next"
+> */
+. eststo clear
+
+. eststo: nbreg dv `count_vars' `covariates' ib(freq).state ib(freq).time
+> , vce(cl mineid) exposure(hours) iter(50) irr
+
+Fitting Poisson model:
+
+Iteration 0:   log pseudolikelihood = -3111.1816  
+Iteration 1:   log pseudolikelihood = -3081.1515  
+Iteration 2:   log pseudolikelihood =  -3081.083  
+Iteration 3:   log pseudolikelihood =  -3081.083  
+
+Fitting constant-only model:
+
+Iteration 0:   log pseudolikelihood = -2662.5736  
+Iteration 1:   log pseudolikelihood = -2570.9012  
+Iteration 2:   log pseudolikelihood =  -2534.924  
+Iteration 3:   log pseudolikelihood = -2534.3997  
+Iteration 4:   log pseudolikelihood = -2534.3997  
+
+Fitting full model:
+
+Iteration 0:   log pseudolikelihood =  -2418.841  
+Iteration 1:   log pseudolikelihood = -2397.1617  
+Iteration 2:   log pseudolikelihood = -2368.6926  
+Iteration 3:   log pseudolikelihood = -2368.1949  
+Iteration 4:   log pseudolikelihood = -2368.1949  
+
+Negative binomial regression                    Number of obs     =      
+>   654
+                                                Wald chi2(23)     =      
+>     .
+Dispersion           = mean                     Prob > chi2       =      
+>     .
+Log pseudolikelihood = -2368.1949               Pseudo R2         =     0
+> .0656
+
+                                (Std. Err. adjusted for 64 clusters in mi
+> neid)
+-------------------------------------------------------------------------
+> -----
+             |               Robust
+          dv |        IRR   Std. Err.      z    P>|z|     [95% Conf. Inte
+> rval]
+-------------+-----------------------------------------------------------
+> -----
+         p48 |   1.020523   .0197079     1.05   0.293     .9826179     1.
+> 05989
+         p75 |   1.000529   .0003176     1.67   0.096     .9999069    1.0
+> 01152
+   mine_time |   .9896292   .1153566    -0.09   0.929     .7875023    1.2
+> 43636
+onsite_ins~s |   .9998097   .0000781    -2.43   0.015     .9996565    .99
+> 99629
+             |
+       state |
+          4  |   1.237621   .1036446     2.55   0.011     1.050277    1.4
+> 58383
+          5  |   .9893213   .0826145    -0.13   0.898     .8399564    1.1
+> 65247
+          6  |   1.017337   .1151089     0.15   0.879     .8149925    1.2
+> 69919
+          9  |   .6696366   .0609934    -4.40   0.000     .5601549    .80
+> 05165
+         10  |   .8854922   .0731104    -1.47   0.141     .7531918    1.0
+> 41032
+         12  |   .9960138   .1981254    -0.02   0.984     .6744439    1.4
+> 70906
+         14  |   .3347656   .0756622    -4.84   0.000     .2149592    .52
+> 13453
+         15  |    .642231   .1552496    -1.83   0.067     .3998768    1.0
+> 31469
+             |
+        time |
+       2004  |   .9709955   .1308709    -0.22   0.827     .7455764    1.2
+> 64568
+       2005  |   .8846892   .2072975    -0.52   0.601     .5589075    1.4
+> 00366
+       2006  |   .8242437   .2872728    -0.55   0.579     .4162816    1.6
+> 32014
+       2007  |    .815568   .3835884    -0.43   0.665     .3244234    2.0
+> 50257
+       2008  |   .7762446   .4529902    -0.43   0.664     .2473239    2.4
+> 36302
+       2009  |   .6484223    .461422    -0.61   0.543     .1607448    2.6
+> 15647
+       2010  |   .7044271   .5762755    -0.43   0.668     .1417385    3.5
+> 00937
+       2011  |   .6686532   .6132813    -0.44   0.661     .1107869     4.
+> 03565
+       2012  |   .6165908    .648937    -0.46   0.646     .0783685    4.8
+> 51236
+       2013  |   .6042145   .7074728    -0.43   0.667     .0608866    5.9
+> 95982
+       2014  |   .6630296   .8555146    -0.32   0.750      .052871    8.3
+> 14726
+       2015  |   .6833875   .9569871    -0.27   0.786     .0439218    10.
+> 63295
+             |
+       _cons |   .0000849   .0000109   -73.22   0.000      .000066    .00
+> 01091
+   ln(hours) |          1  (exposure)
+-------------+-----------------------------------------------------------
+> -----
+    /lnalpha |  -1.744641    .146214                     -2.031216   -1.4
+> 58067
+-------------+-----------------------------------------------------------
+> -----
+       alpha |   .1747076   .0255447                       .131176    .23
+> 26856
+-------------------------------------------------------------------------
+> -----
+(est1 stored)
+
+. esttab using `"`directory'Model.`injury_label'.`time_label'.`violation_
+> level_label'.C.V.1.csv"', replace plain wide p eform
+(note: file C:/Users/slevine2/Dropbox (Stanford Law School)/R-code/Injury
+> -Classification/Model Output + Summaries/big/V1/PS/estout 10-24/Model.P
+> S.Y.P.C.V.1.csv not found)
+(output written to C:/Users/slevine2/Dropbox (Stanford Law School)/R-code
+> /Injury-Classification/Model Output + Summaries/big/V1/PS/estout 10-24/
+> Model.PS.Y.P.C.V.1.csv)
+
+. /* 
+> est store nbin
+> 
+> pause "next"
+> 
+> // test for over-dispersion
+> lrtest pois nbin, stats force 
+> 
+> pause "next" 
+> 
+> // final model + diagnostics/assessment
+> quietly nbreg dv `count_vars' `covariates' ib(freq).state ib(freq).time
+> , vce(cl mineid) exposure(hours) iter(50) irr
+> */
+. predict cv1_yhat 
+(option n assumed; predicted number of events)
+
+. gen cv1_res = dv - cv1_yhat
+
+. 
+. summ dv cv1_yhat
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+          dv |        654    25.86391    23.17418          0        200
+    cv1_yhat |        654    27.22686    22.53347   .1854351   152.1439
+
+. /*
+> pause "next"
+> 
+> scatter dv cv1_yhat
+> 
+> pause "next"
+> 
+> scatter cv1_res dv
+> 
+> pause "next"
+> 
+> scatter cv1_res cv1_yhat
+> */
+. pause "complete: C.V.1"
+
+. 
+. ***********************************************************************
+> *********
+. ***********************************************************************
+> *********
+. 
+. // Model C.V.2
+. 
+. // poisson model
+. /*
+> glm dv `count_lag_1_vars' `covariates' ib(freq).state ib(freq).time, fa
+> mily(poisson) link(log) vce(cl mineid) exposure(hours) iter(50) eform
+>         
+> quietly poisson dv `count_lag_1_vars' `covariates' ib(freq).state ib(fr
+> eq).time, vce(cl mineid) exposure(hours) iter(50) irr
+> est store pois
+> estat gof
+>         
+> pause "next"
+> 
+> // negative binomial model
+> glm dv `count_lag_1_vars' `covariates' ib(freq).state ib(freq).time, fa
+> mily(nbinomial) link(log) vce(cl mineid) exposure(hours) iter(50) eform
+> 
+> pause "next"
+> */
+. eststo clear
+
+. eststo: nbreg dv `count_lag_1_vars' `covariates' ib(freq).state ib(freq
+> ).time, vce(cl mineid) exposure(hours) iter(50) irr
+
+Fitting Poisson model:
+
+Iteration 0:   log pseudolikelihood = -3120.4999  
+Iteration 1:   log pseudolikelihood =  -3094.356  
+Iteration 2:   log pseudolikelihood = -3094.3057  
+Iteration 3:   log pseudolikelihood = -3094.3057  
+
+Fitting constant-only model:
+
+Iteration 0:   log pseudolikelihood = -2662.5736  
+Iteration 1:   log pseudolikelihood = -2570.9012  
+Iteration 2:   log pseudolikelihood =  -2534.924  
+Iteration 3:   log pseudolikelihood = -2534.3997  
+Iteration 4:   log pseudolikelihood = -2534.3997  
+
+Fitting full model:
+
+Iteration 0:   log pseudolikelihood = -2420.4245  
+Iteration 1:   log pseudolikelihood = -2399.4864  
+Iteration 2:   log pseudolikelihood = -2370.8266  
+Iteration 3:   log pseudolikelihood = -2370.3244  
+Iteration 4:   log pseudolikelihood = -2370.3243  
+
+Negative binomial regression                    Number of obs     =      
+>   654
+                                                Wald chi2(23)     =      
+>     .
+Dispersion           = mean                     Prob > chi2       =      
+>     .
+Log pseudolikelihood = -2370.3243               Pseudo R2         =     0
+> .0647
+
+                                (Std. Err. adjusted for 64 clusters in mi
+> neid)
+-------------------------------------------------------------------------
+> -----
+             |               Robust
+          dv |        IRR   Std. Err.      z    P>|z|     [95% Conf. Inte
+> rval]
+-------------+-----------------------------------------------------------
+> -----
+    p48_1lag |   1.004344   .0162209     0.27   0.788     .9730496    1.0
+> 36645
+    p75_1lag |   1.000481   .0003014     1.60   0.110     .9998905    1.0
+> 01072
+   mine_time |   .9859669   .1097177    -0.13   0.899      .792759    1.2
+> 26263
+onsite_ins~s |   .9998256   .0000758    -2.30   0.021      .999677    .99
+> 99742
+             |
+       state |
+          4  |    1.23908   .1049436     2.53   0.011     1.049559    1.4
+> 62822
+          5  |   .9999932    .079407    -0.00   1.000     .8558649    1.1
+> 68393
+          6  |   1.006805    .114004     0.06   0.952     .8064197    1.2
+> 56985
+          9  |    .665855   .0601046    -4.51   0.000     .5578848    .79
+> 47213
+         10  |   .8794239   .0729292    -1.55   0.121     .7474971    1.0
+> 34635
+         12  |   .9797501   .1932625    -0.10   0.917     .6655947    1.4
+> 42184
+         14  |   .3325399   .0742903    -4.93   0.000     .2146263     .5
+> 15234
+         15  |   .6343616   .1568802    -1.84   0.066     .3906891    1.0
+> 30013
+             |
+        time |
+       2004  |   .9769147   .1283376    -0.18   0.859     .7551514    1.2
+> 63803
+       2005  |   .8911591   .1993549    -0.52   0.606     .5748294    1.3
+> 81566
+       2006  |   .8464463   .2804884    -0.50   0.615      .442115    1.6
+> 20554
+       2007  |    .836038   .3748046    -0.40   0.690     .3472349     2.
+> 01293
+       2008  |   .7906884   .4398569    -0.42   0.673     .2657573    2.3
+> 52477
+       2009  |   .6541903   .4433686    -0.63   0.531     .1733061    2.4
+> 69417
+       2010  |   .7271552   .5678329    -0.41   0.683     .1573718    3.3
+> 59907
+       2011  |   .6921464   .6042538    -0.42   0.673     .1250509    3.8
+> 30974
+       2012  |   .6303502   .6314932    -0.46   0.645     .0884783    4.4
+> 90834
+       2013  |    .618539   .6904201    -0.43   0.667     .0693819    5.5
+> 14267
+       2014  |   .6928569   .8534799    -0.30   0.766     .0619598     7.
+> 74777
+       2015  |   .7101063   .9477252    -0.26   0.798     .0519145    9.7
+> 13097
+             |
+       _cons |   .0000855   .0000105   -75.98   0.000     .0000671    .00
+> 01088
+   ln(hours) |          1  (exposure)
+-------------+-----------------------------------------------------------
+> -----
+    /lnalpha |  -1.734246    .147859                     -2.024044   -1.4
+> 44447
+-------------+-----------------------------------------------------------
+> -----
+       alpha |   .1765333    .026102                      .1321201    .23
+> 58764
+-------------------------------------------------------------------------
+> -----
+(est1 stored)
+
+. esttab using `"`directory'Model.`injury_label'.`time_label'.`violation_
+> level_label'.C.V.2.csv"', replace plain wide p eform
+(note: file C:/Users/slevine2/Dropbox (Stanford Law School)/R-code/Injury
+> -Classification/Model Output + Summaries/big/V1/PS/estout 10-24/Model.P
+> S.Y.P.C.V.2.csv not found)
+(output written to C:/Users/slevine2/Dropbox (Stanford Law School)/R-code
+> /Injury-Classification/Model Output + Summaries/big/V1/PS/estout 10-24/
+> Model.PS.Y.P.C.V.2.csv)
+
+. /*
+> est store nbin
+> 
+> pause "next"
+> 
+> // test for over-dispersion
+> lrtest pois nbin, stats force 
+> 
+> pause "next" 
+> 
+> // final model + diagnostics/assessment
+> quietly nbreg dv `count_lag_1_vars' `covariates' ib(freq).state ib(freq
+> ).time, vce(cl mineid) exposure(hours) iter(50) irr
+> */
+. predict cv2_yhat 
+(option n assumed; predicted number of events)
+
+. gen cv2_res = dv - cv2_yhat
+
+. 
+. summ dv cv2_yhat
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+          dv |        654    25.86391    23.17418          0        200
+    cv2_yhat |        654     27.2033    22.21181   .1851893   146.7638
+
+. /*
+> pause "next"
+> 
+> scatter dv cv2_yhat
+> 
+> pause "next"
+> 
+> scatter cv2_res dv
+> 
+> pause "next"
+> 
+> scatter cv2_res cv2_yhat
+> */
+. pause "complete: C.V.2"
+
+. 
+. ***********************************************************************
+> *********
+. ***********************************************************************
+> *********
+. 
+. // Model C.V.3
+. 
+. // poisson model
+. /*
+> glm dv `count_lag_4_vars' `covariates' ib(freq).state ib(freq).time, fa
+> mily(poisson) link(log) vce(cl mineid) exposure(hours) iter(50) eform
+>         
+> quietly poisson dv `count_lag_4_vars' `covariates' ib(freq).state ib(fr
+> eq).time, vce(cl mineid) exposure(hours) iter(50) irr
+> est store pois
+> estat gof
+>         
+> pause "next"
+> 
+> // negative binomial model
+> glm dv `count_lag_4_vars' `covariates' ib(freq).state ib(freq).time, fa
+> mily(nbinomial) link(log) vce(cl mineid) exposure(hours) iter(50) eform
+> 
+> pause "next"
+> */
+. eststo clear
+
+. eststo: nbreg dv `count_lag_4_vars' `covariates' ib(freq).state ib(freq
+> ).time, vce(cl mineid) exposure(hours) iter(50) irr
+
+Fitting Poisson model:
+
+Iteration 0:   log pseudolikelihood = -3129.9232  
+Iteration 1:   log pseudolikelihood = -3103.4279  
+Iteration 2:   log pseudolikelihood = -3103.3771  
+Iteration 3:   log pseudolikelihood = -3103.3771  
+
+Fitting constant-only model:
+
+Iteration 0:   log pseudolikelihood = -2662.5736  
+Iteration 1:   log pseudolikelihood = -2570.9012  
+Iteration 2:   log pseudolikelihood =  -2534.924  
+Iteration 3:   log pseudolikelihood = -2534.3997  
+Iteration 4:   log pseudolikelihood = -2534.3997  
+
+Fitting full model:
+
+Iteration 0:   log pseudolikelihood = -2420.9888  
+Iteration 1:   log pseudolikelihood = -2399.2705  
+Iteration 2:   log pseudolikelihood = -2372.2991  
+Iteration 3:   log pseudolikelihood = -2371.8593  
+Iteration 4:   log pseudolikelihood = -2371.8592  
+
+Negative binomial regression                    Number of obs     =      
+>   654
+                                                Wald chi2(23)     =      
+>     .
+Dispersion           = mean                     Prob > chi2       =      
+>     .
+Log pseudolikelihood = -2371.8592               Pseudo R2         =     0
+> .0641
+
+                                (Std. Err. adjusted for 64 clusters in mi
+> neid)
+-------------------------------------------------------------------------
+> -----
+             |               Robust
+          dv |        IRR   Std. Err.      z    P>|z|     [95% Conf. Inte
+> rval]
+-------------+-----------------------------------------------------------
+> -----
+  p48_c_4lag |   1.002867   .0051704     0.56   0.579     .9927843    1.0
+> 13052
+  p75_c_4lag |   1.000088    .000081     1.09   0.275     .9999297    1.0
+> 00247
+   mine_time |     .98656   .1089725    -0.12   0.903     .7945155    1.2
+> 25024
+onsite_ins~s |   .9998439   .0000766    -2.04   0.042     .9996939     .9
+> 99994
+             |
+       state |
+          4  |   1.240659   .1059133     2.53   0.012      1.04951    1.4
+> 66622
+          5  |   .9869908   .0823368    -0.16   0.875     .8381159     1.
+> 16231
+          6  |   1.000095   .1129818     0.00   0.999     .8014564    1.2
+> 47965
+          9  |   .6604898   .0602943    -4.54   0.000     .5522837     .7
+> 89896
+         10  |   .8772475    .073342    -1.57   0.117     .7446595    1.0
+> 33443
+         12  |   .9478953   .1911006    -0.27   0.791     .6384895    1.4
+> 07236
+         14  |   .3266512   .0731303    -5.00   0.000     .2106291    .50
+> 65826
+         15  |    .628541   .1578883    -1.85   0.065     .3841611     1.
+> 02838
+             |
+        time |
+       2004  |   .9737153   .1277235    -0.20   0.839     .7529719    1.2
+> 59172
+       2005  |    .888554   .1977718    -0.53   0.596     .5744151    1.3
+> 74491
+       2006  |   .8490351    .279089    -0.50   0.619      .445784    1.6
+> 17063
+       2007  |   .8363064   .3720565    -0.40   0.688     .3496893    2.0
+> 00085
+       2008  |   .7903191   .4363472    -0.43   0.670     .2678188     2.
+> 33219
+       2009  |   .6512755   .4375214    -0.64   0.523     .1745559    2.4
+> 29936
+       2010  |   .7201853   .5567951    -0.42   0.671     .1582548    3.2
+> 77416
+       2011  |   .6804874   .5890544    -0.44   0.657     .1247353    3.7
+> 12366
+       2012  |   .6171374   .6132923    -0.49   0.627     .0880002    4.3
+> 27928
+       2013  |   .6119801   .6786535    -0.44   0.658     .0696306    5.3
+> 78667
+       2014  |   .6820907    .834162    -0.31   0.754     .0620678      7
+> .4958
+       2015  |   .6987193   .9256898    -0.27   0.787     .0520713    9.3
+> 75766
+             |
+       _cons |   .0000862   .0000105   -76.75   0.000     .0000678    .00
+> 01094
+   ln(hours) |          1  (exposure)
+-------------+-----------------------------------------------------------
+> -----
+    /lnalpha |  -1.727099   .1467529                     -2.014729   -1.4
+> 39468
+-------------+-----------------------------------------------------------
+> -----
+       alpha |   .1777995   .0260926                      .1333565    .23
+> 70538
+-------------------------------------------------------------------------
+> -----
+(est1 stored)
+
+. esttab using `"`directory'Model.`injury_label'.`time_label'.`violation_
+> level_label'.C.V.3.csv"', replace plain wide p eform
+(note: file C:/Users/slevine2/Dropbox (Stanford Law School)/R-code/Injury
+> -Classification/Model Output + Summaries/big/V1/PS/estout 10-24/Model.P
+> S.Y.P.C.V.3.csv not found)
+(output written to C:/Users/slevine2/Dropbox (Stanford Law School)/R-code
+> /Injury-Classification/Model Output + Summaries/big/V1/PS/estout 10-24/
+> Model.PS.Y.P.C.V.3.csv)
+
+. /*
+> est store nbin
+> 
+> pause "next"
+> 
+> // test for over-dispersion
+> lrtest pois nbin, stats force 
+> 
+> pause "next" 
+> 
+> // final model + diagnostics/assessment
+> quietly nbreg dv `count_lag_4_vars' `covariates' ib(freq).state ib(freq
+> ).time, vce(cl mineid) exposure(hours) iter(50) irr
+> */
+. predict cv3_yhat 
+(option n assumed; predicted number of events)
+
+. gen cv3_res = dv - cv3_yhat
+
+. 
+. summ dv cv3_yhat
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+          dv |        654    25.86391    23.17418          0        200
+    cv3_yhat |        654    27.16234     21.9521   .1803971   143.1797
+
+. 
+. pause "next"
+
+. /*
+> scatter dv cv3_yhat
+> 
+> pause "next"
+> 
+> scatter cv3_res dv
+> 
+> pause "next"
+> 
+> scatter cv3_res cv3_yhat
+> */
+. pause "complete: C.V.3"
+
+. 
+. ***********************************************************************
+> *********
+. ***********************************************************************
+> *********
+. 
+. // Model C.V.4
+. 
+. // poisson model
+. /*
+> glm dv `count_lag_all_vars' `covariates' ib(freq).state ib(freq).time, 
+> family(poisson) link(log) vce(cl mineid) exposure(hours) iter(50) eform
+>         
+> quietly poisson dv `count_lag_all_vars' `covariates' ib(freq).state ib(
+> freq).time, vce(cl mineid) exposure(hours) iter(50) irr
+> est store pois
+> estat gof
+>         
+> pause "next"
+> 
+> // negative binomial model
+> glm dv `count_lag_all_vars' `covariates' ib(freq).state ib(freq).time, 
+> family(nbinomial) link(log) vce(cl mineid) exposure(hours) iter(50) efo
+> rm
+> 
+> pause "next"
+> */
+. eststo clear
+
+. eststo: nbreg dv `count_lag_all_vars' `covariates' ib(freq).state ib(fr
+> eq).time, vce(cl mineid) exposure(hours) iter(50) irr
+
+Fitting Poisson model:
+
+Iteration 0:   log pseudolikelihood = -3111.1896  
+Iteration 1:   log pseudolikelihood = -3091.0736  
+Iteration 2:   log pseudolikelihood =  -3091.047  
+Iteration 3:   log pseudolikelihood =  -3091.047  
+
+Fitting constant-only model:
+
+Iteration 0:   log pseudolikelihood = -2662.5736  
+Iteration 1:   log pseudolikelihood = -2570.9012  
+Iteration 2:   log pseudolikelihood =  -2534.924  
+Iteration 3:   log pseudolikelihood = -2534.3997  
+Iteration 4:   log pseudolikelihood = -2534.3997  
+
+Fitting full model:
+
+Iteration 0:   log pseudolikelihood = -2418.6369  
+Iteration 1:   log pseudolikelihood = -2394.3561  
+Iteration 2:   log pseudolikelihood = -2370.7704  
+Iteration 3:   log pseudolikelihood = -2370.4148  
+Iteration 4:   log pseudolikelihood = -2370.4148  
+
+Negative binomial regression                    Number of obs     =      
+>   654
+                                                Wald chi2(23)     =      
+>     .
+Dispersion           = mean                     Prob > chi2       =      
+>     .
+Log pseudolikelihood = -2370.4148               Pseudo R2         =     0
+> .0647
+
+                                (Std. Err. adjusted for 64 clusters in mi
+> neid)
+-------------------------------------------------------------------------
+> -----
+             |               Robust
+          dv |        IRR   Std. Err.      z    P>|z|     [95% Conf. Inte
+> rval]
+-------------+-----------------------------------------------------------
+> -----
+p48_c_lag_~l |   1.002023   .0018404     1.10   0.271     .9984229    1.0
+> 05637
+p75_c_lag_~l |   .9999854   8.32e-06    -1.75   0.080     .9999691    1.0
+> 00002
+   mine_time |   1.004763   .1207942     0.04   0.968     .7938358    1.2
+> 71734
+onsite_ins~s |   .9999404   .0000636    -0.94   0.349     .9998158    1.0
+> 00065
+             |
+       state |
+          4  |    1.24622    .123902     2.21   0.027     1.025572    1.5
+> 14339
+          5  |   .9321998   .0952112    -0.69   0.492      .763081      1
+> .1388
+          6  |   .9901622   .1087698    -0.09   0.928     .7983648    1.2
+> 28037
+          9  |   .6369334   .0581287    -4.94   0.000     .5326115    .76
+> 16887
+         10  |   .8569789   .0802166    -1.65   0.099     .7133364    1.0
+> 29546
+         12  |   .8206565   .1436895    -1.13   0.259     .5822692    1.1
+> 56642
+         14  |   .2954875   .0643282    -5.60   0.000     .1928549    .45
+> 27385
+         15  |   .6096121   .1618917    -1.86   0.062     .3622464    1.0
+> 25895
+             |
+        time |
+       2004  |   .9488677   .1323641    -0.38   0.707     .7218812    1.2
+> 47227
+       2005  |   .8466167    .203824    -0.69   0.489     .5281522    1.3
+> 57109
+       2006  |   .8174071   .2915631    -0.57   0.572      .406276    1.6
+> 44583
+       2007  |   .7996566   .3858001    -0.46   0.643     .3106242    2.0
+> 58599
+       2008  |   .7197922   .4306864    -0.55   0.583     .2227882    2.3
+> 25531
+       2009  |   .5909977   .4306967    -0.72   0.470      .141665    2.4
+> 65524
+       2010  |   .6339944   .5264099    -0.55   0.583     .1245452    3.2
+> 27334
+       2011  |   .5993911   .5596801    -0.55   0.584     .0961397    3.7
+> 36955
+       2012  |   .5333075   .5686548    -0.59   0.555     .0659719    4.3
+> 11182
+       2013  |   .5254107   .6230965    -0.54   0.587     .0514091    5.3
+> 69801
+       2014  |   .5784327   .7574211    -0.42   0.676     .0444282     7.
+> 53091
+       2015  |   .5998469   .8539467    -0.36   0.720     .0368352    9.7
+> 68268
+             |
+       _cons |   .0000862   .0000108   -74.40   0.000     .0000674    .00
+> 01103
+   ln(hours) |          1  (exposure)
+-------------+-----------------------------------------------------------
+> -----
+    /lnalpha |  -1.734499   .1445613                     -2.017834   -1.4
+> 51164
+-------------+-----------------------------------------------------------
+> -----
+       alpha |   .1764886   .0255134                      .1329431    .23
+> 42973
+-------------------------------------------------------------------------
+> -----
+(est1 stored)
+
+. esttab using `"`directory'Model.`injury_label'.`time_label'.`violation_
+> level_label'.C.V.4.csv"', replace plain wide p eform
+(note: file C:/Users/slevine2/Dropbox (Stanford Law School)/R-code/Injury
+> -Classification/Model Output + Summaries/big/V1/PS/estout 10-24/Model.P
+> S.Y.P.C.V.4.csv not found)
+(output written to C:/Users/slevine2/Dropbox (Stanford Law School)/R-code
+> /Injury-Classification/Model Output + Summaries/big/V1/PS/estout 10-24/
+> Model.PS.Y.P.C.V.4.csv)
+
+. /*
+> est store nbin
+> 
+> pause "next"
+> 
+> // test for over-dispersion
+> lrtest pois nbin, stats force 
+> 
+> pause "next" 
+> 
+> // final model + diagnostics/assessment
+> quietly nbreg dv `count_lag_all_vars' `covariates' ib(freq).state ib(fr
+> eq).time, vce(cl mineid) exposure(hours) iter(50) irr
+> */
+. predict cv4_yhat 
+(option n assumed; predicted number of events)
+
+. gen cv4_res = dv - cv4_yhat
+
+. 
+. summ dv cv4_yhat
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+          dv |        654    25.86391    23.17418          0        200
+    cv4_yhat |        654    26.83418    20.71639   .1572975   143.5276
+
+. /*
+> pause "next"
+> 
+> scatter dv cv4_yhat
+> 
+> pause "next"
+> 
+> scatter cv4_res dv
+> 
+> pause "next"
+> 
+> scatter cv4_res cv4_yhat
+> */
+. pause "complete: C.V.4"
+
+. 
+. ***********************************************************************
+> *********
+. ***********************************************************************
+> *********
+. 
+. // Model C.SSV.1
+. 
+. // poisson model
+. /*
+> glm dv `ss_vars' `covariates' ib(freq).state ib(freq).time, family(pois
+> son) link(log) vce(cl mineid) exposure(hours) iter(50) eform
+>         
+> quietly poisson dv `count_vars' `covariates' ib(freq).state ib(freq).ti
+> me, vce(cl mineid) exposure(hours) iter(50) irr
+> est store pois
+> estat gof
+>         
+> pause "next"
+> 
+> // negative binomial model
+> glm dv `ss_vars' `covariates' ib(freq).state ib(freq).time, family(nbin
+> omial) link(log) vce(cl mineid) exposure(hours) iter(50) eform
+> 
+> pause "next"
+> */
+. eststo clear
+
+. eststo: nbreg dv `ss_vars' `covariates' ib(freq).state ib(freq).time, v
+> ce(cl mineid) exposure(hours) iter(50) irr
+
+Fitting Poisson model:
+
+Iteration 0:   log pseudolikelihood = -3125.6039  
+Iteration 1:   log pseudolikelihood = -3105.0111  
+Iteration 2:   log pseudolikelihood = -3104.9836  
+Iteration 3:   log pseudolikelihood = -3104.9836  
+
+Fitting constant-only model:
+
+Iteration 0:   log pseudolikelihood = -2662.5736  
+Iteration 1:   log pseudolikelihood = -2570.9012  
+Iteration 2:   log pseudolikelihood =  -2534.924  
+Iteration 3:   log pseudolikelihood = -2534.3997  
+Iteration 4:   log pseudolikelihood = -2534.3997  
+
+Fitting full model:
+
+Iteration 0:   log pseudolikelihood = -2419.8997  
+Iteration 1:   log pseudolikelihood = -2400.4986  
+Iteration 2:   log pseudolikelihood = -2369.4136  
+Iteration 3:   log pseudolikelihood = -2368.8074  
+Iteration 4:   log pseudolikelihood = -2368.8072  
+
+Negative binomial regression                    Number of obs     =      
+>   654
+                                                Wald chi2(23)     =      
+>     .
+Dispersion           = mean                     Prob > chi2       =      
+>     .
+Log pseudolikelihood = -2368.8072               Pseudo R2         =     0
+> .0653
+
+                                (Std. Err. adjusted for 64 clusters in mi
+> neid)
+-------------------------------------------------------------------------
+> -----
+             |               Robust
+          dv |        IRR   Std. Err.      z    P>|z|     [95% Conf. Inte
+> rval]
+-------------+-----------------------------------------------------------
+> -----
+      p48_ss |   .9926231   .0364662    -0.20   0.840     .9236632    1.0
+> 66732
+      p75_ss |   1.001602   .0007402     2.17   0.030     1.000153    1.0
+> 03054
+   mine_time |   .9824449   .1149802    -0.15   0.880     .7810664    1.2
+> 35744
+onsite_ins~s |   .9998295   .0000639    -2.67   0.008     .9997042    .99
+> 99548
+             |
+       state |
+          4  |   1.287811   .1190641     2.74   0.006     1.074372    1.5
+> 43653
+          5  |   1.044125   .0905143     0.50   0.618     .8809733    1.2
+> 37493
+          6  |   1.015887   .1107597     0.14   0.885     .8204289    1.2
+> 57911
+          9  |   .6798069   .0625731    -4.19   0.000     .5675923    .81
+> 42068
+         10  |   .8640799   .0703858    -1.79   0.073     .7365753    1.0
+> 13656
+         12  |   .9819566   .1769246    -0.10   0.920     .6898053    1.3
+> 97842
+         14  |   .3409557   .0760918    -4.82   0.000     .2201575    .52
+> 80346
+         15  |   .6199837   .1537988    -1.93   0.054     .3812619    1.0
+> 08178
+             |
+        time |
+       2004  |   .9719765   .1295565    -0.21   0.831     .7485099    1.2
+> 62159
+       2005  |   .8928017   .2101743    -0.48   0.630     .5628256    1.4
+> 16238
+       2006  |   .8447386   .2977841    -0.48   0.632     .4233114    1.6
+> 85717
+       2007  |   .8495008   .4012396    -0.35   0.730     .3366052    2.1
+> 43911
+       2008  |   .8192775   .4801956    -0.34   0.734     .2597311    2.5
+> 84271
+       2009  |   .6880849   .4907177    -0.52   0.600     .1700573    2.7
+> 84125
+       2010  |   .7623756   .6284973    -0.33   0.742      .151511    3.8
+> 36134
+       2011  |   .7227629   .6657221    -0.35   0.724     .1188424    4.3
+> 95621
+       2012  |   .6725956    .708517    -0.38   0.707     .0853281    5.3
+> 01709
+       2013  |   .6653328   .7805974    -0.35   0.728     .0667378    6.6
+> 32934
+       2014  |   .7394935    .957114    -0.23   0.816     .0585111    9.3
+> 46096
+       2015  |   .7823032   1.101309    -0.17   0.862     .0495533    12.
+> 35031
+             |
+       _cons |   .0000839   .0000108   -72.56   0.000     .0000651    .00
+> 01081
+   ln(hours) |          1  (exposure)
+-------------+-----------------------------------------------------------
+> -----
+    /lnalpha |  -1.738889   .1455272                     -2.024118   -1.4
+> 53661
+-------------+-----------------------------------------------------------
+> -----
+       alpha |   .1757154   .0255714                      .1321104     .2
+> 33713
+-------------------------------------------------------------------------
+> -----
+(est1 stored)
+
+. esttab using `"`directory'Model.`injury_label'.`time_label'.`violation_
+> level_label'.C.SSV.1.csv"', replace plain wide p eform
+(note: file C:/Users/slevine2/Dropbox (Stanford Law School)/R-code/Injury
+> -Classification/Model Output + Summaries/big/V1/PS/estout 10-24/Model.P
+> S.Y.P.C.SSV.1.csv not found)
+(output written to C:/Users/slevine2/Dropbox (Stanford Law School)/R-code
+> /Injury-Classification/Model Output + Summaries/big/V1/PS/estout 10-24/
+> Model.PS.Y.P.C.SSV.1.csv)
+
+. /*
+> est store nbin
+> 
+> pause "next"
+> 
+> // test for over-dispersion
+> lrtest pois nbin, stats force 
+> 
+> pause "next" 
+> 
+> // final model + diagnostics/assessment
+> quietly nbreg dv `ss_vars' `covariates' ib(freq).state ib(freq).time, v
+> ce(cl mineid) exposure(hours) iter(50) irr
+> */
+. predict cssv1_yhat 
+(option n assumed; predicted number of events)
+
+. gen cssv1_res = dv - cssv1_yhat
+
+. 
+. summ dv cssv1_yhat
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+          dv |        654    25.86391    23.17418          0        200
+  cssv1_yhat |        654    27.15868    22.05918   .1798278   151.0127
+
+. /*
+> pause "next"
+> 
+> scatter dv cssv1_yhat
+> 
+> pause "next"
+> 
+> scatter cssv1_res dv
+> 
+> pause "next"
+> 
+> scatter cssv1_res cssv1_yhat
+> */
+. pause "complete: C.SSV.1"
+
+. 
+. ***********************************************************************
+> *********
+. ***********************************************************************
+> *********
+. 
+. // Model C.SSV.2
+. 
+. // poisson model
+. /*
+> glm dv `ss_lag_1_vars' `covariates' ib(freq).state ib(freq).time, famil
+> y(poisson) link(log) vce(cl mineid) exposure(hours) iter(50) eform
+>         
+> quietly poisson dv `ss_lag_1_vars' `covariates' ib(freq).state ib(freq)
+> .time, vce(cl mineid) exposure(hours) iter(50) irr
+> est store pois
+> estat gof
+>         
+> pause "next"
+> 
+> // negative binomial model
+> glm dv `ss_lag_1_vars' `covariates' ib(freq).state ib(freq).time, famil
+> y(nbinomial) link(log) vce(cl mineid) exposure(hours) iter(50) eform
+> 
+> pause "next"
+> */
+. eststo clear
+
+. eststo: nbreg dv `ss_lag_1_vars' `covariates' ib(freq).state ib(freq).t
+> ime, vce(cl mineid) exposure(hours) iter(50) irr
+
+Fitting Poisson model:
+
+Iteration 0:   log pseudolikelihood = -3126.7055  
+Iteration 1:   log pseudolikelihood = -3106.6266  
+Iteration 2:   log pseudolikelihood = -3106.6005  
+Iteration 3:   log pseudolikelihood = -3106.6005  
+
+Fitting constant-only model:
+
+Iteration 0:   log pseudolikelihood = -2662.5736  
+Iteration 1:   log pseudolikelihood = -2570.9012  
+Iteration 2:   log pseudolikelihood =  -2534.924  
+Iteration 3:   log pseudolikelihood = -2534.3997  
+Iteration 4:   log pseudolikelihood = -2534.3997  
+
+Fitting full model:
+
+Iteration 0:   log pseudolikelihood = -2420.6713  
+Iteration 1:   log pseudolikelihood = -2401.1952  
+Iteration 2:   log pseudolikelihood = -2370.5564  
+Iteration 3:   log pseudolikelihood = -2369.9664  
+Iteration 4:   log pseudolikelihood = -2369.9662  
+
+Negative binomial regression                    Number of obs     =      
+>   654
+                                                Wald chi2(23)     =      
+>     .
+Dispersion           = mean                     Prob > chi2       =      
+>     .
+Log pseudolikelihood = -2369.9662               Pseudo R2         =     0
+> .0649
+
+                                (Std. Err. adjusted for 64 clusters in mi
+> neid)
+-------------------------------------------------------------------------
+> -----
+             |               Robust
+          dv |        IRR   Std. Err.      z    P>|z|     [95% Conf. Inte
+> rval]
+-------------+-----------------------------------------------------------
+> -----
+ p48_ss_1lag |   .9822227   .0244223    -0.72   0.471     .9355035    1.0
+> 31275
+ p75_ss_1lag |    1.00141   .0006883     2.05   0.040     1.000061     1.
+> 00276
+   mine_time |   .9794897   .1113731    -0.18   0.855     .7838154    1.2
+> 24013
+onsite_ins~s |   .9998407   .0000623    -2.56   0.011     .9997186    .99
+> 99628
+             |
+       state |
+          4  |   1.287676   .1203668     2.70   0.007     1.072111    1.5
+> 46584
+          5  |   1.045366   .0903952     0.51   0.608     .8823951    1.2
+> 38437
+          6  |   1.010115   .1112511     0.09   0.927     .8139953    1.2
+> 53486
+          9  |   .6769719   .0622736    -4.24   0.000     .5652881    .81
+> 07209
+         10  |   .8640629   .0704548    -1.79   0.073     .7364433    1.0
+> 13798
+         12  |    .965525     .17414    -0.19   0.846     .6780202    1.3
+> 74942
+         14  |   .3375382   .0747541    -4.90   0.000     .2186798    .52
+> 09995
+         15  |   .6200798   .1551523    -1.91   0.056     .3797218    1.0
+> 12581
+             |
+        time |
+       2004  |   .9785357   .1291283    -0.16   0.869     .7555296    1.2
+> 67365
+       2005  |   .8986015   .2055218    -0.47   0.640     .5739663    1.4
+> 06851
+       2006  |   .8643318   .2948196    -0.43   0.669     .4429346    1.6
+> 86636
+       2007  |   .8597797   .3940852    -0.33   0.742     .3501336    2.1
+> 11254
+       2008  |   .8329032   .4740351    -0.32   0.748     .2729891    2.5
+> 41229
+       2009  |   .6899571   .4781692    -0.54   0.592     .1773796     2.
+> 68374
+       2010  |   .7740897   .6177978    -0.32   0.748     .1619761    3.6
+> 99403
+       2011  |   .7406672   .6615565    -0.34   0.737     .1286289    4.2
+> 64889
+       2012  |   .6799998   .6952864    -0.38   0.706     .0916583    5.0
+> 44819
+       2013  |   .6763027   .7703906    -0.34   0.731     .0725303    6.3
+> 06127
+       2014  |    .757845   .9526017    -0.22   0.825     .0645105    8.9
+> 02872
+       2015  |    .797487   1.089907    -0.17   0.868     .0547528    11.
+> 61558
+             |
+       _cons |   .0000846   .0000107   -73.84   0.000     .0000659    .00
+> 01085
+   ln(hours) |          1  (exposure)
+-------------+-----------------------------------------------------------
+> -----
+    /lnalpha |  -1.734552   .1463944                     -2.021479   -1.4
+> 47624
+-------------+-----------------------------------------------------------
+> -----
+       alpha |   .1764793   .0258356                      .1324594    .23
+> 51283
+-------------------------------------------------------------------------
+> -----
+(est1 stored)
+
+. esttab using `"`directory'Model.`injury_label'.`time_label'.`violation_
+> level_label'.C.SSV.2.csv"', replace plain wide p eform
+(note: file C:/Users/slevine2/Dropbox (Stanford Law School)/R-code/Injury
+> -Classification/Model Output + Summaries/big/V1/PS/estout 10-24/Model.P
+> S.Y.P.C.SSV.2.csv not found)
+(output written to C:/Users/slevine2/Dropbox (Stanford Law School)/R-code
+> /Injury-Classification/Model Output + Summaries/big/V1/PS/estout 10-24/
+> Model.PS.Y.P.C.SSV.2.csv)
+
+. /*
+> est store nbin
+> 
+> pause "next"
+> 
+> // test for over-dispersion
+> lrtest pois nbin, stats force 
+> 
+> pause "next" 
+> 
+> // final model + diagnostics/assessment
+> quietly nbreg dv `ss_lag_1_vars' `covariates' ib(freq).state ib(freq).t
+> ime, vce(cl mineid) exposure(hours) iter(50) irr
+> */
+. predict cssv2_yhat 
+(option n assumed; predicted number of events)
+
+. gen cssv2_res = dv - cssv2_yhat
+
+. 
+. summ dv cssv2_yhat
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+          dv |        654    25.86391    23.17418          0        200
+  cssv2_yhat |        654    27.13839    21.89459   .1785073   149.8163
+
+. /*
+> pause "next"
+> 
+> scatter dv cssv2_yhat
+> 
+> pause "next"
+> 
+> scatter cssv2_res dv
+> 
+> pause "next"
+> 
+> scatter cssv2_res cssv2_yhat
+> */
+. pause "complete: C.SSV.2"
+
+. 
+. ***********************************************************************
+> *********
+. ***********************************************************************
+> *********
+. 
+. // Model C.SSV.3
+. 
+. // poisson model
+. /*
+> glm dv `ss_lag_4_vars' `covariates' ib(freq).state ib(freq).time, famil
+> y(poisson) link(log) vce(cl mineid) exposure(hours) iter(50) eform
+>         
+> quietly poisson dv `ss_lag_4_vars' `covariates' ib(freq).state ib(freq)
+> .time, vce(cl mineid) exposure(hours) iter(50) irr
+> est store pois
+> estat gof
+>         
+> pause "next"
+> 
+> // negative binomial model
+> glm dv `ss_lag_4_vars' `covariates' ib(freq).state ib(freq).time, famil
+> y(nbinomial) link(log) vce(cl mineid) exposure(hours) iter(50) eform
+> 
+> pause "next"
+> */
+. eststo clear
+
+. eststo: nbreg dv `ss_lag_4_vars' `covariates' ib(freq).state ib(freq).t
+> ime, vce(cl mineid) exposure(hours) iter(50) irr
+
+Fitting Poisson model:
+
+Iteration 0:   log pseudolikelihood = -3135.7828  
+Iteration 1:   log pseudolikelihood = -3115.5772  
+Iteration 2:   log pseudolikelihood = -3115.5514  
+Iteration 3:   log pseudolikelihood = -3115.5514  
+
+Fitting constant-only model:
+
+Iteration 0:   log pseudolikelihood = -2662.5736  
+Iteration 1:   log pseudolikelihood = -2570.9012  
+Iteration 2:   log pseudolikelihood =  -2534.924  
+Iteration 3:   log pseudolikelihood = -2534.3997  
+Iteration 4:   log pseudolikelihood = -2534.3997  
+
+Fitting full model:
+
+Iteration 0:   log pseudolikelihood = -2421.6532  
+Iteration 1:   log pseudolikelihood = -2401.7174  
+Iteration 2:   log pseudolikelihood = -2372.4261  
+Iteration 3:   log pseudolikelihood = -2371.8917  
+Iteration 4:   log pseudolikelihood = -2371.8916  
+
+Negative binomial regression                    Number of obs     =      
+>   654
+                                                Wald chi2(23)     =      
+>     .
+Dispersion           = mean                     Prob > chi2       =      
+>     .
+Log pseudolikelihood = -2371.8916               Pseudo R2         =     0
+> .0641
+
+                                (Std. Err. adjusted for 64 clusters in mi
+> neid)
+-------------------------------------------------------------------------
+> -----
+             |               Robust
+          dv |        IRR   Std. Err.      z    P>|z|     [95% Conf. Inte
+> rval]
+-------------+-----------------------------------------------------------
+> -----
+p48_ss_c_4~g |   .9947208   .0096003    -0.55   0.583     .9760813    1.0
+> 13716
+p75_ss_c_4~g |   1.000278   .0001858     1.50   0.135     .9999138    1.0
+> 00642
+   mine_time |   .9799398   .1074999    -0.18   0.853     .7903549    1.2
+> 15001
+onsite_ins~s |   .9998563   .0000629    -2.28   0.022      .999733    .99
+> 99796
+             |
+       state |
+          4  |   1.283703   .1235479     2.59   0.009     1.063021    1.5
+> 50197
+          5  |   1.034414   .0933697     0.37   0.708     .8666868    1.2
+> 34602
+          6  |   1.001726   .1106522     0.02   0.988     .8067217    1.2
+> 43867
+          9  |   .6714027   .0636488    -4.20   0.000     .5575572    .80
+> 84939
+         10  |   .8660108   .0722479    -1.72   0.085     .7353784    1.0
+> 19849
+         12  |   .9411277   .1730704    -0.33   0.741     .6563194    1.3
+> 49528
+         14  |   .3318203   .0735431    -4.98   0.000     .2149051    .51
+> 23412
+         15  |   .6154335     .15624    -1.91   0.056     .3741853    1.0
+> 12221
+             |
+        time |
+       2004  |   .9776748   .1267061    -0.17   0.862     .7583666    1.2
+> 60404
+       2005  |   .8971332   .1986137    -0.49   0.624     .5813155    1.3
+> 84529
+       2006  |   .8700333   .2845861    -0.43   0.670     .4582575    1.6
+> 51818
+       2007  |   .8632361    .381863    -0.33   0.740     .3627357    2.0
+> 54324
+       2008  |   .8280861   .4543309    -0.34   0.731     .2825285    2.4
+> 27106
+       2009  |   .6839666   .4566142    -0.57   0.569     .1848312    2.5
+> 31015
+       2010  |   .7664996    .588666    -0.35   0.729     .1701357    3.4
+> 53253
+       2011  |   .7301495   .6273478    -0.37   0.714     .1355363    3.9
+> 33399
+       2012  |   .6671037   .6582551    -0.41   0.682     .0964456    4.6
+> 14285
+       2013  |   .6639972   .7311469    -0.37   0.710     .0767155    5.7
+> 47109
+       2014  |   .7459631    .905743    -0.24   0.809     .0690549    8.0
+> 58238
+       2015  |   .7802382   1.029253    -0.19   0.851      .058798    10.
+> 35362
+             |
+       _cons |   .0000853   .0000106   -75.70   0.000      .000067    .00
+> 01088
+   ln(hours) |          1  (exposure)
+-------------+-----------------------------------------------------------
+> -----
+    /lnalpha |  -1.725695   .1465272                     -2.012883   -1.4
+> 38507
+-------------+-----------------------------------------------------------
+> -----
+       alpha |   .1780493   .0260891                       .133603    .23
+> 72818
+-------------------------------------------------------------------------
+> -----
+(est1 stored)
+
+. esttab using `"`directory'Model.`injury_label'.`time_label'.`violation_
+> level_label'.C.SSV.3.csv"', replace plain wide p eform
+(note: file C:/Users/slevine2/Dropbox (Stanford Law School)/R-code/Injury
+> -Classification/Model Output + Summaries/big/V1/PS/estout 10-24/Model.P
+> S.Y.P.C.SSV.3.csv not found)
+(output written to C:/Users/slevine2/Dropbox (Stanford Law School)/R-code
+> /Injury-Classification/Model Output + Summaries/big/V1/PS/estout 10-24/
+> Model.PS.Y.P.C.SSV.3.csv)
+
+. /*
+> est store nbin
+> 
+> pause "next"
+> 
+> // test for over-dispersion
+> lrtest pois nbin, stats force 
+> 
+> pause "next" 
+> 
+> // final model + diagnostics/assessment
+> quietly nbreg dv `ss_lag_4_vars' `covariates' ib(freq).state ib(freq).t
+> ime, vce(cl mineid) exposure(hours) iter(50) irr
+> */
+. predict cssv3_yhat 
+(option n assumed; predicted number of events)
+
+. gen cssv3_res = dv - cssv3_yhat
+
+. 
+. summ dv cssv3_yhat
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+          dv |        654    25.86391    23.17418          0        200
+  cssv3_yhat |        654    27.11999     21.6858   .1755382   144.4517
+
+. /*
+> pause "next"
+> 
+> scatter dv cssv3_yhat
+> 
+> pause "next"
+> 
+> scatter cssv3_res dv
+> 
+> pause "next"
+> 
+> scatter cssv3_res cssv3_yhat
+> */
+. pause "complete: C.SSV.3"
+
+. 
+. ***********************************************************************
+> *********
+. ***********************************************************************
+> *********
+. 
+. // Model C.SSV.4
+. 
+. // poisson model
+. /*
+> glm dv `ss_lag_all_vars' `covariates' ib(freq).state ib(freq).time, fam
+> ily(poisson) link(log) vce(cl mineid) exposure(hours) iter(50) eform
+>         
+> quietly poisson dv `ss_lag_all_vars' `covariates' ib(freq).state ib(fre
+> q).time, vce(cl mineid) exposure(hours) iter(50) irr
+> est store pois
+> estat gof
+>         
+> pause "next"
+> 
+> // negative binomial model
+> glm dv `ss_lag_all_vars' `covariates' ib(freq).state ib(freq).time, fam
+> ily(nbinomial) link(log) vce(cl mineid) exposure(hours) iter(50) eform
+> 
+> pause "next"
+> */
+. eststo clear
+
+. eststo: nbreg dv `ss_lag_all_vars' `covariates' ib(freq).state ib(freq)
+> .time, vce(cl mineid) exposure(hours) iter(50) irr
+
+Fitting Poisson model:
+
+Iteration 0:   log pseudolikelihood = -3109.3038  
+Iteration 1:   log pseudolikelihood = -3092.0256  
+Iteration 2:   log pseudolikelihood = -3092.0074  
+Iteration 3:   log pseudolikelihood = -3092.0074  
+
+Fitting constant-only model:
+
+Iteration 0:   log pseudolikelihood = -2662.5736  
+Iteration 1:   log pseudolikelihood = -2570.9012  
+Iteration 2:   log pseudolikelihood =  -2534.924  
+Iteration 3:   log pseudolikelihood = -2534.3997  
+Iteration 4:   log pseudolikelihood = -2534.3997  
+
+Fitting full model:
+
+Iteration 0:   log pseudolikelihood = -2417.2313  
+Iteration 1:   log pseudolikelihood = -2391.7911  
+Iteration 2:   log pseudolikelihood = -2369.7265  
+Iteration 3:   log pseudolikelihood = -2369.4121  
+Iteration 4:   log pseudolikelihood =  -2369.412  
+
+Negative binomial regression                    Number of obs     =      
+>   654
+                                                Wald chi2(23)     =      
+>     .
+Dispersion           = mean                     Prob > chi2       =      
+>     .
+Log pseudolikelihood =  -2369.412               Pseudo R2         =     0
+> .0651
+
+                                (Std. Err. adjusted for 64 clusters in mi
+> neid)
+-------------------------------------------------------------------------
+> -----
+             |               Robust
+          dv |        IRR   Std. Err.      z    P>|z|     [95% Conf. Inte
+> rval]
+-------------+-----------------------------------------------------------
+> -----
+p48_ss_c_l~l |   1.004254   .0040552     1.05   0.293     .9963371    1.0
+> 12234
+p75_ss_c_l~l |   .9999488   .0000274    -1.87   0.061     .9998952    1.0
+> 00002
+   mine_time |    1.01543   .1188382     0.13   0.896      .807294    1.2
+> 77227
+onsite_ins~s |   .9999464   .0000582    -0.92   0.357     .9998323    1.0
+> 00061
+             |
+       state |
+          4  |   1.176431   .1254105     1.52   0.127      .954611    1.4
+> 49796
+          5  |   .9280448   .1009071    -0.69   0.492     .7499237    1.1
+> 48473
+          6  |   .9680251   .1032675    -0.30   0.761     .7853834     1.
+> 19314
+          9  |   .6043741   .0616439    -4.94   0.000     .4948647     .7
+> 38117
+         10  |   .8361305   .1094199    -1.37   0.171     .6469666    1.0
+> 80603
+         12  |   .8271467   .1372191    -1.14   0.253     .5975481    1.1
+> 44965
+         14  |   .2924151   .0655479    -5.49   0.000     .1884491    .45
+> 37385
+         15  |   .6093896   .1552847    -1.94   0.052     .3698211    1.0
+> 04149
+             |
+        time |
+       2004  |    .940662   .1282628    -0.45   0.654     .7200606    1.2
+> 28848
+       2005  |     .83519   .1959957    -0.77   0.443     .5272688    1.3
+> 22935
+       2006  |    .798922   .2778758    -0.65   0.519     .4040593     1.
+> 57966
+       2007  |   .7745919   .3642765    -0.54   0.587     .3081544    1.9
+> 47052
+       2008  |   .6865091   .4009901    -0.64   0.520      .218504    2.1
+> 56916
+       2009  |   .5581882   .3971954    -0.82   0.413     .1383831    2.2
+> 51533
+       2010  |   .5948705   .4839429    -0.64   0.523     .1207668    2.9
+> 30201
+       2011  |   .5584883   .5100138    -0.64   0.524     .0932595    3.3
+> 44528
+       2012  |   .4939072   .5157429    -0.68   0.499     .0637987    3.8
+> 23655
+       2013  |   .4820736   .5606007    -0.63   0.530     .0493465    4.7
+> 09456
+       2014  |   .5255586   .6732508    -0.50   0.616     .0426791    6.4
+> 71828
+       2015  |   .5407026    .752975    -0.44   0.659     .0352847    8.2
+> 85715
+             |
+       _cons |    .000087   .0000109   -74.66   0.000     .0000681    .00
+> 01112
+   ln(hours) |          1  (exposure)
+-------------+-----------------------------------------------------------
+> -----
+    /lnalpha |   -1.73707    .140466                     -2.012378   -1.4
+> 61762
+-------------+-----------------------------------------------------------
+> -----
+       alpha |   .1760355    .024727                      .1336704    .23
+> 18275
+-------------------------------------------------------------------------
+> -----
+(est1 stored)
+
+. esttab using `"`directory'Model.`injury_label'.`time_label'.`violation_
+> level_label'.C.SSV.4.csv"', replace plain wide p eform
+(note: file C:/Users/slevine2/Dropbox (Stanford Law School)/R-code/Injury
+> -Classification/Model Output + Summaries/big/V1/PS/estout 10-24/Model.P
+> S.Y.P.C.SSV.4.csv not found)
+(output written to C:/Users/slevine2/Dropbox (Stanford Law School)/R-code
+> /Injury-Classification/Model Output + Summaries/big/V1/PS/estout 10-24/
+> Model.PS.Y.P.C.SSV.4.csv)
+
+. /*
+> est store nbin
+> 
+> pause "next"
+> 
+> // test for over-dispersion
+> lrtest pois nbin, stats force 
+> 
+> pause "next" 
+> 
+> // final model + diagnostics/assessment
+> quietly nbreg dv `ss_lag_all_vars' `covariates' ib(freq).state ib(freq)
+> .time, vce(cl mineid) exposure(hours) iter(50) irr
+> */
+. predict cssv4_yhat 
+(option n assumed; predicted number of events)
+
+. gen cssv4_res = dv - cssv4_yhat
+
+. 
+. summ dv cssv4_yhat
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+          dv |        654    25.86391    23.17418          0        200
+  cssv4_yhat |        654     26.8785    20.84229   .1629508   138.5224
+
+. /*
+> pause "next"
+> 
+> scatter dv cssv4_yhat
+> 
+> pause "next"
+> 
+> scatter cssv4_res dv
+> 
+> pause "next"
+> 
+> scatter cssv4_res cssv4_yhat
+> */
+. pause "complete: C.SSV.4"
+
+. 
+. ***********************************************************************
+> *********
+. ***********************************************************************
+> *********
+. 
+. // Model C.PP.1
+. 
+. // poisson model
+. /*
+> glm dv `pp_vars' `covariates' ib(freq).state ib(freq).time if sample_pp
+>  == 1, family(poisson) link(log) vce(cl mineid) exposure(hours) iter(50
+> ) eform
+>         
+> quietly poisson dv `pp_vars' `covariates' ib(freq).state ib(freq).time 
+> if sample_pp == 1, vce(cl mineid) exposure(hours) iter(50) irr
+> est store pois
+> estat gof
+>         
+> pause "next"
+> 
+> // negative binomial model
+> glm dv `pp_vars' `covariates' ib(freq).state ib(freq).time if sample_pp
+>  == 1, family(nbinomial) link(log) vce(cl mineid) exposure(hours) iter(
+> 50) eform
+> 
+> pause "next"
+> */
+. eststo clear
+
+. eststo: nbreg dv `pp_vars' `covariates' ib(freq).state ib(freq).time if
+>  sample_pp == 1, vce(cl mineid) exposure(hours) iter(50) irr
+
+Fitting Poisson model:
+
+Iteration 0:   log pseudolikelihood = -1854.1634  
+Iteration 1:   log pseudolikelihood = -1844.8303  
+Iteration 2:   log pseudolikelihood = -1844.8055  
+Iteration 3:   log pseudolikelihood = -1844.8055  
+
+Fitting constant-only model:
+
+Iteration 0:   log pseudolikelihood = -1631.9811  
+Iteration 1:   log pseudolikelihood =  -1564.403  
+Iteration 2:   log pseudolikelihood = -1549.5714  
+Iteration 3:   log pseudolikelihood = -1549.4482  
+Iteration 4:   log pseudolikelihood = -1549.4482  
+
+Fitting full model:
+
+Iteration 0:   log pseudolikelihood = -1484.9868  
+Iteration 1:   log pseudolikelihood = -1471.1427  
+Iteration 2:   log pseudolikelihood = -1456.4622  
+Iteration 3:   log pseudolikelihood = -1456.2658  
+Iteration 4:   log pseudolikelihood = -1456.2658  
+
+Negative binomial regression                    Number of obs     =      
+>   414
+                                                Wald chi2(18)     =      
+>     .
+Dispersion           = mean                     Prob > chi2       =      
+>     .
+Log pseudolikelihood = -1456.2658               Pseudo R2         =     0
+> .0601
+
+                                (Std. Err. adjusted for 55 clusters in mi
+> neid)
+-------------------------------------------------------------------------
+> -----
+             |               Robust
+          dv |        IRR   Std. Err.      z    P>|z|     [95% Conf. Inte
+> rval]
+-------------+-----------------------------------------------------------
+> -----
+      p48_pp |   1.000469   .0003706     1.27   0.206     .9997428    1.0
+> 01196
+      p75_pp |   1.000011   4.84e-06     2.31   0.021     1.000002    1.0
+> 00021
+   mine_time |   1.028158   .1808289     0.16   0.875      .728372     1.
+> 45133
+onsite_ins~s |   .9997751   .0000764    -2.94   0.003     .9996253    .99
+> 99249
+             |
+       state |
+          4  |   1.118423   .1124856     1.11   0.266     .9183251    1.3
+> 62122
+          5  |   .8560965    .079964    -1.66   0.096     .7128792    1.0
+> 28086
+          6  |   .9099126    .129314    -0.66   0.507      .688699    1.2
+> 02181
+          9  |   .6509299   .0730336    -3.83   0.000     .5224327    .81
+> 10323
+         10  |   .9348425   .0958918    -0.66   0.511     .7645857    1.1
+> 43012
+         12  |    1.15908   .2337117     0.73   0.464      .780694    1.7
+> 20861
+         14  |   .3397842   .0879202    -4.17   0.000      .204622    .56
+> 42273
+         15  |    .464331   .0927396    -3.84   0.000     .3139203    .68
+> 68091
+             |
+        time |
+       2008  |   .8808038   .1595461    -0.70   0.483     .6175828    1.2
+> 56213
+       2009  |   .7092006   .2597764    -0.94   0.348     .3459223    1.4
+> 53984
+       2010  |   .7465112   .3959981    -0.55   0.582     .2639391    2.1
+> 11392
+       2011  |   .6779628   .4640176    -0.57   0.570     .1772632    2.5
+> 92944
+       2012  |   .6074063   .5360246    -0.56   0.572     .1077234    3.4
+> 24905
+       2013  |    .566301   .6014605    -0.54   0.592     .0706314    4.5
+> 40428
+       2014  |    .598984   .7398601    -0.41   0.678      .053213    6.7
+> 42366
+       2015  |   .5940381   .8335271    -0.37   0.711     .0379706    9.2
+> 93545
+             |
+       _cons |   .0000594   .0000495   -11.68   0.000     .0000116    .00
+> 03042
+   ln(hours) |          1  (exposure)
+-------------+-----------------------------------------------------------
+> -----
+    /lnalpha |  -1.748622     .18029                     -2.101984    -1.
+> 39526
+-------------+-----------------------------------------------------------
+> -----
+       alpha |   .1740136   .0313729                      .1222138    .24
+> 77687
+-------------------------------------------------------------------------
+> -----
+(est1 stored)
+
+. esttab using `"`directory'Model.`injury_label'.`time_label'.`violation_
+> level_label'.C.PP.1.csv"', replace plain wide p eform
+(note: file C:/Users/slevine2/Dropbox (Stanford Law School)/R-code/Injury
+> -Classification/Model Output + Summaries/big/V1/PS/estout 10-24/Model.P
+> S.Y.P.C.PP.1.csv not found)
+(output written to C:/Users/slevine2/Dropbox (Stanford Law School)/R-code
+> /Injury-Classification/Model Output + Summaries/big/V1/PS/estout 10-24/
+> Model.PS.Y.P.C.PP.1.csv)
+
+. /*
+> est store nbin
+> 
+> pause "next"
+> 
+> // test for over-dispersion
+> lrtest pois nbin, stats force 
+> 
+> pause "next" 
+> 
+> // final model + diagnostics/assessment
+> quietly nbreg dv `pp_vars' `covariates' ib(freq).state ib(freq).time if
+>  sample_pp == 1, vce(cl mineid) exposure(hours) iter(50) irr
+> */
+. predict cpp1_yhat 
+(option n assumed; predicted number of events)
+
+. gen cpp1_res = dv - cpp1_yhat
+
+. 
+. summ dv cpp1_yhat
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+          dv |        654    25.86391    23.17418          0        200
+   cpp1_yhat |        654    24.27968    20.59347   .1686167   131.3121
+
+. /*
+> pause "next"
+> 
+> scatter dv cpp1_yhat
+> 
+> pause "next"
+> 
+> scatter cpp1_res dv
+> 
+> pause "next"
+> 
+> scatter cpp1_res cpp1_yhat
+> */
+. pause "complete: C.PP.1"
+
+. 
+. ***********************************************************************
+> *********
+. ***********************************************************************
+> *********
+. 
+. // Model C.PP.2
+. 
+. // poisson model
+. /*
+> glm dv `pp_lag_1_vars' `covariates' ib(freq).state ib(freq).time if sam
+> ple_pp == 1, family(poisson) link(log) vce(cl mineid) exposure(hours) i
+> ter(50) eform
+>         
+> quietly poisson dv `pp_lag_1_vars' `covariates' ib(freq).state ib(freq)
+> .time if sample_pp == 1, vce(cl mineid) exposure(hours) iter(50) irr
+> est store pois
+> estat gof
+>         
+> pause "next"
+> 
+> // negative binomial model
+> glm dv `pp_lag_1_vars' `covariates' ib(freq).state ib(freq).time if sam
+> ple_pp == 1, family(nbinomial) link(log) vce(cl mineid) exposure(hours)
+>  iter(50) eform
+> 
+> pause "next"
+> */
+. eststo clear
+
+. eststo: nbreg dv `pp_lag_1_vars' `covariates' ib(freq).state ib(freq).t
+> ime if sample_pp == 1, vce(cl mineid) exposure(hours) iter(50) irr
+
+Fitting Poisson model:
+
+Iteration 0:   log pseudolikelihood = -1874.5647  
+Iteration 1:   log pseudolikelihood = -1865.4681  
+Iteration 2:   log pseudolikelihood = -1865.4382  
+Iteration 3:   log pseudolikelihood = -1865.4382  
+
+Fitting constant-only model:
+
+Iteration 0:   log pseudolikelihood = -1631.9811  
+Iteration 1:   log pseudolikelihood =  -1564.403  
+Iteration 2:   log pseudolikelihood = -1549.5714  
+Iteration 3:   log pseudolikelihood = -1549.4482  
+Iteration 4:   log pseudolikelihood = -1549.4482  
+
+Fitting full model:
+
+Iteration 0:   log pseudolikelihood = -1487.4313  
+Iteration 1:   log pseudolikelihood = -1474.4832  
+Iteration 2:   log pseudolikelihood = -1459.3443  
+Iteration 3:   log pseudolikelihood = -1459.1531  
+Iteration 4:   log pseudolikelihood =  -1459.153  
+
+Negative binomial regression                    Number of obs     =      
+>   414
+                                                Wald chi2(18)     =      
+>     .
+Dispersion           = mean                     Prob > chi2       =      
+>     .
+Log pseudolikelihood =  -1459.153               Pseudo R2         =     0
+> .0583
+
+                                (Std. Err. adjusted for 55 clusters in mi
+> neid)
+-------------------------------------------------------------------------
+> -----
+             |               Robust
+          dv |        IRR   Std. Err.      z    P>|z|     [95% Conf. Inte
+> rval]
+-------------+-----------------------------------------------------------
+> -----
+ p48_pp_1lag |   1.000182   .0002956     0.62   0.537     .9996031    1.0
+> 00762
+ p75_pp_1lag |    1.00001   4.33e-06     2.30   0.021     1.000001    1.0
+> 00018
+   mine_time |   1.028144   .1775323     0.16   0.872     .7329506    1.4
+> 42225
+onsite_ins~s |   .9997991   .0000731    -2.75   0.006     .9996559    .99
+> 99424
+             |
+       state |
+          4  |    1.11338   .1133904     1.05   0.292      .911915    1.3
+> 59355
+          5  |   .8662799   .0731834    -1.70   0.089     .7340888    1.0
+> 22275
+          6  |   .8947986   .1271587    -0.78   0.434     .6772703    1.1
+> 82193
+          9  |   .6456084   .0707926    -3.99   0.000     .5207541    .80
+> 03972
+         10  |   .9186531   .0947456    -0.82   0.411     .7505205    1.1
+> 24451
+         12  |   1.111809   .2230159     0.53   0.597     .7503936    1.6
+> 47295
+         14  |    .332393   .0851783    -4.30   0.000     .2011522    .54
+> 92612
+         15  |   .4546014   .0932873    -3.84   0.000     .3040593    .67
+> 96779
+             |
+        time |
+       2008  |   .8426766   .1470682    -0.98   0.327     .5985563    1.1
+> 86361
+       2009  |   .6624118   .2334151    -1.17   0.242     .3320389      1
+> .3215
+       2010  |   .7154972   .3701444    -0.65   0.518     .2595735    1.9
+> 72221
+       2011  |    .651186   .4340444    -0.64   0.520     .1763362    2.4
+> 04743
+       2012  |    .566673   .4853292    -0.66   0.507     .1057591    3.0
+> 36318
+       2013  |   .5293249   .5475704    -0.61   0.539     .0696916    4.0
+> 20354
+       2014  |   .5735114   .6925356    -0.46   0.645      .053788    6.1
+> 15029
+       2015  |   .5581053    .764039    -0.43   0.670     .0381445    8.1
+> 65828
+             |
+       _cons |    .000063   .0000517   -11.78   0.000     .0000126    .00
+> 03147
+   ln(hours) |          1  (exposure)
+-------------+-----------------------------------------------------------
+> -----
+    /lnalpha |  -1.723262   .1794056                     -2.074891   -1.3
+> 71633
+-------------+-----------------------------------------------------------
+> -----
+       alpha |    .178483   .0320209                      .1255702    .25
+> 36922
+-------------------------------------------------------------------------
+> -----
+(est1 stored)
+
+. esttab using `"`directory'Model.`injury_label'.`time_label'.`violation_
+> level_label'.C.PP.2.csv"', replace plain wide p eform
+(note: file C:/Users/slevine2/Dropbox (Stanford Law School)/R-code/Injury
+> -Classification/Model Output + Summaries/big/V1/PS/estout 10-24/Model.P
+> S.Y.P.C.PP.2.csv not found)
+(output written to C:/Users/slevine2/Dropbox (Stanford Law School)/R-code
+> /Injury-Classification/Model Output + Summaries/big/V1/PS/estout 10-24/
+> Model.PS.Y.P.C.PP.2.csv)
+
+. /*
+> est store nbin
+> 
+> pause "next"
+> 
+> // test for over-dispersion
+> lrtest pois nbin, stats force 
+> 
+> pause "next" 
+> 
+> // final model + diagnostics/assessment
+> quietly nbreg dv `pp_lag_1_vars' `covariates' ib(freq).state ib(freq).t
+> ime if sample_pp == 1, vce(cl mineid) exposure(hours) iter(50) irr
+> */
+. predict cpp2_yhat 
+(option n assumed; predicted number of events)
+
+. gen cpp2_res = dv - cpp2_yhat
+
+. 
+. summ dv cpp2_yhat
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+          dv |        654    25.86391    23.17418          0        200
+   cpp2_yhat |        654    24.82285    20.60018   .1717372   126.8358
+
+. /*
+> pause "next"
+> 
+> scatter dv cpp2_yhat
+> 
+> pause "next"
+> 
+> scatter cpp2_res dv
+> 
+> pause "next"
+> 
+> scatter cpp2_res cpp2_yhat
+> */
+. pause "complete: C.PP.2"
+
+. 
+. ***********************************************************************
+> *********
+. ***********************************************************************
+> *********
+. 
+. // Model C.PP.3
+. 
+. // poisson model
+. /*
+> glm dv `pp_lag_4_vars' `covariates' ib(freq).state ib(freq).time if sam
+> ple_pp == 1, family(poisson) link(log) vce(cl mineid) exposure(hours) i
+> ter(50) eform
+>         
+> quietly poisson dv `pp_lag_4_vars' `covariates' ib(freq).state ib(freq)
+> .time if sample_pp == 1, vce(cl mineid) exposure(hours) iter(50) irr
+> est store pois
+> estat gof
+>         
+> pause "next"
+> 
+> // negative binomial model
+> glm dv `pp_lag_4_vars' `covariates' ib(freq).state ib(freq).time if sam
+> ple_pp == 1, family(nbinomial) link(log) vce(cl mineid) exposure(hours)
+>  iter(50) eform
+> 
+> pause "next"
+> */
+. eststo clear
+
+. eststo: nbreg dv `pp_lag_4_vars' `covariates' ib(freq).state ib(freq).t
+> ime if sample_pp == 1, vce(cl mineid) exposure(hours) iter(50) irr
+
+Fitting Poisson model:
+
+Iteration 0:   log pseudolikelihood = -1882.6922  
+Iteration 1:   log pseudolikelihood = -1873.2587  
+Iteration 2:   log pseudolikelihood = -1873.2276  
+Iteration 3:   log pseudolikelihood = -1873.2276  
+
+Fitting constant-only model:
+
+Iteration 0:   log pseudolikelihood = -1631.9811  
+Iteration 1:   log pseudolikelihood =  -1564.403  
+Iteration 2:   log pseudolikelihood = -1549.5714  
+Iteration 3:   log pseudolikelihood = -1549.4482  
+Iteration 4:   log pseudolikelihood = -1549.4482  
+
+Fitting full model:
+
+Iteration 0:   log pseudolikelihood = -1487.4543  
+Iteration 1:   log pseudolikelihood = -1473.5617  
+Iteration 2:   log pseudolikelihood = -1460.3032  
+Iteration 3:   log pseudolikelihood =  -1460.164  
+Iteration 4:   log pseudolikelihood =  -1460.164  
+
+Negative binomial regression                    Number of obs     =      
+>   414
+                                                Wald chi2(18)     =      
+>     .
+Dispersion           = mean                     Prob > chi2       =      
+>     .
+Log pseudolikelihood =  -1460.164               Pseudo R2         =     0
+> .0576
+
+                                (Std. Err. adjusted for 55 clusters in mi
+> neid)
+-------------------------------------------------------------------------
+> -----
+             |               Robust
+          dv |        IRR   Std. Err.      z    P>|z|     [95% Conf. Inte
+> rval]
+-------------+-----------------------------------------------------------
+> -----
+p48_pp_c_4~g |   1.000107   .0000961     1.11   0.267     .9999183    1.0
+> 00295
+p75_pp_c_4~g |   1.000002   1.22e-06     1.72   0.085     .9999997    1.0
+> 00005
+   mine_time |   1.032166   .1807437     0.18   0.857     .7323092    1.4
+> 54803
+onsite_ins~s |   .9998135   .0000759    -2.46   0.014     .9996647    .99
+> 99622
+             |
+       state |
+          4  |   1.105115   .1131983     0.98   0.329     .9041027    1.3
+> 50819
+          5  |    .843951   .0822329    -1.74   0.082     .6972328    1.0
+> 21543
+          6  |   .8891186   .1263254    -0.83   0.408     .6730101    1.1
+> 74621
+          9  |   .6349424   .0722381    -3.99   0.000     .5080332     .7
+> 93554
+         10  |   .9184371   .0951944    -0.82   0.412     .7495901    1.1
+> 25317
+         12  |   1.071758   .2277641     0.33   0.744     .7066497    1.6
+> 25509
+         14  |   .3258548   .0838369    -4.36   0.000     .1967997    .53
+> 95403
+         15  |   .4497475   .0929413    -3.87   0.000     .2999619    .67
+> 43282
+             |
+        time |
+       2008  |   .8388483   .1472919    -1.00   0.317     .5945967    1.1
+> 83435
+       2009  |   .6541036   .2310265    -1.20   0.229     .3273452    1.3
+> 07035
+       2010  |   .6971116   .3620993    -0.69   0.487      .251863     1.
+> 92948
+       2011  |   .6276394    .422362    -0.69   0.489     .1678437    2.3
+> 47013
+       2012  |    .543283   .4697724    -0.71   0.480     .0997698    2.9
+> 58375
+       2013  |   .5124435   .5363101    -0.64   0.523     .0658871     3.
+> 98558
+       2014  |   .5519393   .6742301    -0.49   0.627     .0503608    6.0
+> 49088
+       2015  |   .5324869    .738055    -0.45   0.649     .0351964    8.0
+> 55996
+             |
+       _cons |   .0000627   .0000523   -11.60   0.000     .0000122    .00
+> 03215
+   ln(hours) |          1  (exposure)
+-------------+-----------------------------------------------------------
+> -----
+    /lnalpha |  -1.715025   .1751705                     -2.058353   -1.3
+> 71697
+-------------+-----------------------------------------------------------
+> -----
+       alpha |   .1799592   .0315235                       .127664     .2
+> 53676
+-------------------------------------------------------------------------
+> -----
+(est1 stored)
+
+. esttab using `"`directory'Model.`injury_label'.`time_label'.`violation_
+> level_label'.C.PP.3.csv"', replace plain wide p eform
+(note: file C:/Users/slevine2/Dropbox (Stanford Law School)/R-code/Injury
+> -Classification/Model Output + Summaries/big/V1/PS/estout 10-24/Model.P
+> S.Y.P.C.PP.3.csv not found)
+(output written to C:/Users/slevine2/Dropbox (Stanford Law School)/R-code
+> /Injury-Classification/Model Output + Summaries/big/V1/PS/estout 10-24/
+> Model.PS.Y.P.C.PP.3.csv)
+
+. /*
+> est store nbin
+> 
+> pause "next"
+> 
+> // test for over-dispersion
+> lrtest pois nbin, stats force 
+> 
+> pause "next" 
+> 
+> // final model + diagnostics/assessment
+> quietly nbreg dv `pp_lag_4_vars' `covariates' ib(freq).state ib(freq).t
+> ime if sample_pp == 1, vce(cl mineid) exposure(hours) iter(50) irr
+> */
+. predict cpp3_yhat 
+(option n assumed; predicted number of events)
+
+. gen cpp3_res = dv - cpp3_yhat
+
+. 
+. summ dv cpp3_yhat
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+          dv |        654    25.86391    23.17418          0        200
+   cpp3_yhat |        654    24.90631    20.59529   .1659626   122.0501
+
+. /*
+> pause "next"
+> 
+> scatter dv cpp3_yhat
+> 
+> pause "next"
+> 
+> scatter cpp3_res dv
+> 
+> pause "next"
+> 
+> scatter cpp3_res cpp3_yhat
+> */
+. pause "complete: C.PP.3"
+
+. 
+. ***********************************************************************
+> *********
+. ***********************************************************************
+> *********
+. 
+. // Model C.PP.4
+. 
+. // poisson model
+. /*
+> glm dv `pp_lag_all_vars' `covariates' ib(freq).state ib(freq).time if s
+> ample_pp == 1, family(poisson) link(log) vce(cl mineid) exposure(hours)
+>  iter(50) eform
+>         
+> quietly poisson dv `pp_lag_all_vars' `covariates' ib(freq).state ib(fre
+> q).time if sample_pp == 1, vce(cl mineid) exposure(hours) iter(50) irr
+> est store pois
+> estat gof
+>         
+> pause "next"
+> 
+> // negative binomial model
+> glm dv `pp_lag_all_vars' `covariates' ib(freq).state ib(freq).time if s
+> ample_pp == 1, family(nbinomial) link(log) vce(cl mineid) exposure(hour
+> s) iter(50) eform
+> 
+> pause "next"
+> */ 
+. eststo clear
+
+. eststo: nbreg dv `pp_lag_all_vars' `covariates' ib(freq).state ib(freq)
+> .time if sample_pp == 1, vce(cl mineid) exposure(hours) iter(50) irr
+
+Fitting Poisson model:
+
+Iteration 0:   log pseudolikelihood = -1925.1237  
+Iteration 1:   log pseudolikelihood =  -1915.349  
+Iteration 2:   log pseudolikelihood = -1915.3166  
+Iteration 3:   log pseudolikelihood = -1915.3166  
+
+Fitting constant-only model:
+
+Iteration 0:   log pseudolikelihood = -1631.9811  
+Iteration 1:   log pseudolikelihood =  -1564.403  
+Iteration 2:   log pseudolikelihood = -1549.5714  
+Iteration 3:   log pseudolikelihood = -1549.4482  
+Iteration 4:   log pseudolikelihood = -1549.4482  
+
+Fitting full model:
+
+Iteration 0:   log pseudolikelihood = -1488.5432  
+Iteration 1:   log pseudolikelihood = -1473.5509  
+Iteration 2:   log pseudolikelihood = -1463.4606  
+Iteration 3:   log pseudolikelihood = -1463.3939  
+Iteration 4:   log pseudolikelihood = -1463.3939  
+
+Negative binomial regression                    Number of obs     =      
+>   414
+                                                Wald chi2(18)     =      
+>     .
+Dispersion           = mean                     Prob > chi2       =      
+>     .
+Log pseudolikelihood = -1463.3939               Pseudo R2         =     0
+> .0555
+
+                                (Std. Err. adjusted for 55 clusters in mi
+> neid)
+-------------------------------------------------------------------------
+> -----
+             |               Robust
+          dv |        IRR   Std. Err.      z    P>|z|     [95% Conf. Inte
+> rval]
+-------------+-----------------------------------------------------------
+> -----
+p48_pp_c_l~l |   1.000053   .0000426     1.24   0.216     .9999691    1.0
+> 00136
+p75_pp_c_l~l |   .9999998   1.76e-07    -1.21   0.228     .9999994       
+>     1
+   mine_time |   1.062196   .1865052     0.34   0.731     .7529162     1.
+> 49852
+onsite_ins~s |   .9999235   .0000696    -1.10   0.272     .9997872     1.
+> 00006
+             |
+       state |
+          4  |   1.059054   .1272236     0.48   0.633     .8368809    1.3
+> 40209
+          5  |   .7228113   .1108097    -2.12   0.034     .5352203    .97
+> 61516
+          6  |   .8569326   .1157947    -1.14   0.253     .6575464    1.1
+> 16778
+          9  |   .5627574   .0623684    -5.19   0.000     .4528826    .69
+> 92892
+         10  |   .8672159   .1005528    -1.23   0.219     .6909256    1.0
+> 88487
+         12  |   .8294649   .1686875    -0.92   0.358     .5567882     1.
+> 23568
+         14  |   .2796034   .0697293    -5.11   0.000     .1715001    .45
+> 58485
+         15  |   .4117889   .0827061    -4.42   0.000     .2777885    .61
+> 04288
+             |
+        time |
+       2008  |   .8575081   .1555894    -0.85   0.397     .6008874    1.2
+> 23724
+       2009  |   .6623421   .2387014    -1.14   0.253      .326827    1.3
+> 42291
+       2010  |   .6702169   .3484378    -0.77   0.441     .2419278    1.8
+> 56714
+       2011  |   .5989069   .4033673    -0.76   0.447     .1599816    2.2
+> 42067
+       2012  |   .5007042   .4298349    -0.81   0.420     .0930804    2.6
+> 93421
+       2013  |    .457529    .473419    -0.76   0.450     .0602081    3.4
+> 76823
+       2014  |    .481247   .5821989    -0.60   0.545     .0449375    5.1
+> 53797
+       2015  |   .4674962   .6454696    -0.55   0.582     .0312269    6.9
+> 98866
+             |
+       _cons |   .0000555   .0000465   -11.70   0.000     .0000108    .00
+> 02864
+   ln(hours) |          1  (exposure)
+-------------+-----------------------------------------------------------
+> -----
+    /lnalpha |   -1.68043   .1601357                      -1.99429   -1.3
+> 66569
+-------------+-----------------------------------------------------------
+> -----
+       alpha |   .1862939   .0298323                      .1361103    .25
+> 49802
+-------------------------------------------------------------------------
+> -----
+(est1 stored)
+
+. esttab using `"`directory'Model.`injury_label'.`time_label'.`violation_
+> level_label'.C.PP.4.csv"', replace plain wide p eform
+(note: file C:/Users/slevine2/Dropbox (Stanford Law School)/R-code/Injury
+> -Classification/Model Output + Summaries/big/V1/PS/estout 10-24/Model.P
+> S.Y.P.C.PP.4.csv not found)
+(output written to C:/Users/slevine2/Dropbox (Stanford Law School)/R-code
+> /Injury-Classification/Model Output + Summaries/big/V1/PS/estout 10-24/
+> Model.PS.Y.P.C.PP.4.csv)
+
+. /*
+> est store nbin
+> 
+> pause "next"
+> 
+> // test for over-dispersion
+> lrtest pois nbin, stats force 
+> 
+> pause "next"
+> 
+> // final model + diagnostics/assessment
+> quietly nbreg dv `pp_lag_all_vars' `covariates' ib(freq).state ib(freq)
+> .time if sample_pp == 1, vce(cl mineid) exposure(hours) iter(50) irr
+> */
+. predict cpp4_yhat 
+(option n assumed; predicted number of events)
+
+. gen cpp4_res = dv - cpp4_yhat
+
+. 
+. summ dv cpp4_yhat
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+          dv |        654    25.86391    23.17418          0        200
+   cpp4_yhat |        654    24.61403    19.63377   .1179305   106.3272
+
+. /*
+> pause "next"
+> 
+> scatter dv cpp4_yhat
+> 
+> pause "next"
+> 
+> scatter cpp4_res dv
+> 
+> pause "next"
+> 
+> scatter cpp4_res cpp4_yhat
+> */
+. pause "complete: C.PP.4"
+
+. 
+. ***********************************************************************
+> *********
+. ***********************************************************************
+> *********
+. 
+. // Model B.V.1
+. 
+. eststo clear
+
+. capture eststo: logit dv_indicator `count_vars' `covariates' ib(freq).s
+> tate ib(freq).time, vce(cl mineid) offset(lnhours) iter(50) or
+
+. capture local rc = _rc 
+
+. 
+. if "`rc'" == "" {
+.         esttab using `"`directory'Model.`injury_label'.`time_label'.`vi
+> olation_level_label'.B.V.1.csv"', replace plain wide p eform
+. 
+.         pause "next"
+. 
+.         // diagnostics/assessment
+.         lfit
+. 
+.         pause "next"
+. 
+.         linktest
+. 
+.         pause "next"
+. 
+.         estat classification
+. 
+.         pause "next"
+. 
+.         predict bv1_yhat 
+.         gen bv1_res = dv_indicator - bv1_yhat
+. 
+.         summ dv_indicator bv1_yhat
+.         /*
+>         pause "next"
+> 
+>         scatter dv_indicator bv1_yhat
+> 
+>         pause "next"
+> 
+>         scatter bv1_res dv_indicator
+> 
+>         pause "next"
+> 
+>         scatter bv1_res bv1_yhat
+>         */
+.         pause "complete: B.V.1"
+. }
+
+. ***********************************************************************
+> *********
+. ***********************************************************************
+> *********
+. 
+. // Model B.V.2
+. 
+. eststo clear
+
+. capture eststo: logit dv_indicator `count_lag_1_vars' `covariates' ib(f
+> req).state ib(freq).time, vce(cl mineid) offset(lnhours) iter(50) or
+
+. capture local rc = _rc 
+
+. 
+. if "`rc'" == "" {
+.         esttab using `"`directory'Model.`injury_label'.`time_label'.`vi
+> olation_level_label'.B.V.2.csv"', replace plain wide p eform
+. 
+.         pause "next"
+. 
+.         // diagnostics/assessment
+.         lfit
+. 
+.         pause "next"
+. 
+.         linktest
+. 
+.         pause "next"
+. 
+.         estat classification
+. 
+.         pause "next"
+. 
+.         predict bv2_yhat 
+.         gen bv2_res = dv_indicator - bv2_yhat
+. 
+.         summ dv_indicator bv2_yhat
+.         /*
+>         pause "next"
+> 
+>         scatter dv_indicator bv2_yhat
+> 
+>         pause "next"
+> 
+>         scatter bv2_res dv_indicator
+> 
+>         pause "next"
+> 
+>         scatter bv2_res bv2_yhat
+>         */
+.         pause "complete: B.V.2"
+. }
+
+. ***********************************************************************
+> *********
+. ***********************************************************************
+> *********
+. 
+. // Model B.V.3
+. 
+. eststo clear
+
+. capture eststo: logit dv_indicator `count_lag_4_vars' `covariates' ib(f
+> req).state ib(freq).time, vce(cl mineid) offset(lnhours) iter(50) or
+
+. capture local rc = _rc 
+
+. 
+. if "`rc'" == "" {
+.         esttab using `"`directory'Model.`injury_label'.`time_label'.`vi
+> olation_level_label'.B.V.3.csv"', replace plain wide p eform
+. 
+.         pause "next"
+. 
+.         // diagnostics/assessment
+.         lfit
+. 
+.         pause "next"
+. 
+.         linktest
+. 
+.         pause "next"
+. 
+.         estat classification
+. 
+.         pause "next"
+. 
+.         predict bv3_yhat 
+.         gen bv3_res = dv_indicator - bv3_yhat
+. 
+.         summ dv_indicator bv3_yhat
+.         /*
+>         pause "next"
+> 
+>         scatter dv_indicator bv3_yhat
+> 
+>         pause "next"
+> 
+>         scatter bv3_res dv_indicator
+> 
+>         pause "next"
+> 
+>         scatter bv3_res bv3_yhat
+>         */
+.         pause "complete: B.V.3"
+. }
+
+. ***********************************************************************
+> *********
+. ***********************************************************************
+> *********
+. 
+. // Model B.V.4
+. 
+. eststo clear
+
+. capture eststo: logit dv_indicator `count_lag_all_vars' `covariates' ib
+> (freq).state ib(freq).time, vce(cl mineid) offset(lnhours) iter(50) or
+
+. capture local rc = _rc 
+
+. 
+. if "`rc'" == "" {
+.         esttab using `"`directory'Model.`injury_label'.`time_label'.`vi
+> olation_level_label'.B.V.4.csv"', replace plain wide p eform
+. 
+.         pause "next"
+. 
+.         // diagnostics/assessment
+.         lfit
+. 
+.         pause "next"
+. 
+.         linktest
+. 
+.         pause "next"
+. 
+.         estat classification
+. 
+.         pause "next"
+. 
+.         predict bv4_yhat 
+.         gen bv4_res = dv_indicator - bv4_yhat
+. 
+.         summ dv_indicator bv4_yhat
+.         /*
+>         pause "next"
+> 
+>         scatter dv_indicator bv4_yhat
+> 
+>         pause "next"
+> 
+>         scatter bv4_res dv_indicator
+> 
+>         pause "next"
+> 
+>         scatter bv4_res bv4_yhat
+>         */
+.         pause "complete: B.V.4"
+. }
+
+. ***********************************************************************
+> *********
+. ***********************************************************************
+> *********
+. 
+. // Model B.SSV.1
+. 
+. eststo clear
+
+. capture eststo: logit dv_indicator `ss_vars' `covariates' ib(freq).stat
+> e ib(freq).time, vce(cl mineid) offset(lnhours) iter(50) or
+
+. capture local rc = _rc 
+
+. 
+. if "`rc'" == "" {
+.         esttab using `"`directory'Model.`injury_label'.`time_label'.`vi
+> olation_level_label'.B.SSV.1.csv"', replace plain wide p eform
+. 
+.         pause "next"
+. 
+.         // diagnostics/assessment
+.         lfit
+. 
+.         pause "next"
+. 
+.         linktest
+. 
+.         pause "next"
+. 
+.         estat classification
+. 
+.         pause "next"
+. 
+.         predict bssv1_yhat 
+.         gen bssv1_res = dv_indicator - bssv1_yhat
+. 
+.         summ dv_indicator bssv1_yhat
+.         /*
+>         pause "next"
+> 
+>         scatter dv_indicator bssv1_yhat
+> 
+>         pause "next"
+> 
+>         scatter bssv1_res dv_indicator
+> 
+>         pause "next"
+> 
+>         scatter bssv1_res bssv1_yhat
+>         */
+.         pause "complete: B.SSV.1"
+. }
+
+. ***********************************************************************
+> *********
+. ***********************************************************************
+> *********
+. 
+. // Model B.SSV.2
+. 
+. eststo clear
+
+. capture eststo: logit dv_indicator `ss_lag_1_vars' `covariates' ib(freq
+> ).state ib(freq).time, vce(cl mineid) offset(lnhours) iter(50) or
+
+. capture local rc = _rc 
+
+. 
+. if "`rc'" == "" {
+.         esttab using `"`directory'Model.`injury_label'.`time_label'.`vi
+> olation_level_label'.B.SSV.2.csv"', replace plain wide p eform
+. 
+.         pause "next"
+. 
+.         // diagnostics/assessment
+.         lfit
+. 
+.         pause "next"
+. 
+.         linktest
+. 
+.         pause "next"
+. 
+.         estat classification
+. 
+.         pause "next"
+. 
+.         predict bssv2_yhat 
+.         gen bssv2_res = dv_indicator - bssv2_yhat
+. 
+.         summ dv_indicator bssv2_yhat
+.         /*
+>         pause "next"
+> 
+>         scatter dv_indicator bssv2_yhat
+> 
+>         pause "next"
+> 
+>         scatter bssv2_res dv_indicator
+> 
+>         pause "next"
+> 
+>         scatter bssv2_res bssv2_yhat
+>         */
+.         pause "complete: B.SSV.2"
+. }
+
+. ***********************************************************************
+> *********
+. ***********************************************************************
+> *********
+. 
+. // Model B.SSV.3
+. 
+. eststo clear
+
+. capture eststo: logit dv_indicator `ss_lag_4_vars' `covariates' ib(freq
+> ).state ib(freq).time, vce(cl mineid) offset(lnhours) iter(50) or
+
+. capture local rc = _rc 
+
+. 
+. if "`rc'" == "" {
+.         esttab using `"`directory'Model.`injury_label'.`time_label'.`vi
+> olation_level_label'.B.SSV.3.csv"', replace plain wide p eform
+. 
+.         pause "next"
+. 
+.         // diagnostics/assessment
+.         lfit
+. 
+.         pause "next"
+. 
+.         linktest
+. 
+.         pause "next"
+. 
+.         estat classification
+. 
+.         pause "next"
+. 
+.         predict bssv3_yhat 
+.         gen bssv3_res = dv_indicator - bssv3_yhat
+. 
+.         summ dv_indicator bssv3_yhat
+.         /*
+>         pause "next"
+> 
+>         scatter dv_indicator bssv3_yhat
+> 
+>         pause "next"
+> 
+>         scatter bssv3_res dv_indicator
+> 
+>         pause "next"
+> 
+>         scatter bssv3_res bssv3_yhat
+>         */
+.         pause "complete: B.SSV.3"
+. }
+
+. ***********************************************************************
+> *********
+. ***********************************************************************
+> *********
+. 
+. // Model B.SSV.4
+. 
+. eststo clear
+
+. capture eststo: logit dv_indicator `ss_lag_all_vars' `covariates' ib(fr
+> eq).state ib(freq).time, vce(cl mineid) offset(lnhours) iter(50) or
+
+. capture local rc = _rc 
+
+. 
+. if "`rc'" == "" {
+.         esttab using `"`directory'Model.`injury_label'.`time_label'.`vi
+> olation_level_label'.B.SSV.4.csv"', replace plain wide p eform
+. 
+.         pause "next"
+. 
+.         // diagnostics/assessment
+.         lfit
+. 
+.         pause "next"
+. 
+.         linktest
+. 
+.         pause "next"
+. 
+.         estat classification
+. 
+.         pause "next"
+. 
+.         predict bssv4_yhat 
+.         gen bssv4_res = dv_indicator - bssv4_yhat
+. 
+.         summ dv_indicator bssv4_yhat
+.         /*
+>         pause "next"
+> 
+>         scatter dv_indicator bssv4_yhat
+> 
+>         pause "next"
+> 
+>         scatter bssv4_res dv_indicator
+> 
+>         pause "next"
+> 
+>         scatter bssv4_res bssv4_yhat
+>         */
+.         pause "complete: B.SSV.4"
+. }
+
+. ***********************************************************************
+> *********
+. ***********************************************************************
+> *********
+. 
+. // Model B.PP.1
+. 
+. eststo clear
+
+. capture eststo: logit dv_indicator `pp_vars' `covariates' ib(freq).stat
+> e ib(freq).time if sample_pp == 1, vce(cl mineid) offset(lnhours) iter(
+> 50) or
+
+. capture local rc = _rc 
+
+. 
+. if "`rc'" == "" {
+.         esttab using `"`directory'Model.`injury_label'.`time_label'.`vi
+> olation_level_label'.B.PP.1.csv"', replace plain wide p eform
+. 
+.         pause "next"
+. 
+.         // diagnostics/assessment
+.         lfit
+. 
+.         pause "next"
+. 
+.         linktest
+. 
+.         pause "next"
+. 
+.         estat classification
+. 
+.         pause "next"
+. 
+.         predict bpp1_yhat 
+.         gen bpp1_res = dv_indicator - bpp1_yhat
+. 
+.         summ dv_indicator bpp1_yhat
+.         /*
+>         pause "next"
+> 
+>         scatter dv_indicator bpp1_yhat
+> 
+>         pause "next"
+> 
+>         scatter bpp1_res dv_indicator
+> 
+>         pause "next"
+> 
+>         scatter bpp1_res bpp1_yhat
+>         */
+.         pause "complete: B.PP.1"
+. }
+
+. ***********************************************************************
+> *********
+. ***********************************************************************
+> *********
+. 
+. // Model B.PP.2
+. 
+. eststo clear
+
+. capture eststo: logit dv_indicator `pp_lag_1_vars' `covariates' ib(freq
+> ).state ib(freq).time if sample_pp == 1, vce(cl mineid) offset(lnhours)
+>  iter(50) or
+
+. capture local rc = _rc 
+
+. 
+. if "`rc'" == "" {
+.         esttab using `"`directory'Model.`injury_label'.`time_label'.`vi
+> olation_level_label'.B.PP.2.csv"', replace plain wide p eform
+. 
+.         pause "next"
+. 
+.         // diagnostics/assessment
+.         lfit
+. 
+.         pause "next"
+. 
+.         linktest
+. 
+.         pause "next"
+. 
+.         estat classification
+. 
+.         pause "next"
+. 
+.         predict bpp2_yhat 
+.         gen bpp2_res = dv_indicator - bpp2_yhat
+. 
+.         summ dv_indicator bpp2_yhat
+.         /*
+>         pause "next"
+> 
+>         scatter dv_indicator bpp2_yhat
+> 
+>         pause "next"
+> 
+>         scatter bpp2_res dv_indicator
+> 
+>         pause "next"
+> 
+>         scatter bpp2_res bpp2_yhat
+>         */
+.         pause "complete: B.PP.2"
+. }
+
+. ***********************************************************************
+> *********
+. ***********************************************************************
+> *********
+. 
+. // Model B.PP.3
+. 
+. eststo clear
+
+. capture eststo: logit dv_indicator `pp_lag_4_vars' `covariates' ib(freq
+> ).state ib(freq).time if sample_pp == 1, vce(cl mineid) offset(lnhours)
+>  iter(50) or
+
+. capture local rc = _rc 
+
+. 
+. if "`rc'" == "" {
+.         esttab using `"`directory'Model.`injury_label'.`time_label'.`vi
+> olation_level_label'.B.PP.3.csv"', replace plain wide p eform
+. 
+.         pause "next"
+. 
+.         // diagnostics/assessment
+.         lfit
+. 
+.         pause "next"
+. 
+.         linktest
+. 
+.         pause "next"
+. 
+.         estat classification
+. 
+.         pause "next"
+. 
+.         predict bpp3_yhat 
+.         gen bpp3_res = dv_indicator - bpp3_yhat
+. 
+.         summ dv_indicator bpp3_yhat
+.         /*
+>         pause "next"
+> 
+>         scatter dv_indicator bpp3_yhat
+> 
+>         pause "next"
+> 
+>         scatter bpp3_res dv_indicator
+> 
+>         pause "next"
+> 
+>         scatter bpp3_res bpp3_yhat
+>         */
+.         pause "complete: B.PP.3"
+. }
+
+. ***********************************************************************
+> *********
+. ***********************************************************************
+> *********
+. 
+. // Model B.PP.4
+. 
+. eststo clear
+
+. capture eststo: logit dv_indicator `pp_lag_all_vars' `covariates' ib(fr
+> eq).state ib(freq).time if sample_pp == 1, vce(cl mineid) offset(lnhour
+> s) iter(50) or
+
+. capture local rc = _rc 
+
+. 
+. if "`rc'" == "" {
+.         esttab using `"`directory'Model.`injury_label'.`time_label'.`vi
+> olation_level_label'.B.PP.4.csv"', replace plain wide p eform
+. 
+.         pause "next"
+. 
+.         // diagnostics/assessment
+.         lfit
+. 
+.         pause "next"
+. 
+.         linktest
+. 
+.         pause "next"
+. 
+.         estat classification
+. 
+.         pause "next"
+. 
+.         predict bpp4_yhat 
+.         gen bpp4_res = dv_indicator - bpp4_yhat
+. 
+.         summ dv_indicator bpp4_yhat
+.         /*
+>         pause "next"
+> 
+>         scatter dv_indicator bpp4_yhat
+> 
+>         pause "next"
+> 
+>         scatter bpp4_res dv_indicator
+> 
+>         pause "next"
+> 
+>         scatter bpp4_res bpp4_yhat
+>         */
+.         pause "complete: B.PP.4"
+. }
+
+. ***********************************************************************
+> *********
+. ***********************************************************************
+> *********
+. 
+. log close
+      name:  <unnamed>
+       log:  C:/Users/slevine2/Dropbox (Stanford Law School)/R-code/Injur
+> y-Classification/Model Output + Summaries/big/V1/PS/log 10-24/log_part_
+> year.txt
+  log type:  text
+ closed on:  24 Oct 2016, 21:17:09
+-------------------------------------------------------------------------

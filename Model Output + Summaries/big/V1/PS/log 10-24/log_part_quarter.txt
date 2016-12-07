@@ -1,0 +1,4769 @@
+-------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  C:/Users/slevine2/Dropbox (Stanford Law School)/R-code/Injur
+> y-Classification/Model Output + Summaries/big/V1/PS/log 10-24/log_part_
+> quarter.txt
+  log type:  text
+ opened on:  24 Oct 2016, 21:13:56
+. }       
+
+.         
+. if "`mine_sample'" == "bad" | "`mine_sample'" == "big_bad" { 
+.         // make directories 
+.         capture mkdir "C:/Users/`fellow'/Dropbox (Stanford Law School)/
+> R-code/Injury-Classification/Model Output + Summaries/`mine_sample'/`ba
+> dness'/`version'/log `date'/`injury_type'/estout `date'/"
+.         capture mkdir "C:/Users/`fellow'/Dropbox (Stanford Law School)/
+> R-code/Injury-Classification/Model Output + Summaries/`mine_sample'/`ba
+> dness'/`version'/log `date'/`injury_type'/log `date'/"
+.         // make logs                    
+.         local directory "C:/Users/`fellow'/Dropbox (Stanford Law School
+> )/R-code/Injury-Classification/Model Output + Summaries/`mine_sample'/`
+> badness'/`version'/`injury_type'/estout `date'/"
+.         capture log close
+.         log using "C:/Users/`fellow'/Dropbox (Stanford Law School)/R-co
+> de/Injury-Classification/Model Output + Summaries/`mine_sample'/`badnes
+> s'/`version'/`injury_type'/log `date'/log_`violation_level'_`log_time'.
+> txt", text replace
+. }
+
+. 
+. ***********************************************************************
+> *********
+. ***********************************************************************
+> *********
+. // DATA SET-UP
+. 
+. // format variables
+. if "`injury_type'" == "MR" {
+.         rename MR dv
+.         rename MR_indicator dv_indicator
+.         local injury_label "MR"
+.         local relevant_parts "47 48 71 72 75 77"
+. }
+
+. 
+. if "`injury_type'" == "PS" {
+.         rename PS dv
+.         rename PS_indicator dv_indicator
+.         local injury_label "PS"
+.         local relevant_parts "48 75"
+. }
+
+. 
+. if "`violation_level'" == "part" {
+.         local violation_level_label "P"
+. }
+
+. 
+. if "`violation_level'" == "subpart" {
+.         local violation_level_label "SP"
+. }
+
+. 
+. // flag obs after or equal to 2007 to use in penlaty points analyses (a
+> ssessments changed for the last time in 2007)
+. gen sample_pp = quarter >= 2007 
+
+. 
+. // format time
+. tostring quarter, replace
+quarter was double now str7
+
+. encode quarter, gen(quart)
+
+. drop quarter year
+
+. rename quart time
+
+. local time_label "Q" // will be overwritten if unit_of_analysis is year
+> _sum or year_avg
+
+. 
+. // collapse to quarter levels (sums)
+. if "`unit_of_analysis'" == "year_sum" { // collapse to mine years - sum
+> s 
+.         local time_label "Y"
+.         
+.         // count number of complete quarters per year
+.         decode time, gen(year)
+.         replace year = regexs(0) if(regexm(year, "^[0-9][0-9][0-9][0-9]
+> "))
+.         gen marker = 1
+.         bysort mineid year: egen num_quarts = sum(marker)
+.                 /*tab num_quarts
+>                          num_quarts |      Freq.     Percent        Cum
+> .
+>                         ------------+----------------------------------
+> -
+>                                           1 |      1,100        3.63   
+>      3.63
+>                                           2 |      1,666        5.50   
+>      9.13
+>                                           3 |      2,511        8.29   
+>     17.42
+>                                           4 |     25,012       82.58   
+>    100.00
+>                         ------------+----------------------------------
+> -
+>                                   Total |     30,289      100.00 - Sara
+> h 9/21/2016 @ 10:54 PM */
+.         drop if num_quarts < 4
+.         
+.         // collapse to the mine-year 
+.         collapse (sum) p* sp* onsite_insp_hours hours dv* (firstnm) sta
+> te sample_pp union longwall, by(mineid year)
+.         rename year time
+.         encode time, gen(time2)
+.         drop time
+.         rename time2 time
+.         bys mineid: gen mine_time = _n
+.         
+.         pause "complete: year_sum collapse"
+. }
+
+. // collapse to quarter levels (means)
+. if "`unit_of_analysis'" == "year_avg" { // collapse on mine years - ave
+> rages
+.         local time_label "Y"
+.         decode time, gen(year)
+.         replace year = regexs(0) if(regexm(year, "^[0-9][0-9][0-9][0-9]
+> "))
+.         pause "collapsing to mine-year"
+.         collapse (mean) p* sp* onsite_insp_hours hours dv* (firstnm) st
+> ate sample_pp union longwall, by(mineid year)
+.         rename year time
+.         encode time, gen(time2)
+.         drop time
+.         rename time2 time
+.         bys mineid: gen mine_time = _n
+.         
+.         pause "complete: year_avg collapse"
+. }
+
+. // format depvars
+. drop dv_indicator
+
+. gen dv_binary = 0 if dv == 0
+(2,369 missing values generated)
+
+. replace dv_binary = 1 if dv != 0
+(2,369 real changes made)
+
+. rename dv_binary dv_indicator
+
+.         
+. gen lnhours = log(hours)
+
+. pause "complete: data formatting"
+
+. 
+. // group variables
+. local covariates "mine_time onsite_insp_hours"
+
+. 
+. if "`union_status'" == "on" {
+.         local covariates "`covariates' union longwall"
+. }
+
+. 
+. *** lag 0 ***
+. if "`violation_level'" == "part" {
+. 
+.         foreach x in `relevant_parts' {
+  2.                 foreach var of varlist p`x' {
+  3.                         local count_vars `count_vars' `var'
+  4.                 }
+  5.         }
+.         noi di "`count_vars'"
+p48 p75
+. 
+.         foreach var of varlist p*ss {
+  2.                 local ss_vars `ss_vars' `var'
+  3.         }
+.         noi di "`ss_vars'"
+p48_ss p75_ss
+. 
+.         foreach var of varlist p*pp {
+  2.                 local pp_vars `pp_vars' `var'
+  3.         }
+.         noi di "`pp_vars'"
+p48_pp p75_pp
+.         
+.         pause "complete: variable groups - part no lag"
+. }
+
+. 
+. if "`violation_level'" == "subpart" {
+. 
+.         foreach x in 1 2 3 4 5 6 7 8 9 0 {
+  2.                 foreach var of varlist sp*`x' {
+  3.                         local count_vars `count_vars' `var'
+  4.                 }
+  5.         }
+.         noi di "`count_vars'"
+. 
+.         foreach var of varlist sp*ss {
+  2.                 local ss_vars `ss_vars' `var'
+  3.         }
+.         noi di "`ss_vars'"
+. 
+.         foreach var of varlist sp*pp {
+  2.                 local pp_vars `pp_vars' `var'
+  3.         }
+.         noi di "`pp_vars'"
+.         
+.         pause "complete: variable groups - subpart no lag"
+. }
+
+. 
+. *** lag 1 ***
+. if "`violation_level'" == "part" {
+. 
+.         foreach x in `relevant_parts' {
+  2.                 foreach var of varlist p`x'_1lag  {
+  3.                         local count_lag_1_vars `count_lag_1_vars' `v
+> ar'
+  4.                 }
+  5.         }
+.         noi di "`count_lag_1_vars'"
+p48_1lag p75_1lag
+. 
+.         foreach var of varlist p*ss_1lag  {
+  2.                 local ss_lag_1_vars `ss_lag_1_vars' `var'
+  3.         }
+.         noi di "`ss_lag_1_vars'"
+p48_ss_1lag p75_ss_1lag
+. 
+.         foreach var of varlist p*pp_1lag  {
+  2.                 local pp_lag_1_vars `pp_lag_1_vars' `var'
+  3.         }
+.         noi di "`pp_lag_1_vars'"
+p48_pp_1lag p75_pp_1lag
+.         
+.         pause "complete: variable groups - part lag 1"
+. }
+
+. 
+. if "`violation_level'" == "subpart" {
+. 
+.         foreach x in 1 2 3 4 5 6 7 8 9 0 {
+  2.                 foreach var of varlist sp*`x'_1lag  {
+  3.                         local count_lag_1_vars `count_lag_1_vars' `v
+> ar'
+  4.                 }
+  5.         }
+.         noi di "`count_lag_1_vars'"
+. 
+.         foreach var of varlist sp*ss_1lag  {
+  2.                 local ss_lag_1_vars `ss_lag_1_vars' `var'
+  3.         }
+.         noi di "`ss_lag_1_vars'"
+. 
+. 
+.         foreach var of varlist sp*pp_1lag  {
+  2.                 local pp_lag_1_vars `pp_lag_1_vars' `var'
+  3.         }
+.         noi di "`pp_lag_1_vars'"
+. 
+.         pause "complete: variable groups - subpart lag 1"
+. } 
+
+. 
+. *** lag 4 ***
+. if "`violation_level'" == "part" {
+.         
+.         foreach x in `relevant_parts' {
+  2.                 foreach var of varlist p`x'_c_4lag  {
+  3.                         local count_lag_4_vars `count_lag_4_vars' `v
+> ar'
+  4.                 }
+  5.         }
+.         noi di "`count_lag_4_vars'"
+p48_c_4lag p75_c_4lag
+. 
+.         foreach var of varlist p*ss_c_4lag {
+  2.                 local ss_lag_4_vars `ss_lag_4_vars' `var'
+  3.         }
+.         noi di "`ss_lag_4_vars'"
+p48_ss_c_4lag p75_ss_c_4lag
+. 
+.         foreach var of varlist p*pp_c_4lag {
+  2.                 local pp_lag_4_vars `pp_lag_4_vars' `var'
+  3.         }
+.         noi di "`pp_lag_4_vars'"
+p48_pp_c_4lag p75_pp_c_4lag
+. 
+.         pause "complete: variable groups - part lag 4"
+. }
+
+. 
+. if "`violation_level'" == "subpart" {
+. 
+.         foreach x in 1 2 3 4 5 6 7 8 9 0 {
+  2.                 foreach var of varlist sp*`x'_c_4lag  {
+  3.                         local count_lag_4_vars `count_lag_4_vars' `v
+> ar'
+  4.                 }
+  5.         }
+.         noi di "`count_lag_4_vars'"
+. 
+.         foreach var of varlist sp*ss_c_4lag {
+  2.                 local ss_lag_4_vars `ss_lag_4_vars' `var'
+  3.         }
+.         noi di "`ss_lag_4_vars'"
+. 
+.         foreach var of varlist sp*pp_c_4lag {
+  2.                 local pp_lag_4_vars `pp_lag_4_vars' `var'
+  3.         }
+.         noi di "`pp_lag_4_vars'"
+. 
+.         pause "complete: variable groups - subpart lag 4"
+. }
+
+. 
+. *** lag all ***
+. if "`violation_level'" == "part" {
+. 
+.         foreach x in `relevant_parts' {
+  2.                 foreach var of varlist p`x'_c_lag_all  {
+  3.                         local count_lag_all_vars `count_lag_all_vars
+> ' `var'
+  4.                 }
+  5.         }
+.         noi di "`count_lag_all_vars'"
+p48_c_lag_all p75_c_lag_all
+. 
+.         foreach var of varlist p*ss_c_lag_all {
+  2.                 local ss_lag_all_vars `ss_lag_all_vars' `var'
+  3.         }
+.         noi di "`ss_lag_all_vars'"
+p48_ss_c_lag_all p75_ss_c_lag_all
+. 
+.         foreach var of varlist p*pp_c_lag_all {
+  2.                 local pp_lag_all_vars `pp_lag_all_vars' `var'
+  3.         }
+.         noi di "`pp_lag_all_vars'"
+p48_pp_c_lag_all p75_pp_c_lag_all
+. 
+.         pause "complete: variable groups - part lag all"
+. }
+
+. 
+. if "`violation_level'" == "subpart" {
+. 
+.         foreach x in 1 2 3 4 5 6 7 8 9 0 {
+  2.                 foreach var of varlist sp*`x'_c_lag_all  {
+  3.                         local count_lag_all_vars `count_lag_all_vars
+> ' `var'
+  4.                 }
+  5.         }
+.         noi di "`count_lag_all_vars'"
+.         
+.         foreach var of varlist sp*ss_c_lag_all {
+  2.                 local ss_lag_all_vars `ss_lag_all_vars' `var'
+  3.         }
+.         noi di "`ss_lag_all_vars'"
+.         
+.         foreach var of varlist sp*pp_c_lag_all {
+  2.                 local pp_lag_all_vars `pp_lag_all_vars' `var'
+  3.         }
+.         noi di "`pp_lag_all_vars'"
+. 
+.         pause "complete: variable groups - subpart lag all"
+. }
+
+. 
+. ***********************************************************************
+> *********
+. ***********************************************************************
+> ********
+. // DATA OVERVIEW
+. 
+. // outcome variables
+. summ dv
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+          dv |      2,726    6.319516    6.454206          0         71
+
+. 
+. pause "next"
+
+. 
+. tab dv_indicator
+
+dv_indicato |
+          r |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          0 |        357       13.10       13.10
+          1 |      2,369       86.90      100.00
+------------+-----------------------------------
+      Total |      2,726      100.00
+
+.           
+. pause "next"
+
+. 
+. if "`violation_level'" == "part" {
+.         summ `count_vars' `ss_vars' `pp_vars'
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+         p48 |      2,688    .1502976    .5661588          0          9
+         p75 |      2,688     53.7753    47.30648          0        382
+      p48_ss |      2,688    .0394345    .2685749          0          4
+      p75_ss |      2,688    16.01451    16.57968          0        154
+      p48_pp |      2,688    7.117188    29.22702          0        479
+-------------+---------------------------------------------------------
+      p75_pp |      2,688    3059.699    3512.584          0      28605
+.         
+.         pause "next"
+.         
+.         summ `count_lag_1_vars' `ss_lag_1_vars' `pp_lag_1_vars'
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+    p48_1lag |      2,695    .1495362    .5619515          0          9
+    p75_1lag |      2,695    53.72356    47.24709          0        382
+ p48_ss_1lag |      2,695    .0400742     .270878          0          4
+ p75_ss_1lag |      2,695    16.15436    16.60759          0        154
+ p48_pp_1lag |      2,695    6.999258    28.86501          0        479
+-------------+---------------------------------------------------------
+ p75_pp_1lag |      2,695    3018.743    3511.673          0      28605
+.         
+.         pause "next"
+.         
+.         summ `count_lag_4_vars' `ss_lag_4_vars' `pp_lag_4_vars'
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+  p48_c_4lag |      2,636    .6058422    1.328347          0         14
+  p75_c_4lag |      2,636     218.099    168.9614          4       1290
+p48_ss_c_4~g |      2,636    .1635053    .6235508          0          9
+p75_ss_c_4~g |      2,636    65.75303    55.75889          0        311
+p48_pp_c_4~g |      2,636    28.12064    68.79154          0        804
+-------------+---------------------------------------------------------
+p75_pp_c_4~g |      2,636    12167.21    12906.64         38     101005
+.         
+.         pause "next"
+.         
+.         summ `count_lag_all_vars' `ss_lag_all_vars' `pp_lag_all_vars'
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+p48_c_lag_~l |      2,281    4.736519    6.178225          0         27
+p75_c_lag_~l |      2,281    1844.369    1594.902         73      10114
+p48_ss_c_l~l |      2,281    1.520386    2.656117          0         13
+p75_ss_c_l~l |      2,281    612.1635    504.7277         20       3452
+p48_pp_c_l~l |      2,281    168.3919     273.697          0       1371
+-------------+---------------------------------------------------------
+p75_pp_c_l~l |      2,281    73282.79    85517.47        749     575818
+. }
+
+. 
+. pause "complete: data overview"
+
+. 
+. ***********************************************************************
+> ********/
+. /**********************************************************************
+> *********
+> // MODEL LABEL KEY
+> 
+> Model X.Y.Z
+>   X
+>     C: response variable is count of injuries
+>     B: response variable is binary of injuries
+>   Y
+>     V: predictors are number of violations
+>     SSV: predictors are number of significant and substantial violation
+> s
+>     PP: predictors are number of penalty points
+>   Z
+>     1: inj_t ~ viol_t
+>     2: inj_t ~ viol_(t_-1)
+>     3: inj_t ~ viol_(annual sum pre_t)
+>     4: inj_t ~ viol_(sum since study period) 
+> 
+> ***********************************************************************
+> ********/
+. ***********************************************************************
+> *********
+. // NULL MODELS (V & SSV)
+. 
+. // count outcome (V & SSV)
+. /*
+> glm dv, family(poisson) link(log) vce(cl mineid) exposure(hours) eform
+>         
+> pause "next"    
+>         
+> quietly poisson dv, vce(cl mineid) exposure(hours) irr
+> estat gof
+> 
+> pause "next"
+>         
+> glm dv, family(nbinomial) link(log) vce(cl mineid) exposure(hours) efor
+> m
+> 
+> pause "next"
+> */
+. 
+. nbreg dv, vce(cl mineid) exposure(hours) irr
+
+Fitting Poisson model:
+
+Iteration 0:   log pseudolikelihood = -8588.3858  
+Iteration 1:   log pseudolikelihood = -8588.3858  
+
+Fitting constant-only model:
+
+Iteration 0:   log pseudolikelihood = -7397.9033  
+Iteration 1:   log pseudolikelihood = -7125.6548  
+Iteration 2:   log pseudolikelihood = -7109.2882  
+Iteration 3:   log pseudolikelihood = -7109.1249  
+Iteration 4:   log pseudolikelihood = -7109.1249  
+
+Fitting full model:
+
+Iteration 0:   log pseudolikelihood = -7109.1249  
+Iteration 1:   log pseudolikelihood = -7109.1249  
+
+Negative binomial regression                    Number of obs     =      
+> 2,726
+                                                Wald chi2(0)      =      
+>     .
+Dispersion           = mean                     Prob > chi2       =      
+>     .
+Log pseudolikelihood = -7109.1249               Pseudo R2         =     0
+> .0000
+
+                                (Std. Err. adjusted for 66 clusters in mi
+> neid)
+-------------------------------------------------------------------------
+> -----
+             |               Robust
+          dv |        IRR   Std. Err.      z    P>|z|     [95% Conf. Inte
+> rval]
+-------------+-----------------------------------------------------------
+> -----
+       _cons |   .0000499   2.78e-06  -177.85   0.000     .0000447    .00
+> 00556
+   ln(hours) |          1  (exposure)
+-------------+-----------------------------------------------------------
+> -----
+    /lnalpha |  -.9906931   .1373505                     -1.259895   -.72
+> 14912
+-------------+-----------------------------------------------------------
+> -----
+       alpha |   .3713192   .0510009                      .2836838     .4
+> 86027
+-------------------------------------------------------------------------
+> -----
+
+. 
+. pause "next"
+
+. 
+. predict c_null_yhat 
+(option n assumed; predicted number of events)
+
+. summ dv c_null_yhat
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+          dv |      2,726    6.319516    6.454206          0         71
+ c_null_yhat |      2,726    6.908105    5.752227   .0034912   35.64878
+
+. 
+. pause "complete: null model - count outcome"
+
+. 
+. // binary outcome (V & SSV)
+. logit dv_indicator, vce(cl mineid) offset(lnhours) or
+
+Iteration 0:   log pseudolikelihood = -800.14216  
+Iteration 1:   log pseudolikelihood = -774.28965  
+Iteration 2:   log pseudolikelihood = -774.28963  
+
+Logistic regression                             Number of obs     =      
+> 2,726
+                                                Wald chi2(0)      =      
+>     .
+Log pseudolikelihood = -774.28963               Prob > chi2       =      
+>     .
+
+                                (Std. Err. adjusted for 66 clusters in mi
+> neid)
+-------------------------------------------------------------------------
+> -----
+             |               Robust
+dv_indicator | Odds Ratio   Std. Err.      z    P>|z|     [95% Conf. Inte
+> rval]
+-------------+-----------------------------------------------------------
+> -----
+       _cons |    .000121   .0000187   -58.27   0.000     .0000894    .00
+> 01639
+     lnhours |          1  (offset)
+-------------------------------------------------------------------------
+> -----
+
+. 
+. pause "next"
+
+. 
+. lfit
+
+Logistic model for dv_indicator, goodness-of-fit test
+
+       number of observations =      2726
+ number of covariate patterns =         1
+              Pearson chi2(0) =         0.00
+                  Prob > chi2 =              .
+
+. 
+. pause "next"
+
+. 
+. linktest
+
+Iteration 0:   log likelihood = -1058.2596  
+Iteration 1:   log likelihood = -823.94187  
+Iteration 2:   log likelihood = -768.51858  
+Iteration 3:   log likelihood = -755.50365  
+Iteration 4:   log likelihood = -755.42585  
+Iteration 5:   log likelihood = -755.42582  
+
+Logistic regression                             Number of obs     =      
+> 2,726
+                                                LR chi2(2)        =     6
+> 05.67
+                                                Prob > chi2       =     0
+> .0000
+Log likelihood = -755.42582                     Pseudo R2         =     0
+> .2862
+
+-------------------------------------------------------------------------
+> -----
+dv_indicator |      Coef.   Std. Err.      z    P>|z|     [95% Conf. Inte
+> rval]
+-------------+-----------------------------------------------------------
+> -----
+        _hat |   .7909755   .0637946    12.40   0.000     .6659404    .91
+> 60106
+      _hatsq |   .1637391    .025977     6.30   0.000     .1128252     .2
+> 14653
+       _cons |  -.3029919   .1060183    -2.86   0.004    -.5107839      -
+> .0952
+-------------------------------------------------------------------------
+> -----
+
+. 
+. pause "next"
+
+. 
+. estat classification
+
+Logistic model for dv_indicator
+
+              -------- True --------
+Classified |         D            ~D  |      Total
+-----------+--------------------------+-----------
+     +     |      2323           259  |       2582
+     -     |        46            98  |        144
+-----------+--------------------------+-----------
+   Total   |      2369           357  |       2726
+
+Classified + if predicted Pr(D) >= .5
+True D defined as dv_indicator != 0
+--------------------------------------------------
+Sensitivity                     Pr( +| D)   98.06%
+Specificity                     Pr( -|~D)   27.45%
+Positive predictive value       Pr( D| +)   89.97%
+Negative predictive value       Pr(~D| -)   68.06%
+--------------------------------------------------
+False + rate for true ~D        Pr( +|~D)   72.55%
+False - rate for true D         Pr( -| D)    1.94%
+False + rate for classified +   Pr(~D| +)   10.03%
+False - rate for classified -   Pr( D| -)   31.94%
+--------------------------------------------------
+Correctly classified                        88.81%
+--------------------------------------------------
+
+. 
+. pause "next"
+
+. 
+. predict b_null_yhat 
+(option pr assumed; Pr(dv_indicator))
+
+. summ dv_indicator b_null_yhat
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+dv_indicator |      2,726    .8690389    .3374197          0          1
+ b_null_yhat |      2,726    .8690389    .1668968   .0084021   .9885741
+
+. 
+. pause "complete: null model - binary outcome"
+
+. 
+. ***********************************************************************
+> ********/
+. ***********************************************************************
+> *********
+. // NULL MODELS (PP)
+. 
+. // count outcome (PP)
+. /*
+> glm dv if sample_pp == 1, family(poisson) link(log) vce(cl mineid) expo
+> sure(hours) eform
+>         
+> pause "next"    
+>         
+> quietly poisson dv if sample_pp == 1, vce(cl mineid) exposure(hours) ir
+> r
+> estat gof
+> 
+> pause "next"
+>         
+> glm dv if sample_pp == 1, family(nbinomial) link(log) vce(cl mineid) ex
+> posure(hours) eform
+> 
+> pause "next"
+> */
+. 
+. nbreg dv if sample_pp == 1, vce(cl mineid) exposure(hours) irr
+
+Fitting Poisson model:
+
+Iteration 0:   log pseudolikelihood = -5034.9777  
+Iteration 1:   log pseudolikelihood = -5034.9777  
+
+Fitting constant-only model:
+
+Iteration 0:   log pseudolikelihood =  -4529.206  
+Iteration 1:   log pseudolikelihood = -4342.8974  
+Iteration 2:   log pseudolikelihood = -4335.3045  
+Iteration 3:   log pseudolikelihood = -4335.2257  
+Iteration 4:   log pseudolikelihood = -4335.2257  
+
+Fitting full model:
+
+Iteration 0:   log pseudolikelihood = -4335.2257  
+Iteration 1:   log pseudolikelihood = -4335.2257  
+
+Negative binomial regression                    Number of obs     =      
+> 1,739
+                                                Wald chi2(0)      =      
+>     .
+Dispersion           = mean                     Prob > chi2       =      
+>     .
+Log pseudolikelihood = -4335.2257               Pseudo R2         =     0
+> .0000
+
+                                (Std. Err. adjusted for 57 clusters in mi
+> neid)
+-------------------------------------------------------------------------
+> -----
+             |               Robust
+          dv |        IRR   Std. Err.      z    P>|z|     [95% Conf. Inte
+> rval]
+-------------+-----------------------------------------------------------
+> -----
+       _cons |   .0000414   2.48e-06  -168.36   0.000     .0000368    .00
+> 00465
+   ln(hours) |          1  (exposure)
+-------------+-----------------------------------------------------------
+> -----
+    /lnalpha |  -1.097047   .1792536                     -1.448377   -.74
+> 57163
+-------------+-----------------------------------------------------------
+> -----
+       alpha |   .3338556   .0598448                      .2349512    .47
+> 43944
+-------------------------------------------------------------------------
+> -----
+
+. 
+. pause "next"
+
+. 
+. predict c_pp_null_yhat 
+(option n assumed; predicted number of events)
+
+. summ dv_indicator c_pp_null_yhat
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+dv_indicator |      2,726    .8690389    .3374197          0          1
+c_pp_null_~t |      2,726    5.731723    4.772679   .0028967   29.57814
+
+. 
+. pause "complete: null model - count outcome"
+
+. 
+. // binary outcome (PP)
+. logit dv_indicator if sample_pp == 1, vce(cl mineid) offset(lnhours) or
+
+Iteration 0:   log pseudolikelihood =  -546.1869  
+Iteration 1:   log pseudolikelihood = -530.54044  
+Iteration 2:   log pseudolikelihood = -530.53583  
+Iteration 3:   log pseudolikelihood = -530.53583  
+
+Logistic regression                             Number of obs     =      
+> 1,739
+                                                Wald chi2(0)      =      
+>     .
+Log pseudolikelihood = -530.53583               Prob > chi2       =      
+>     .
+
+                                (Std. Err. adjusted for 57 clusters in mi
+> neid)
+-------------------------------------------------------------------------
+> -----
+             |               Robust
+dv_indicator | Odds Ratio   Std. Err.      z    P>|z|     [95% Conf. Inte
+> rval]
+-------------+-----------------------------------------------------------
+> -----
+       _cons |   .0000936   .0000152   -57.33   0.000     .0000682    .00
+> 01286
+     lnhours |          1  (offset)
+-------------------------------------------------------------------------
+> -----
+
+. 
+. pause "next"
+
+. 
+. lfit
+
+Logistic model for dv_indicator, goodness-of-fit test
+
+       number of observations =      1739
+ number of covariate patterns =         1
+              Pearson chi2(0) =         0.00
+                  Prob > chi2 =              .
+
+. 
+. pause "next"
+
+. 
+. linktest
+
+Iteration 0:   log likelihood = -731.87436  
+Iteration 1:   log likelihood = -552.19151  
+Iteration 2:   log likelihood = -534.84342  
+Iteration 3:   log likelihood = -522.25581  
+Iteration 4:   log likelihood = -522.23391  
+Iteration 5:   log likelihood = -522.23386  
+
+Logistic regression                             Number of obs     =      
+> 1,739
+                                                LR chi2(2)        =     4
+> 19.28
+                                                Prob > chi2       =     0
+> .0000
+Log likelihood = -522.23386                     Pseudo R2         =     0
+> .2864
+
+-------------------------------------------------------------------------
+> -----
+dv_indicator |      Coef.   Std. Err.      z    P>|z|     [95% Conf. Inte
+> rval]
+-------------+-----------------------------------------------------------
+> -----
+        _hat |    .939046   .0915776    10.25   0.000     .7595572    1.1
+> 18535
+      _hatsq |   .1215981   .0359261     3.38   0.001     .0511842     .1
+> 92012
+       _cons |   -.309959   .1241252    -2.50   0.013    -.5532399   -.06
+> 66781
+-------------------------------------------------------------------------
+> -----
+
+. 
+. pause "next"
+
+. 
+. estat classification
+
+Logistic model for dv_indicator
+
+              -------- True --------
+Classified |         D            ~D  |      Total
+-----------+--------------------------+-----------
+     +     |      1446           177  |       1623
+     -     |        34            82  |        116
+-----------+--------------------------+-----------
+   Total   |      1480           259  |       1739
+
+Classified + if predicted Pr(D) >= .5
+True D defined as dv_indicator != 0
+--------------------------------------------------
+Sensitivity                     Pr( +| D)   97.70%
+Specificity                     Pr( -|~D)   31.66%
+Positive predictive value       Pr( D| +)   89.09%
+Negative predictive value       Pr(~D| -)   70.69%
+--------------------------------------------------
+False + rate for true ~D        Pr( +|~D)   68.34%
+False - rate for true D         Pr( -| D)    2.30%
+False + rate for classified +   Pr(~D| +)   10.91%
+False - rate for classified -   Pr( D| -)   29.31%
+--------------------------------------------------
+Correctly classified                        87.87%
+--------------------------------------------------
+
+. 
+. pause "next"
+
+. 
+. predict b_pp_null_yhat 
+(option pr assumed; Pr(dv_indicator))
+
+. summ dv_indicator b_pp_null_yhat
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+dv_indicator |      2,726    .8690389    .3374197          0          1
+b_pp_null_~t |      2,726    .8453055    .1781435   .0065114   .9852775
+
+. 
+. pause "complete: null model - binary outcome"
+
+. 
+. ***********************************************************************
+> *********
+. ***********************************************************************
+> *********
+. 
+. if "`violation_level'" == "subpart" {
+.         set matsize 11000, perm
+.         set emptycells drop
+. }
+
+. 
+. ***********************************************************************
+> *********
+. ***********************************************************************
+> *********
+. 
+. // Model C.V.1
+. 
+. // poisson model
+. /*
+> glm dv `count_vars' `covariates' ib(freq).state ib(freq).time, family(p
+> oisson) link(log) vce(cl mineid) exposure(hours) iter(50) eform
+>         
+> quietly poisson dv `count_vars' `covariates' ib(freq).state ib(freq).ti
+> me, vce(cl mineid) exposure(hours) iter(50) irr
+> est store pois
+> estat gof
+>         
+> pause "next"
+> 
+> // negative binomial model
+> glm dv `count_vars' `covariates' ib(freq).state ib(freq).time, family(n
+> binomial) link(log) vce(cl mineid) exposure(hours) iter(50) eform
+> 
+> pause "next"
+> */
+. eststo clear
+
+. eststo: nbreg dv `count_vars' `covariates' ib(freq).state ib(freq).time
+> , vce(cl mineid) exposure(hours) iter(50) irr
+
+Fitting Poisson model:
+
+Iteration 0:   log pseudolikelihood = -7269.1505  
+Iteration 1:   log pseudolikelihood = -7247.5027  
+Iteration 2:   log pseudolikelihood =  -7247.477  
+Iteration 3:   log pseudolikelihood =  -7247.477  
+
+Fitting constant-only model:
+
+Iteration 0:   log pseudolikelihood = -7361.3597  
+Iteration 1:   log pseudolikelihood = -7089.8825  
+Iteration 2:   log pseudolikelihood = -7073.6925  
+Iteration 3:   log pseudolikelihood =  -7073.533  
+Iteration 4:   log pseudolikelihood =  -7073.533  
+
+Fitting full model:
+
+Iteration 0:   log pseudolikelihood = -6741.8346  
+Iteration 1:   log pseudolikelihood = -6659.1535  
+Iteration 2:   log pseudolikelihood = -6650.6478  
+Iteration 3:   log pseudolikelihood = -6650.6102  
+Iteration 4:   log pseudolikelihood = -6650.6102  
+
+Negative binomial regression                    Number of obs     =      
+> 2,688
+                                                Wald chi2(63)     =      
+>     .
+Dispersion           = mean                     Prob > chi2       =      
+>     .
+Log pseudolikelihood = -6650.6102               Pseudo R2         =     0
+> .0598
+
+                                (Std. Err. adjusted for 66 clusters in mi
+> neid)
+-------------------------------------------------------------------------
+> -----
+             |               Robust
+          dv |        IRR   Std. Err.      z    P>|z|     [95% Conf. Inte
+> rval]
+-------------+-----------------------------------------------------------
+> -----
+         p48 |   1.034754   .0235495     1.50   0.133     .9896117    1.0
+> 81955
+         p75 |   1.001221    .000901     1.36   0.175     .9994563    1.0
+> 02988
+   mine_time |   1.017757   .0198022     0.90   0.366     .9796763    1.0
+> 57318
+onsite_ins~s |   .9995061   .0002151    -2.30   0.022     .9990847    .99
+> 99277
+             |
+       state |
+         IL  |   1.315742   .1172587     3.08   0.002     1.104872    1.5
+> 66858
+         IN  |   1.100328   .0841317     1.25   0.211     .9471932    1.2
+> 78219
+         KY  |    1.05217    .112023     0.48   0.633     .8540032    1.2
+> 96319
+         NM  |   .7207229   .0582621    -4.05   0.000     .6151181    .84
+> 44582
+         OH  |   .9403071   .0692024    -0.84   0.403     .8140013    1.0
+> 86211
+         PA  |   .8879133   .1317232    -0.80   0.423     .6638862    1.1
+> 87538
+         UT  |   .3499509   .0740297    -4.96   0.000     .2311753    .52
+> 97523
+         VA  |   .6174234    .160522    -1.85   0.064     .3709214    1.0
+> 27743
+             |
+        time |
+    2003.25  |   1.061821    .094673     0.67   0.501      .891574    1.2
+> 64577
+     2003.5  |   1.146469   .1148299     1.36   0.172     .9421202    1.3
+> 95142
+    2003.75  |   .9218294   .0992305    -0.76   0.450      .746488    1.1
+> 38357
+       2004  |   .8774769    .106241    -1.08   0.280     .6921114    1.1
+> 12488
+    2004.25  |   1.032886   .1168943     0.29   0.775     .8274086    1.2
+> 89392
+     2004.5  |   1.109254   .1645829     0.70   0.485     .8293464    1.4
+> 83631
+    2004.75  |   .7243133   .1225771    -1.91   0.057     .5198474      1
+> .0092
+       2005  |   .7031196   .1238096    -2.00   0.045     .4979025    .99
+> 29194
+    2005.25  |   .7998015   .1529547    -1.17   0.243     .5497911    1.1
+> 63501
+     2005.5  |   .8319233   .1653617    -0.93   0.355     .5634945    1.2
+> 28222
+    2005.75  |   .8478792   .1666406    -0.84   0.401     .5768201    1.2
+> 46314
+       2006  |   .7003518   .1626221    -1.53   0.125     .4442902    1.1
+> 03991
+    2006.25  |    .676811    .169079    -1.56   0.118     .4147846    1.1
+> 04364
+     2006.5  |   .8094498   .2207109    -0.78   0.438     .4743453    1.3
+> 81291
+    2006.75  |   .6014191   .1697051    -1.80   0.072     .3459314    1.0
+> 45597
+       2007  |   .6125602   .1919479    -1.56   0.118     .3314529    1.1
+> 32076
+    2007.25  |   .5922174   .2235076    -1.39   0.165     .2826382    1.2
+> 40885
+     2007.5  |   .6742763   .2384872    -1.11   0.265     .3371113     1.
+> 34866
+    2007.75  |   .6606162   .2428075    -1.13   0.259     .3214346    1.3
+> 57706
+       2008  |   .5336658   .1953297    -1.72   0.086     .2604455    1.0
+> 93508
+    2008.25  |   .5338429   .2032547    -1.65   0.099     .2531209    1.1
+> 25898
+     2008.5  |   .6003168   .2456994    -1.25   0.212     .2691523    1.3
+> 38945
+    2008.75  |   .4855717   .2194302    -1.60   0.110     .2002603    1.1
+> 77367
+       2009  |   .4742689   .2189058    -1.62   0.106     .1919288     1.
+> 17195
+    2009.25  |   .3963695   .1896447    -1.93   0.053     .1551812    1.0
+> 12421
+     2009.5  |   .4359603   .2187523    -1.65   0.098     .1630566    1.1
+> 65616
+    2009.75  |   .3989384    .206907    -1.77   0.076     .1443561    1.1
+> 02495
+       2010  |   .3591387   .1941577    -1.89   0.058     .1244759    1.0
+> 36189
+    2010.25  |   .4774736   .2773456    -1.27   0.203     .1529396     1.
+> 49066
+     2010.5  |   .4508452   .2480345    -1.45   0.148     .1533682    1.3
+> 25317
+    2010.75  |   .3589499   .2113128    -1.74   0.082     .1132228    1.1
+> 37978
+       2011  |   .3369636   .2000834    -1.83   0.067     .1052334    1.0
+> 78978
+    2011.25  |   .3895735   .2354857    -1.56   0.119     .1191415    1.2
+> 73843
+     2011.5  |   .3921258   .2469877    -1.49   0.137     .1140986    1.3
+> 47629
+    2011.75  |   .3005539    .196527    -1.84   0.066     .0834327      1
+> .0827
+       2012  |   .3110674   .2054458    -1.77   0.077     .0852462      1
+> .1351
+    2012.25  |   .2516834   .1786326    -1.94   0.052       .06262     1.
+> 01157
+     2012.5  |   .3574019   .2572123    -1.43   0.153     .0872109    1.4
+> 64681
+    2012.75  |   .2943581   .2189126    -1.64   0.100     .0685238    1.2
+> 64475
+       2013  |     .27208   .2087977    -1.70   0.090     .0604608    1.2
+> 24389
+    2013.25  |   .3008416    .232855    -1.55   0.121      .065993    1.3
+> 71444
+     2013.5  |   .3211273   .2560753    -1.42   0.154     .0672833    1.5
+> 32666
+    2013.75  |   .2342721   .1894047    -1.80   0.073      .048033    1.1
+> 42619
+       2014  |    .289771   .2395077    -1.50   0.134     .0573458    1.4
+> 64226
+    2014.25  |   .2963546   .2505337    -1.44   0.150     .0565221    1.5
+> 53834
+     2014.5  |   .3169757   .2797655    -1.30   0.193     .0562015    1.7
+> 87738
+    2014.75  |   .2517802   .2289334    -1.52   0.129     .0423701    1.4
+> 96181
+       2015  |     .27202   .2490178    -1.42   0.155     .0452249    1.6
+> 36154
+    2015.25  |   .2175332   .2043956    -1.62   0.104      .034493    1.3
+> 71892
+     2015.5  |   .3690178   .3518585    -1.05   0.296     .0569412    2.3
+> 91487
+    2015.75  |   .2296233    .224858    -1.50   0.133     .0336883    1.5
+> 65139
+       2016  |   .2738698   .2744426    -1.29   0.196     .0384204    1.9
+> 52207
+             |
+       _cons |   .0000585   .0000149   -38.27   0.000     .0000355    .00
+> 00964
+   ln(hours) |          1  (exposure)
+-------------+-----------------------------------------------------------
+> -----
+    /lnalpha |  -1.584646   .1499872                     -1.878616   -1.2
+> 90677
+-------------+-----------------------------------------------------------
+> -----
+       alpha |   .2050203   .0307504                      .1528014    .27
+> 50845
+-------------------------------------------------------------------------
+> -----
+(est1 stored)
+
+. esttab using `"`directory'Model.`injury_label'.`time_label'.`violation_
+> level_label'.C.V.1.csv"', replace plain wide p eform
+(note: file C:/Users/slevine2/Dropbox (Stanford Law School)/R-code/Injury
+> -Classification/Model Output + Summaries/big/V1/PS/estout 10-24/Model.P
+> S.Q.P.C.V.1.csv not found)
+(output written to C:/Users/slevine2/Dropbox (Stanford Law School)/R-code
+> /Injury-Classification/Model Output + Summaries/big/V1/PS/estout 10-24/
+> Model.PS.Q.P.C.V.1.csv)
+
+. /* 
+> est store nbin
+> 
+> pause "next"
+> 
+> // test for over-dispersion
+> lrtest pois nbin, stats force 
+> 
+> pause "next" 
+> 
+> // final model + diagnostics/assessment
+> quietly nbreg dv `count_vars' `covariates' ib(freq).state ib(freq).time
+> , vce(cl mineid) exposure(hours) iter(50) irr
+> */
+. predict cv1_yhat 
+(option n assumed; predicted number of events)
+(38 missing values generated)
+
+. gen cv1_res = dv - cv1_yhat
+(38 missing values generated)
+
+. 
+. summ dv cv1_yhat
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+          dv |      2,726    6.319516    6.454206          0         71
+    cv1_yhat |      2,688    6.630766    5.603159   .0039399   44.60789
+
+. /*
+> pause "next"
+> 
+> scatter dv cv1_yhat
+> 
+> pause "next"
+> 
+> scatter cv1_res dv
+> 
+> pause "next"
+> 
+> scatter cv1_res cv1_yhat
+> */
+. pause "complete: C.V.1"
+
+. 
+. ***********************************************************************
+> *********
+. ***********************************************************************
+> *********
+. 
+. // Model C.V.2
+. 
+. // poisson model
+. /*
+> glm dv `count_lag_1_vars' `covariates' ib(freq).state ib(freq).time, fa
+> mily(poisson) link(log) vce(cl mineid) exposure(hours) iter(50) eform
+>         
+> quietly poisson dv `count_lag_1_vars' `covariates' ib(freq).state ib(fr
+> eq).time, vce(cl mineid) exposure(hours) iter(50) irr
+> est store pois
+> estat gof
+>         
+> pause "next"
+> 
+> // negative binomial model
+> glm dv `count_lag_1_vars' `covariates' ib(freq).state ib(freq).time, fa
+> mily(nbinomial) link(log) vce(cl mineid) exposure(hours) iter(50) eform
+> 
+> pause "next"
+> */
+. eststo clear
+
+. eststo: nbreg dv `count_lag_1_vars' `covariates' ib(freq).state ib(freq
+> ).time, vce(cl mineid) exposure(hours) iter(50) irr
+
+Fitting Poisson model:
+
+Iteration 0:   log pseudolikelihood = -7255.2309  
+Iteration 1:   log pseudolikelihood = -7240.1119  
+Iteration 2:   log pseudolikelihood = -7240.0969  
+Iteration 3:   log pseudolikelihood = -7240.0969  
+
+Fitting constant-only model:
+
+Iteration 0:   log pseudolikelihood =  -7337.991  
+Iteration 1:   log pseudolikelihood = -7065.7139  
+Iteration 2:   log pseudolikelihood = -7049.6283  
+Iteration 3:   log pseudolikelihood = -7049.4708  
+Iteration 4:   log pseudolikelihood = -7049.4708  
+
+Fitting full model:
+
+Iteration 0:   log pseudolikelihood = -6722.2207  
+Iteration 1:   log pseudolikelihood =  -6642.066  
+Iteration 2:   log pseudolikelihood = -6633.7939  
+Iteration 3:   log pseudolikelihood = -6633.7576  
+Iteration 4:   log pseudolikelihood = -6633.7576  
+
+Negative binomial regression                    Number of obs     =      
+> 2,669
+                                                Wald chi2(64)     =   772
+> 92.06
+Dispersion           = mean                     Prob > chi2       =     0
+> .0000
+Log pseudolikelihood = -6633.7576               Pseudo R2         =     0
+> .0590
+
+                                (Std. Err. adjusted for 66 clusters in mi
+> neid)
+-------------------------------------------------------------------------
+> -----
+             |               Robust
+          dv |        IRR   Std. Err.      z    P>|z|     [95% Conf. Inte
+> rval]
+-------------+-----------------------------------------------------------
+> -----
+    p48_1lag |   .9938256   .0272306    -0.23   0.821     .9418624    1.0
+> 48656
+    p75_1lag |   1.000832   .0006291     1.32   0.186     .9995997    1.0
+> 02066
+   mine_time |   1.014941   .0193018     0.78   0.435     .9778068    1.0
+> 53486
+onsite_ins~s |   .9995991   .0001683    -2.38   0.017     .9992693    .99
+> 99289
+             |
+       state |
+         IL  |   1.322409    .121882     3.03   0.002     1.103858     1.
+> 58423
+         IN  |   1.105048   .0828191     1.33   0.183     .9540844    1.2
+> 79898
+         KY  |   1.043821   .1096748     0.41   0.683     .8495515    1.2
+> 82514
+         NM  |   .7183115   .0580878    -4.09   0.000     .6130255    .84
+> 16801
+         OH  |   .9310743   .0685627    -0.97   0.332     .8059411    1.0
+> 75636
+         PA  |   .8630705   .1183011    -1.07   0.283     .6597388    1.1
+> 29069
+         UT  |    .346844   .0725109    -5.06   0.000     .2302411    .52
+> 24992
+         VA  |   .6073538   .1612161    -1.88   0.060     .3609929    1.0
+> 21845
+             |
+        time |
+    2003.25  |   1.067395   .0956584     0.73   0.467     .8954504    1.2
+> 72355
+     2003.5  |    1.14333   .1169253     1.31   0.190     .9356674    1.3
+> 97082
+    2003.75  |   .9335356   .0980333    -0.65   0.513     .7598779     1.
+> 14688
+       2004  |   .8861455   .1063005    -1.01   0.314      .700481    1.1
+> 21021
+    2004.25  |   1.046091     .11636     0.41   0.685     .8411772    1.3
+> 00922
+     2004.5  |   1.123593   .1676181     0.78   0.435     .8387378    1.5
+> 05191
+    2004.75  |   .7442312   .1238824    -1.77   0.076     .5370559    1.0
+> 31327
+       2005  |   .7298239   .1251034    -1.84   0.066     .5215651    1.0
+> 21239
+    2005.25  |   .8197551   .1536694    -1.06   0.289     .5677013    1.1
+> 83718
+     2005.5  |   .8504072   .1632199    -0.84   0.399     .5837872    1.2
+> 38794
+    2005.75  |   .8762811   .1673711    -0.69   0.489     .6026464    1.2
+> 74161
+       2006  |   .7362121    .168296    -1.34   0.180     .4703495    1.1
+> 52352
+    2006.25  |     .68572   .1676216    -1.54   0.123     .4246919    1.1
+> 07184
+     2006.5  |   .8617068   .2306196    -0.56   0.578      .509978    1.4
+> 56021
+    2006.75  |   .6336628   .1737607    -1.66   0.096     .3702072    1.0
+> 84605
+       2007  |   .6428678   .1959539    -1.45   0.147     .3537245    1.1
+> 68364
+    2007.25  |    .631631   .2383131    -1.22   0.223     .3015136    1.3
+> 23183
+     2007.5  |    .717411   .2456998    -0.97   0.332     .3666465    1.4
+> 03746
+    2007.75  |   .7038694   .2539339    -0.97   0.330     .3470606    1.4
+> 27509
+       2008  |   .5637636   .1979715    -1.63   0.103     .2832623    1.1
+> 22032
+    2008.25  |   .5646672   .2081684    -1.55   0.121      .274152    1.1
+> 63038
+     2008.5  |   .6379451   .2525911    -1.14   0.256      .293599    1.3
+> 86156
+    2008.75  |   .5142672   .2251227    -1.52   0.129     .2180578    1.2
+> 12847
+       2009  |   .5019657   .2227553    -1.55   0.120     .2103487    1.1
+> 97866
+    2009.25  |   .4262208   .1987405    -1.83   0.067      .170896     1.
+> 06301
+     2009.5  |   .4671248    .226742    -1.57   0.117     .1804099    1.2
+> 09499
+    2009.75  |   .4186818   .2095158    -1.74   0.082     .1570102    1.1
+> 16453
+       2010  |   .3890869   .2042586    -1.80   0.072     .1390568    1.0
+> 88682
+    2010.25  |   .5135432   .2944638    -1.16   0.245     .1669172    1.5
+> 79984
+     2010.5  |   .4930542   .2624963    -1.33   0.184       .17367    1.3
+> 99795
+    2010.75  |   .3831498   .2176849    -1.69   0.091     .1258236    1.1
+> 66743
+       2011  |   .3670464   .2120878    -1.73   0.083     .1182707    1.1
+> 39108
+    2011.25  |   .4211867   .2465698    -1.48   0.140      .133711    1.3
+> 26729
+     2011.5  |   .4347758   .2648355    -1.37   0.172     .1317564    1.4
+> 34693
+    2011.75  |   .3306407   .2091263    -1.75   0.080     .0957153    1.1
+> 42171
+       2012  |   .3409181   .2158099    -1.70   0.089     .0985866    1.1
+> 78915
+    2012.25  |   .2745309   .1868904    -1.90   0.058     .0722978    1.0
+> 42455
+     2012.5  |   .3904056   .2712376    -1.35   0.176     .1000314    1.5
+> 23686
+    2012.75  |    .323135   .2321102    -1.57   0.116     .0790605    1.3
+> 20712
+       2013  |   .2979518   .2205354    -1.64   0.102     .0698411    1.2
+> 71104
+    2013.25  |   .3309243   .2472678    -1.48   0.139     .0765082    1.4
+> 31362
+     2013.5  |    .358252   .2761342    -1.33   0.183     .0790857    1.6
+> 22854
+    2013.75  |   .2608681   .2030224    -1.73   0.084     .0567502    1.1
+> 99153
+       2014  |   .3269192   .2621502    -1.39   0.163     .0679014    1.5
+> 73992
+    2014.25  |   .3342012   .2736464    -1.34   0.181     .0671487    1.6
+> 63329
+     2014.5  |   .3595795   .3078826    -1.19   0.232     .0671384    1.9
+> 25834
+    2014.75  |   .2829443   .2491795    -1.43   0.152     .0503589    1.5
+> 89738
+       2015  |   .3073322   .2715923    -1.34   0.182     .0543743    1.7
+> 37091
+    2015.25  |   .2461635   .2241814    -1.54   0.124     .0413079    1.4
+> 66945
+     2015.5  |   .4297806   .3992273    -0.91   0.363     .0695917    2.6
+> 54215
+    2015.75  |    .260914   .2476074    -1.42   0.157     .0406169    1.6
+> 76052
+       2016  |   .3090296   .3008554    -1.21   0.228     .0458473    2.0
+> 82986
+             |
+       _cons |   .0000607   .0000151   -38.94   0.000     .0000372     .0
+> 00099
+   ln(hours) |          1  (exposure)
+-------------+-----------------------------------------------------------
+> -----
+    /lnalpha |  -1.574797    .147385                     -1.863666   -1.2
+> 85927
+-------------+-----------------------------------------------------------
+> -----
+       alpha |   .2070497    .030516                       .155103    .27
+> 63942
+-------------------------------------------------------------------------
+> -----
+(est1 stored)
+
+. esttab using `"`directory'Model.`injury_label'.`time_label'.`violation_
+> level_label'.C.V.2.csv"', replace plain wide p eform
+(note: file C:/Users/slevine2/Dropbox (Stanford Law School)/R-code/Injury
+> -Classification/Model Output + Summaries/big/V1/PS/estout 10-24/Model.P
+> S.Q.P.C.V.2.csv not found)
+(output written to C:/Users/slevine2/Dropbox (Stanford Law School)/R-code
+> /Injury-Classification/Model Output + Summaries/big/V1/PS/estout 10-24/
+> Model.PS.Q.P.C.V.2.csv)
+
+. /*
+> est store nbin
+> 
+> pause "next"
+> 
+> // test for over-dispersion
+> lrtest pois nbin, stats force 
+> 
+> pause "next" 
+> 
+> // final model + diagnostics/assessment
+> quietly nbreg dv `count_lag_1_vars' `covariates' ib(freq).state ib(freq
+> ).time, vce(cl mineid) exposure(hours) iter(50) irr
+> */
+. predict cv2_yhat 
+(option n assumed; predicted number of events)
+(57 missing values generated)
+
+. gen cv2_res = dv - cv2_yhat
+(57 missing values generated)
+
+. 
+. summ dv cv2_yhat
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+          dv |      2,726    6.319516    6.454206          0         71
+    cv2_yhat |      2,669    6.661401    5.516951   .0061739   45.22665
+
+. /*
+> pause "next"
+> 
+> scatter dv cv2_yhat
+> 
+> pause "next"
+> 
+> scatter cv2_res dv
+> 
+> pause "next"
+> 
+> scatter cv2_res cv2_yhat
+> */
+. pause "complete: C.V.2"
+
+. 
+. ***********************************************************************
+> *********
+. ***********************************************************************
+> *********
+. 
+. // Model C.V.3
+. 
+. // poisson model
+. /*
+> glm dv `count_lag_4_vars' `covariates' ib(freq).state ib(freq).time, fa
+> mily(poisson) link(log) vce(cl mineid) exposure(hours) iter(50) eform
+>         
+> quietly poisson dv `count_lag_4_vars' `covariates' ib(freq).state ib(fr
+> eq).time, vce(cl mineid) exposure(hours) iter(50) irr
+> est store pois
+> estat gof
+>         
+> pause "next"
+> 
+> // negative binomial model
+> glm dv `count_lag_4_vars' `covariates' ib(freq).state ib(freq).time, fa
+> mily(nbinomial) link(log) vce(cl mineid) exposure(hours) iter(50) eform
+> 
+> pause "next"
+> */
+. eststo clear
+
+. eststo: nbreg dv `count_lag_4_vars' `covariates' ib(freq).state ib(freq
+> ).time, vce(cl mineid) exposure(hours) iter(50) irr
+
+Fitting Poisson model:
+
+Iteration 0:   log pseudolikelihood = -7180.7099  
+Iteration 1:   log pseudolikelihood = -7166.3225  
+Iteration 2:   log pseudolikelihood = -7166.3083  
+Iteration 3:   log pseudolikelihood = -7166.3083  
+
+Fitting constant-only model:
+
+Iteration 0:   log pseudolikelihood = -7283.2087  
+Iteration 1:   log pseudolikelihood = -7006.4765  
+Iteration 2:   log pseudolikelihood = -6990.2047  
+Iteration 3:   log pseudolikelihood = -6990.0415  
+Iteration 4:   log pseudolikelihood = -6990.0415  
+
+Fitting full model:
+
+Iteration 0:   log pseudolikelihood =  -6664.403  
+Iteration 1:   log pseudolikelihood = -6584.3352  
+Iteration 2:   log pseudolikelihood = -6576.3286  
+Iteration 3:   log pseudolikelihood = -6576.2945  
+Iteration 4:   log pseudolikelihood = -6576.2945  
+
+Negative binomial regression                    Number of obs     =      
+> 2,636
+                                                Wald chi2(64)     = 20793
+> 86.95
+Dispersion           = mean                     Prob > chi2       =     0
+> .0000
+Log pseudolikelihood = -6576.2945               Pseudo R2         =     0
+> .0592
+
+                                (Std. Err. adjusted for 66 clusters in mi
+> neid)
+-------------------------------------------------------------------------
+> -----
+             |               Robust
+          dv |        IRR   Std. Err.      z    P>|z|     [95% Conf. Inte
+> rval]
+-------------+-----------------------------------------------------------
+> -----
+  p48_c_4lag |    1.01331   .0164167     0.82   0.414     .9816391    1.0
+> 46002
+  p75_c_4lag |     1.0002   .0002435     0.82   0.411     .9997231    1.0
+> 00678
+   mine_time |   1.014356   .0224995     0.64   0.520     .9712028    1.0
+> 59427
+onsite_ins~s |   .9995915   .0001776    -2.30   0.021     .9992434    .99
+> 99397
+             |
+       state |
+         IL  |   1.329206   .1205408     3.14   0.002     1.112756    1.5
+> 87759
+         IN  |   1.086026   .0863613     1.04   0.299     .9292922    1.2
+> 69195
+         KY  |   1.050954   .1090397     0.48   0.632      .857569    1.2
+> 87949
+         NM  |   .7231672   .0587433    -3.99   0.000     .6167301    .84
+> 79735
+         OH  |   .9353197   .0726216    -0.86   0.389     .8032851    1.0
+> 89057
+         PA  |   .8594363   .1165925    -1.12   0.264     .6587768    1.1
+> 21215
+         UT  |   .3491195   .0739719    -4.97   0.000     .2304732    .52
+> 88443
+         VA  |   .6137441   .1620472    -1.85   0.064     .3658004    1.0
+> 29747
+             |
+        time |
+    2003.25  |   1.072163   .0963871     0.78   0.438     .8989549    1.2
+> 78743
+     2003.5  |    1.14999   .1192601     1.35   0.178     .9384692    1.4
+> 09186
+    2003.75  |    .942279    .102929    -0.54   0.586     .7606752    1.1
+> 67239
+       2004  |    .884702   .1136122    -0.95   0.340     .6878391    1.1
+> 37908
+    2004.25  |     1.0315   .1385703     0.23   0.817       .79272    1.3
+> 42204
+     2004.5  |   1.130291   .1864358     0.74   0.458     .8180673    1.5
+> 61679
+    2004.75  |   .7544345   .1386379    -1.53   0.125     .5262612    1.0
+> 81538
+       2005  |   .7365196   .1445247    -1.56   0.119     .5013673    1.0
+> 81964
+    2005.25  |   .8358338   .1780911    -0.84   0.400     .5504964     1.
+> 26907
+     2005.5  |   .8600648   .1940072    -0.67   0.504      .552743    1.3
+> 38256
+    2005.75  |   .8826882   .1952068    -0.56   0.573      .572221    1.3
+> 61604
+       2006  |   .7389825    .196757    -1.14   0.256     .4385291    1.2
+> 45288
+    2006.25  |   .6880967   .1947369    -1.32   0.187     .3951414    1.1
+> 98247
+     2006.5  |   .8475982   .2652686    -0.53   0.597     .4589799     1.
+> 56526
+    2006.75  |   .6030656   .1957667    -1.56   0.119     .3191891    1.1
+> 39413
+       2007  |   .6508823     .23287    -1.20   0.230      .322822    1.3
+> 12326
+    2007.25  |   .6228448   .2680538    -1.10   0.271     .2679466     1.
+> 44781
+     2007.5  |   .7279559   .2922108    -0.79   0.429     .3314529    1.5
+> 98778
+    2007.75  |   .7124847   .3014651    -0.80   0.423     .3108973    1.6
+> 32805
+       2008  |   .5740138   .2404505    -1.33   0.185     .2525572    1.3
+> 04623
+    2008.25  |   .5772247   .2522008    -1.26   0.208     .2451536      1
+> .3591
+     2008.5  |   .6409562   .3001637    -0.95   0.342     .2559796    1.6
+> 04912
+    2008.75  |   .5236266   .2686134    -1.26   0.207     .1915873    1.4
+> 31122
+       2009  |   .5089104   .2668674    -1.29   0.198     .1820874    1.4
+> 22338
+    2009.25  |   .4312337   .2352611    -1.54   0.123     .1480255    1.2
+> 56287
+     2009.5  |   .4796169   .2740778    -1.29   0.199     .1564855    1.4
+> 69992
+    2009.75  |   .4328965   .2552293    -1.42   0.156     .1363102    1.3
+> 74801
+       2010  |   .3909291   .2399176    -1.53   0.126     .1174102    1.3
+> 01637
+    2010.25  |   .5215426   .3406824    -1.00   0.319     .1449664    1.8
+> 76343
+     2010.5  |   .5011856   .3178461    -1.09   0.276     .1446027    1.7
+> 37084
+    2010.75  |   .3917684   .2630011    -1.40   0.163        .1051    1.4
+> 60347
+       2011  |   .3707481   .2531448    -1.45   0.146     .0972485    1.4
+> 13432
+    2011.25  |   .4287466   .2983203    -1.22   0.224     .1096321    1.6
+> 76732
+     2011.5  |   .4406267    .319297    -1.13   0.258     .1064765    1.8
+> 23426
+    2011.75  |   .3356359   .2527219    -1.45   0.147     .0767262    1.4
+> 68226
+       2012  |   .3457341   .2623908    -1.40   0.162     .0781147    1.5
+> 30212
+    2012.25  |   .2781683   .2241317    -1.59   0.112     .0573402    1.3
+> 49447
+     2012.5  |   .3961675   .3244438    -1.13   0.258      .079576    1.9
+> 72312
+    2012.75  |    .328907   .2794634    -1.31   0.191     .0622057    1.7
+> 39066
+       2013  |   .3074303    .270199    -1.34   0.180     .0549073    1.7
+> 21328
+    2013.25  |   .3408197    .302151    -1.21   0.225     .0599651    1.9
+> 37094
+     2013.5  |   .3677538   .3359855    -1.09   0.274     .0613602    2.2
+> 04083
+    2013.75  |   .2699466   .2487137    -1.42   0.155     .0443638    1.6
+> 42583
+       2014  |   .3343561   .3176128    -1.15   0.249     .0519556     2.
+> 15172
+    2014.25  |   .3438538   .3337357    -1.10   0.271     .0513121    2.3
+> 04243
+     2014.5  |   .3721118   .3751639    -0.98   0.327      .051581    2.6
+> 84458
+    2014.75  |   .2926654   .3024704    -1.19   0.234     .0386058    2.2
+> 18657
+       2015  |    .315344   .3279314    -1.11   0.267     .0410777    2.4
+> 20823
+    2015.25  |   .2524047   .2692386    -1.29   0.197     .0311979    2.0
+> 42062
+     2015.5  |   .4365265   .4754517    -0.76   0.447     .0516306    3.6
+> 90746
+    2015.75  |   .2684179   .2989449    -1.18   0.238     .0302554     2.
+> 38133
+       2016  |   .3165459   .3612387    -1.01   0.313     .0338107    2.9
+> 63593
+             |
+       _cons |   .0000607   .0000174   -33.93   0.000     .0000346    .00
+> 01064
+   ln(hours) |          1  (exposure)
+-------------+-----------------------------------------------------------
+> -----
+    /lnalpha |  -1.594803   .1486718                     -1.886195   -1.3
+> 03412
+-------------+-----------------------------------------------------------
+> -----
+       alpha |   .2029485   .0301727                      .1516478    .27
+> 16035
+-------------------------------------------------------------------------
+> -----
+(est1 stored)
+
+. esttab using `"`directory'Model.`injury_label'.`time_label'.`violation_
+> level_label'.C.V.3.csv"', replace plain wide p eform
+(note: file C:/Users/slevine2/Dropbox (Stanford Law School)/R-code/Injury
+> -Classification/Model Output + Summaries/big/V1/PS/estout 10-24/Model.P
+> S.Q.P.C.V.3.csv not found)
+(output written to C:/Users/slevine2/Dropbox (Stanford Law School)/R-code
+> /Injury-Classification/Model Output + Summaries/big/V1/PS/estout 10-24/
+> Model.PS.Q.P.C.V.3.csv)
+
+. /*
+> est store nbin
+> 
+> pause "next"
+> 
+> // test for over-dispersion
+> lrtest pois nbin, stats force 
+> 
+> pause "next" 
+> 
+> // final model + diagnostics/assessment
+> quietly nbreg dv `count_lag_4_vars' `covariates' ib(freq).state ib(freq
+> ).time, vce(cl mineid) exposure(hours) iter(50) irr
+> */
+. predict cv3_yhat 
+(option n assumed; predicted number of events)
+(90 missing values generated)
+
+. gen cv3_res = dv - cv3_yhat
+(90 missing values generated)
+
+. 
+. summ dv cv3_yhat
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+          dv |      2,726    6.319516    6.454206          0         71
+    cv3_yhat |      2,636     6.71476    5.522523   .0062574   44.40309
+
+. 
+. pause "next"
+
+. /*
+> scatter dv cv3_yhat
+> 
+> pause "next"
+> 
+> scatter cv3_res dv
+> 
+> pause "next"
+> 
+> scatter cv3_res cv3_yhat
+> */
+. pause "complete: C.V.3"
+
+. 
+. ***********************************************************************
+> *********
+. ***********************************************************************
+> *********
+. 
+. // Model C.V.4
+. 
+. // poisson model
+. /*
+> glm dv `count_lag_all_vars' `covariates' ib(freq).state ib(freq).time, 
+> family(poisson) link(log) vce(cl mineid) exposure(hours) iter(50) eform
+>         
+> quietly poisson dv `count_lag_all_vars' `covariates' ib(freq).state ib(
+> freq).time, vce(cl mineid) exposure(hours) iter(50) irr
+> est store pois
+> estat gof
+>         
+> pause "next"
+> 
+> // negative binomial model
+> glm dv `count_lag_all_vars' `covariates' ib(freq).state ib(freq).time, 
+> family(nbinomial) link(log) vce(cl mineid) exposure(hours) iter(50) efo
+> rm
+> 
+> pause "next"
+> */
+. eststo clear
+
+. eststo: nbreg dv `count_lag_all_vars' `covariates' ib(freq).state ib(fr
+> eq).time, vce(cl mineid) exposure(hours) iter(50) irr
+
+Fitting Poisson model:
+
+Iteration 0:   log pseudolikelihood = -6398.1127  
+Iteration 1:   log pseudolikelihood = -6387.7578  
+Iteration 2:   log pseudolikelihood = -6387.7295  
+Iteration 3:   log pseudolikelihood = -6387.7295  
+
+Fitting constant-only model:
+
+Iteration 0:   log pseudolikelihood =  -6555.289  
+Iteration 1:   log pseudolikelihood = -6238.1966  
+Iteration 2:   log pseudolikelihood =  -6217.431  
+Iteration 3:   log pseudolikelihood = -6217.1646  
+Iteration 4:   log pseudolikelihood = -6217.1646  
+
+Fitting full model:
+
+Iteration 0:   log pseudolikelihood = -5943.2468  
+Iteration 1:   log pseudolikelihood = -5882.8923  
+Iteration 2:   log pseudolikelihood = -5879.4395  
+Iteration 3:   log pseudolikelihood =  -5879.432  
+Iteration 4:   log pseudolikelihood =  -5879.432  
+
+Negative binomial regression                    Number of obs     =      
+> 2,281
+                                                Wald chi2(62)     =      
+>     .
+Dispersion           = mean                     Prob > chi2       =      
+>     .
+Log pseudolikelihood =  -5879.432               Pseudo R2         =     0
+> .0543
+
+                                (Std. Err. adjusted for 64 clusters in mi
+> neid)
+-------------------------------------------------------------------------
+> -----
+             |               Robust
+          dv |        IRR   Std. Err.      z    P>|z|     [95% Conf. Inte
+> rval]
+-------------+-----------------------------------------------------------
+> -----
+p48_c_lag_~l |   1.008625   .0065241     1.33   0.184     .9959188    1.0
+> 21494
+p75_c_lag_~l |   .9999553   .0000294    -1.52   0.128     .9998977    1.0
+> 00013
+   mine_time |   .9984185   .0234022    -0.07   0.946     .9535888    1.0
+> 45356
+onsite_ins~s |    .999952   .0001405    -0.34   0.733     .9996767    1.0
+> 00227
+             |
+       state |
+         IL  |   1.376507   .1281431     3.43   0.001     1.146932    1.6
+> 52035
+         IN  |   1.034621   .1050137     0.34   0.737     .8479776    1.2
+> 62344
+         KY  |   1.119453   .1099687     1.15   0.251     .9233971    1.3
+> 57135
+         NM  |   .7630642   .0581415    -3.55   0.000     .6572097    .88
+> 59683
+         OH  |   .9229534   .0798986    -0.93   0.354     .7789196    1.0
+> 93621
+         PA  |   .7620093   .0810225    -2.56   0.011     .6186632    .93
+> 85693
+         UT  |   .4392781   .0539337    -6.70   0.000     .3453273    .55
+> 87896
+         VA  |   .6140549   .1687224    -1.77   0.076     .3583641     1.
+> 05218
+             |
+        time |
+    2003.25  |   1.069102   .0986275     0.72   0.469      .892264    1.2
+> 80987
+     2003.5  |   1.176981    .124628     1.54   0.124     .9563956    1.4
+> 48443
+    2003.75  |   .9857451   .1122612    -0.13   0.900     .7885438    1.2
+> 32263
+       2004  |   .9478794   .1257664    -0.40   0.687     .7308261    1.2
+> 29397
+    2004.25  |   1.113741   .1497868     0.80   0.423     .8556697    1.4
+> 49646
+     2004.5  |   1.237405   .2188794     1.20   0.228     .8748754    1.7
+> 50158
+    2004.75  |   .8454856   .1569898    -0.90   0.366     .5875639    1.2
+> 16627
+       2005  |   .8309933    .168981    -0.91   0.363     .5578369    1.2
+> 37906
+    2005.25  |    .932662   .2172834    -0.30   0.765     .5907705    1.4
+> 72413
+     2005.5  |    .979896   .2219973    -0.09   0.929     .6285484    1.5
+> 27641
+    2005.75  |   .9911889   .2715812    -0.03   0.974     .5793367    1.6
+> 95828
+       2006  |   .8652945   .2527107    -0.50   0.620     .4881678    1.5
+> 33765
+    2006.25  |    .830809   .2637847    -0.58   0.559     .4459044    1.5
+> 47963
+     2006.5  |   1.068994   .3704178     0.19   0.847     .5420316    2.1
+> 08267
+    2006.75  |   .7871439   .2741212    -0.69   0.492     .3977635    1.5
+> 57698
+       2007  |   .8437206   .3119423    -0.46   0.646     .4087807    1.7
+> 41433
+    2007.25  |   .8334579   .3849435    -0.39   0.693     .3370894    2.0
+> 60736
+     2007.5  |   1.002835   .4230409     0.01   0.995     .4386867    2.2
+> 92475
+    2007.75  |   .9162048   .4240311    -0.19   0.850     .3698671    2.2
+> 69548
+       2008  |   .7447439    .340193    -0.65   0.519      .304218    1.8
+> 23177
+    2008.25  |    .730352   .3488829    -0.66   0.511     .2863654    1.8
+> 62704
+     2008.5  |    .876962   .4477539    -0.26   0.797     .3223884    2.3
+> 85514
+    2008.75  |   .7343683   .4094085    -0.55   0.580     .2462471    2.1
+> 90063
+       2009  |   .7556847   .4187955    -0.51   0.613     .2550412    2.2
+> 39087
+    2009.25  |   .6662438   .3877929    -0.70   0.485     .2129041    2.0
+> 84886
+     2009.5  |   .7249385   .4568512    -0.51   0.610     .2108045    2.4
+> 93001
+    2009.75  |   .6713897   .4261381    -0.63   0.530     .1935121    2.3
+> 29385
+       2010  |   .5935709   .4057785    -0.76   0.445     .1554433    2.2
+> 66591
+    2010.25  |   .8128078   .5507085    -0.31   0.760     .2154101     3.
+> 06697
+     2010.5  |   .7822904   .5272456    -0.36   0.716     .2087747    2.9
+> 31286
+    2010.75  |   .6524112   .4648211    -0.60   0.549     .1614615    2.6
+> 36173
+       2011  |   .5796649   .4314068    -0.73   0.464     .1347979    2.4
+> 92705
+    2011.25  |   .6343542   .4761833    -0.61   0.544       .14567    2.7
+> 62444
+     2011.5  |    .693124    .527079    -0.48   0.630     .1561433    3.0
+> 76794
+    2011.75  |   .5365537   .4302429    -0.78   0.437     .1114463    2.5
+> 83216
+       2012  |   .5729922   .4473054    -0.71   0.476      .124068    2.6
+> 46292
+    2012.25  |   .5069577   .4145952    -0.83   0.406     .1020588    2.5
+> 18217
+     2012.5  |   .7083777   .5919095    -0.41   0.680     .1377254    3.6
+> 43475
+    2012.75  |   .5733396   .4854914    -0.66   0.511     .1090519    3.0
+> 14329
+       2013  |    .553517   .4859246    -0.67   0.500     .0990543    3.0
+> 93061
+    2013.25  |   .6485331   .5880111    -0.48   0.633     .1096897    3.8
+> 34408
+     2013.5  |   .7020865   .6434606    -0.39   0.700      .116484      4
+> .2317
+    2013.75  |   .5750321   .5358277    -0.59   0.553     .0925813    3.5
+> 71583
+       2014  |   .6682203   .6674784    -0.40   0.687     .0943329    4.7
+> 33433
+    2014.25  |   .6972892   .7172896    -0.35   0.726     .0928531     5.
+> 23636
+     2014.5  |   .7813377   .8188555    -0.24   0.814     .1001763    6.0
+> 94145
+    2014.75  |   .6307559   .6751162    -0.43   0.667     .0774098    5.1
+> 39571
+       2015  |    .662941   .7049572    -0.39   0.699     .0824756    5.3
+> 28738
+    2015.25  |   .5548906   .6369405    -0.51   0.608     .0584981    5.2
+> 63484
+     2015.5  |    .952907   1.082795    -0.04   0.966       .10276    8.8
+> 36432
+    2015.75  |   .6045062   .7191544    -0.42   0.672      .058717    6.2
+> 23545
+       2016  |   .7048678   .8523744    -0.29   0.772     .0658835    7.5
+> 41172
+             |
+       _cons |   .0000698   .0000216   -30.91   0.000     .0000381    .00
+> 01281
+   ln(hours) |          1  (exposure)
+-------------+-----------------------------------------------------------
+> -----
+    /lnalpha |  -1.701049    .158073                     -2.010866   -1.3
+> 91232
+-------------+-----------------------------------------------------------
+> -----
+       alpha |    .182492   .0288471                      .1338726    .24
+> 87687
+-------------------------------------------------------------------------
+> -----
+(est1 stored)
+
+. esttab using `"`directory'Model.`injury_label'.`time_label'.`violation_
+> level_label'.C.V.4.csv"', replace plain wide p eform
+(note: file C:/Users/slevine2/Dropbox (Stanford Law School)/R-code/Injury
+> -Classification/Model Output + Summaries/big/V1/PS/estout 10-24/Model.P
+> S.Q.P.C.V.4.csv not found)
+(output written to C:/Users/slevine2/Dropbox (Stanford Law School)/R-code
+> /Injury-Classification/Model Output + Summaries/big/V1/PS/estout 10-24/
+> Model.PS.Q.P.C.V.4.csv)
+
+. /*
+> est store nbin
+> 
+> pause "next"
+> 
+> // test for over-dispersion
+> lrtest pois nbin, stats force 
+> 
+> pause "next" 
+> 
+> // final model + diagnostics/assessment
+> quietly nbreg dv `count_lag_all_vars' `covariates' ib(freq).state ib(fr
+> eq).time, vce(cl mineid) exposure(hours) iter(50) irr
+> */
+. predict cv4_yhat 
+(option n assumed; predicted number of events)
+(445 missing values generated)
+
+. gen cv4_res = dv - cv4_yhat
+(445 missing values generated)
+
+. 
+. summ dv cv4_yhat
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+          dv |      2,726    6.319516    6.454206          0         71
+    cv4_yhat |      2,281    7.280893    5.286905   .0183478   44.94757
+
+. /*
+> pause "next"
+> 
+> scatter dv cv4_yhat
+> 
+> pause "next"
+> 
+> scatter cv4_res dv
+> 
+> pause "next"
+> 
+> scatter cv4_res cv4_yhat
+> */
+. pause "complete: C.V.4"
+
+. 
+. ***********************************************************************
+> *********
+. ***********************************************************************
+> *********
+. 
+. // Model C.SSV.1
+. 
+. // poisson model
+. /*
+> glm dv `ss_vars' `covariates' ib(freq).state ib(freq).time, family(pois
+> son) link(log) vce(cl mineid) exposure(hours) iter(50) eform
+>         
+> quietly poisson dv `count_vars' `covariates' ib(freq).state ib(freq).ti
+> me, vce(cl mineid) exposure(hours) iter(50) irr
+> est store pois
+> estat gof
+>         
+> pause "next"
+> 
+> // negative binomial model
+> glm dv `ss_vars' `covariates' ib(freq).state ib(freq).time, family(nbin
+> omial) link(log) vce(cl mineid) exposure(hours) iter(50) eform
+> 
+> pause "next"
+> */
+. eststo clear
+
+. eststo: nbreg dv `ss_vars' `covariates' ib(freq).state ib(freq).time, v
+> ce(cl mineid) exposure(hours) iter(50) irr
+
+Fitting Poisson model:
+
+Iteration 0:   log pseudolikelihood =  -7273.414  
+Iteration 1:   log pseudolikelihood = -7253.8311  
+Iteration 2:   log pseudolikelihood = -7253.8067  
+Iteration 3:   log pseudolikelihood = -7253.8067  
+
+Fitting constant-only model:
+
+Iteration 0:   log pseudolikelihood = -7361.3597  
+Iteration 1:   log pseudolikelihood = -7089.8825  
+Iteration 2:   log pseudolikelihood = -7073.6925  
+Iteration 3:   log pseudolikelihood =  -7073.533  
+Iteration 4:   log pseudolikelihood =  -7073.533  
+
+Fitting full model:
+
+Iteration 0:   log pseudolikelihood = -6741.3261  
+Iteration 1:   log pseudolikelihood = -6659.2415  
+Iteration 2:   log pseudolikelihood = -6650.4269  
+Iteration 3:   log pseudolikelihood = -6650.3858  
+Iteration 4:   log pseudolikelihood = -6650.3858  
+
+Negative binomial regression                    Number of obs     =      
+> 2,688
+                                                Wald chi2(63)     =      
+>     .
+Dispersion           = mean                     Prob > chi2       =      
+>     .
+Log pseudolikelihood = -6650.3858               Pseudo R2         =     0
+> .0598
+
+                                (Std. Err. adjusted for 66 clusters in mi
+> neid)
+-------------------------------------------------------------------------
+> -----
+             |               Robust
+          dv |        IRR   Std. Err.      z    P>|z|     [95% Conf. Inte
+> rval]
+-------------+-----------------------------------------------------------
+> -----
+      p48_ss |   .9847859   .0470148    -0.32   0.748     .8968183    1.0
+> 81382
+      p75_ss |    1.00363   .0017841     2.04   0.042     1.000139    1.0
+> 07133
+   mine_time |   1.016729    .019435     0.87   0.385     .9793417    1.0
+> 55543
+onsite_ins~s |   .9995499   .0001821    -2.47   0.013     .9991931    .99
+> 99067
+             |
+       state |
+         IL  |   1.346346   .1259112     3.18   0.001     1.120861    1.6
+> 17193
+         IN  |   1.128689   .0866858     1.58   0.115     .9709568    1.3
+> 12044
+         KY  |    1.05128    .109717     0.48   0.632     .8568064    1.2
+> 89895
+         NM  |   .7261109   .0576179    -4.03   0.000     .6215254    .84
+> 82951
+         OH  |   .9241821   .0682486    -1.07   0.286     .7996471    1.0
+> 68112
+         PA  |   .8779275   .1215812    -0.94   0.347      .669235    1.1
+> 51698
+         UT  |   .3534191   .0740114    -4.97   0.000     .2344419    .53
+> 27762
+         VA  |   .6054762    .158944    -1.91   0.056      .361949    1.0
+> 12854
+             |
+        time |
+    2003.25  |   1.067044   .0950516     0.73   0.466     .8961027    1.2
+> 70594
+     2003.5  |   1.152191    .114375     1.43   0.154     .9484799    1.3
+> 99655
+    2003.75  |   .9272285   .0996424    -0.70   0.482     .7511288    1.1
+> 44614
+       2004  |   .8779414   .1052617    -1.09   0.278     .6940806    1.1
+> 10507
+    2004.25  |   1.038294   .1157104     0.34   0.736     .8345652    1.2
+> 91757
+     2004.5  |   1.114343   .1628625     0.74   0.459     .8367867    1.4
+> 83963
+    2004.75  |   .7313069   .1218864    -1.88   0.060     .5275098    1.0
+> 13838
+       2005  |   .7104053   .1236545    -1.96   0.049     .5050617    .99
+> 92356
+    2005.25  |   .8070329   .1519656    -1.14   0.255     .5579671    1.1
+> 67277
+     2005.5  |   .8403816   .1636872    -0.89   0.372      .573696    1.2
+> 31037
+    2005.75  |   .8592861   .1652137    -0.79   0.430     .5894927    1.2
+> 52556
+       2006  |   .7046993     .15833    -1.56   0.119     .4536889    1.0
+> 94585
+    2006.25  |    .692572   .1682946    -1.51   0.131     .4301535    1.1
+> 15081
+     2006.5  |   .8269568   .2201638    -0.71   0.475     .4907545    1.3
+> 93482
+    2006.75  |   .6127981   .1698821    -1.77   0.077     .3559133    1.0
+> 55092
+       2007  |   .6255641   .1937059    -1.51   0.130     .3409552    1.1
+> 47747
+    2007.25  |   .6069565   .2231448    -1.36   0.174     .2952685    1.2
+> 47665
+     2007.5  |   .6983385   .2419292    -1.04   0.300     .3541438    1.3
+> 77058
+    2007.75  |   .6830754   .2478391    -1.05   0.293     .3354506    1.3
+> 90941
+       2008  |   .5590807   .2023078    -1.61   0.108     .2750809    1.1
+> 36288
+    2008.25  |   .5569505   .2100191    -1.55   0.121      .265974    1.1
+> 66256
+     2008.5  |   .6158333   .2478842    -1.20   0.228     .2797944    1.3
+> 55462
+    2008.75  |   .5002044   .2221024    -1.56   0.119     .2095049    1.1
+> 94265
+       2009  |   .4967517    .226034    -1.54   0.124     .2036208    1.2
+> 11871
+    2009.25  |   .4097302   .1931635    -1.89   0.058     .1626323     1.
+> 03226
+     2009.5  |   .4510529   .2225153    -1.61   0.107     .1715178    1.1
+> 86167
+    2009.75  |   .4128629   .2108473    -1.73   0.083     .1517403    1.1
+> 23339
+       2010  |    .375789   .1997363    -1.84   0.066     .1325929    1.0
+> 65045
+    2010.25  |   .5013147   .2884128    -1.20   0.230     .1623317    1.5
+> 48167
+     2010.5  |   .4719485   .2540529    -1.39   0.163     .1643189    1.3
+> 55507
+    2010.75  |   .3766532   .2174042    -1.69   0.091     .1215145    1.1
+> 67495
+       2011  |   .3545522   .2069541    -1.78   0.076     .1129352    1.1
+> 13092
+    2011.25  |   .4065144   .2412982    -1.52   0.129      .127005    1.3
+> 01161
+     2011.5  |   .4121655   .2538162    -1.44   0.150     .1232798    1.3
+> 78007
+    2011.75  |   .3169359   .2028262    -1.80   0.073     .0904142     1.
+> 11098
+       2012  |   .3309896   .2135396    -1.71   0.087     .0934668    1.1
+> 72118
+    2012.25  |   .2644322   .1835015    -1.92   0.055     .0678621     1.
+> 03039
+     2012.5  |   .3754327   .2650789    -1.39   0.165     .0940872    1.4
+> 98075
+    2012.75  |   .3099655    .226115    -1.61   0.108     .0741951    1.2
+> 94946
+       2013  |   .2883555   .2167391    -1.65   0.098     .0660895    1.2
+> 58126
+    2013.25  |    .318398   .2410452    -1.51   0.131     .0722042    1.4
+> 04035
+     2013.5  |   .3421544      .2669    -1.37   0.169     .0741713    1.5
+> 78368
+    2013.75  |   .2482506   .1969863    -1.76   0.079      .052416    1.1
+> 75755
+       2014  |   .3095319   .2506966    -1.45   0.148     .0632847    1.5
+> 13952
+    2014.25  |   .3170997    .262817    -1.39   0.166     .0624751    1.6
+> 09476
+     2014.5  |   .3355968    .290749    -1.26   0.208     .0614282    1.8
+> 33446
+    2014.75  |   .2712245   .2425472    -1.46   0.145     .0470032    1.5
+> 65059
+       2015  |   .2946092   .2651743    -1.36   0.175     .0504766    1.7
+> 19503
+    2015.25  |    .235473   .2171965    -1.57   0.117     .0386195     1.
+> 43574
+     2015.5  |   .3999907   .3740086    -0.98   0.327      .063994    2.5
+> 00116
+    2015.75  |    .250301   .2409435    -1.44   0.150     .0379388    1.6
+> 51361
+       2016  |   .2976546   .2932397    -1.23   0.219     .0431655    2.0
+> 52527
+             |
+       _cons |   .0000585   .0000146   -38.99   0.000     .0000358    .00
+> 00954
+   ln(hours) |          1  (exposure)
+-------------+-----------------------------------------------------------
+> -----
+    /lnalpha |  -1.581367   .1492392                      -1.87387   -1.2
+> 88864
+-------------+-----------------------------------------------------------
+> -----
+       alpha |   .2056937   .0306976                      .1535283    .27
+> 55838
+-------------------------------------------------------------------------
+> -----
+(est1 stored)
+
+. esttab using `"`directory'Model.`injury_label'.`time_label'.`violation_
+> level_label'.C.SSV.1.csv"', replace plain wide p eform
+(note: file C:/Users/slevine2/Dropbox (Stanford Law School)/R-code/Injury
+> -Classification/Model Output + Summaries/big/V1/PS/estout 10-24/Model.P
+> S.Q.P.C.SSV.1.csv not found)
+(output written to C:/Users/slevine2/Dropbox (Stanford Law School)/R-code
+> /Injury-Classification/Model Output + Summaries/big/V1/PS/estout 10-24/
+> Model.PS.Q.P.C.SSV.1.csv)
+
+. /*
+> est store nbin
+> 
+> pause "next"
+> 
+> // test for over-dispersion
+> lrtest pois nbin, stats force 
+> 
+> pause "next" 
+> 
+> // final model + diagnostics/assessment
+> quietly nbreg dv `ss_vars' `covariates' ib(freq).state ib(freq).time, v
+> ce(cl mineid) exposure(hours) iter(50) irr
+> */
+. predict cssv1_yhat 
+(option n assumed; predicted number of events)
+(38 missing values generated)
+
+. gen cssv1_res = dv - cssv1_yhat
+(38 missing values generated)
+
+. 
+. summ dv cssv1_yhat
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+          dv |      2,726    6.319516    6.454206          0         71
+  cssv1_yhat |      2,688    6.621236    5.526596    .003975   41.75586
+
+. /*
+> pause "next"
+> 
+> scatter dv cssv1_yhat
+> 
+> pause "next"
+> 
+> scatter cssv1_res dv
+> 
+> pause "next"
+> 
+> scatter cssv1_res cssv1_yhat
+> */
+. pause "complete: C.SSV.1"
+
+. 
+. ***********************************************************************
+> *********
+. ***********************************************************************
+> *********
+. 
+. // Model C.SSV.2
+. 
+. // poisson model
+. /*
+> glm dv `ss_lag_1_vars' `covariates' ib(freq).state ib(freq).time, famil
+> y(poisson) link(log) vce(cl mineid) exposure(hours) iter(50) eform
+>         
+> quietly poisson dv `ss_lag_1_vars' `covariates' ib(freq).state ib(freq)
+> .time, vce(cl mineid) exposure(hours) iter(50) irr
+> est store pois
+> estat gof
+>         
+> pause "next"
+> 
+> // negative binomial model
+> glm dv `ss_lag_1_vars' `covariates' ib(freq).state ib(freq).time, famil
+> y(nbinomial) link(log) vce(cl mineid) exposure(hours) iter(50) eform
+> 
+> pause "next"
+> */
+. eststo clear
+
+. eststo: nbreg dv `ss_lag_1_vars' `covariates' ib(freq).state ib(freq).t
+> ime, vce(cl mineid) exposure(hours) iter(50) irr
+
+Fitting Poisson model:
+
+Iteration 0:   log pseudolikelihood = -7261.1808  
+Iteration 1:   log pseudolikelihood = -7245.7707  
+Iteration 2:   log pseudolikelihood = -7245.7539  
+Iteration 3:   log pseudolikelihood = -7245.7539  
+
+Fitting constant-only model:
+
+Iteration 0:   log pseudolikelihood =  -7337.991  
+Iteration 1:   log pseudolikelihood = -7065.7139  
+Iteration 2:   log pseudolikelihood = -7049.6283  
+Iteration 3:   log pseudolikelihood = -7049.4708  
+Iteration 4:   log pseudolikelihood = -7049.4708  
+
+Fitting full model:
+
+Iteration 0:   log pseudolikelihood =  -6723.033  
+Iteration 1:   log pseudolikelihood = -6643.6885  
+Iteration 2:   log pseudolikelihood = -6635.4674  
+Iteration 3:   log pseudolikelihood = -6635.4311  
+Iteration 4:   log pseudolikelihood = -6635.4311  
+
+Negative binomial regression                    Number of obs     =      
+> 2,669
+                                                Wald chi2(64)     =  3923
+> 71.69
+Dispersion           = mean                     Prob > chi2       =     0
+> .0000
+Log pseudolikelihood = -6635.4311               Pseudo R2         =     0
+> .0587
+
+                                (Std. Err. adjusted for 66 clusters in mi
+> neid)
+-------------------------------------------------------------------------
+> -----
+             |               Robust
+          dv |        IRR   Std. Err.      z    P>|z|     [95% Conf. Inte
+> rval]
+-------------+-----------------------------------------------------------
+> -----
+ p48_ss_1lag |   .9932469    .039722    -0.17   0.865     .9183662    1.0
+> 74233
+ p75_ss_1lag |   1.001422   .0013023     1.09   0.275     .9988727    1.0
+> 03978
+   mine_time |   1.015923   .0189556     0.85   0.397     .9794423    1.0
+> 53763
+onsite_ins~s |   .9996554    .000166    -2.07   0.038       .99933    .99
+> 99809
+             |
+       state |
+         IL  |   1.337967   .1266468     3.08   0.002     1.111409    1.6
+> 10709
+         IN  |   1.111328     .08425     1.39   0.164     .9578834    1.2
+> 89354
+         KY  |   1.039351   .1080378     0.37   0.710     .8477777    1.2
+> 74214
+         NM  |     .71556   .0571881    -4.19   0.000     .6118111    .83
+> 69023
+         OH  |   .9266172   .0681048    -1.04   0.300     .8023032    1.0
+> 70193
+         PA  |   .8420483   .1134432    -1.28   0.202     .6466371    1.0
+> 96512
+         UT  |   .3434947   .0715957    -5.13   0.000     .2282976    .51
+> 68193
+         VA  |   .5991145   .1599562    -1.92   0.055     .3550172    1.0
+> 11044
+             |
+        time |
+    2003.25  |   1.071043   .0966668     0.76   0.447     .8973911    1.2
+> 78297
+     2003.5  |   1.147649   .1174703     1.35   0.178     .9390359    1.4
+> 02606
+    2003.75  |   .9370343   .0990317    -0.62   0.538     .7617196    1.1
+> 52699
+       2004  |   .8846174   .1058228    -1.02   0.305     .6997293    1.1
+> 18358
+    2004.25  |   1.042415   .1156422     0.37   0.708     .8387083    1.2
+> 95598
+     2004.5  |   1.118916   .1650939     0.76   0.446     .8379234    1.4
+> 94138
+    2004.75  |   .7415064   .1223939    -1.81   0.070     .5365554    1.0
+> 24744
+       2005  |    .727289   .1239664    -1.87   0.062     .5207385    1.0
+> 15768
+    2005.25  |   .8132529   .1502439    -1.12   0.263     .5662014    1.1
+> 68101
+     2005.5  |   .8466298   .1609488    -0.88   0.381     .5832781    1.2
+> 28886
+    2005.75  |   .8706573   .1648387    -0.73   0.464     .6007475    1.2
+> 61835
+       2006  |    .729334   .1630758    -1.41   0.158     .4705456     1.
+> 13045
+    2006.25  |   .6815393   .1640971    -1.59   0.111     .4251512    1.0
+> 92542
+     2006.5  |    .853255   .2254681    -0.60   0.548     .5083389    1.4
+> 32202
+    2006.75  |    .632914   .1725868    -1.68   0.093     .3708804    1.0
+> 80079
+       2007  |   .6389246   .1929967    -1.48   0.138     .3534529    1.1
+> 54962
+    2007.25  |    .626785   .2334161    -1.25   0.210     .3020851    1.3
+> 00493
+     2007.5  |   .7175947   .2432218    -0.98   0.328     .3692943    1.3
+> 94395
+    2007.75  |   .6919145   .2443138    -1.04   0.297     .3463336    1.3
+> 82325
+       2008  |   .5594024   .1934682    -1.68   0.093     .2840129     1.
+> 10182
+    2008.25  |   .5625263   .2055493    -1.57   0.115     .2748594    1.1
+> 51265
+     2008.5  |   .6333058   .2480653    -1.17   0.244     .2938993    1.3
+> 64672
+    2008.75  |   .5080926   .2190917    -1.57   0.116     .2182233       
+> 1.183
+       2009  |   .4941675   .2160064    -1.61   0.107     .2097993    1.1
+> 63977
+    2009.25  |   .4207626   .1932327    -1.89   0.059     .1710519    1.0
+> 35014
+     2009.5  |   .4591632   .2195164    -1.63   0.104     .1798976    1.1
+> 71949
+    2009.75  |   .4130286   .2039515    -1.79   0.073     .1569137    1.0
+> 87175
+       2010  |   .3801129   .1959735    -1.88   0.061     .1383762    1.0
+> 44152
+    2010.25  |   .5036077   .2854344    -1.21   0.226     .1658246    1.5
+> 29452
+     2010.5  |   .4846171    .253809    -1.38   0.167     .1736193    1.3
+> 52693
+    2010.75  |   .3763155   .2104697    -1.75   0.081     .1257428    1.1
+> 26214
+       2011  |    .357855   .2027962    -1.81   0.070     .1178506    1.0
+> 86632
+    2011.25  |   .4128319   .2378854    -1.54   0.125     .1334403    1.2
+> 77202
+     2011.5  |   .4226252   .2522191    -1.44   0.149     .1312096    1.3
+> 61273
+    2011.75  |   .3214943   .1998162    -1.83   0.068     .0950893    1.0
+> 86963
+       2012  |    .330905   .2046535    -1.79   0.074      .098461    1.1
+> 12097
+    2012.25  |   .2670335   .1780845    -1.98   0.048     .0722603    .98
+> 68058
+     2012.5  |   .3780492   .2571718    -1.43   0.153     .0996575    1.4
+> 34124
+    2012.75  |   .3115103    .218671    -1.66   0.097     .0786963    1.2
+> 33078
+       2013  |   .2883631   .2086918    -1.72   0.086     .0698096    1.1
+> 91144
+    2013.25  |   .3200409   .2340823    -1.56   0.119     .0763177    1.3
+> 42104
+     2013.5  |   .3451488   .2599721    -1.41   0.158     .0788618    1.5
+> 10589
+    2013.75  |   .2557883   .1962582    -1.78   0.076     .0568566    1.1
+> 50748
+       2014  |   .3127478    .244776    -1.49   0.138     .0674514    1.4
+> 50099
+    2014.25  |    .322143   .2585096    -1.41   0.158     .0668323    1.5
+> 52784
+     2014.5  |    .348544    .293466    -1.25   0.211     .0669215    1.8
+> 15305
+    2014.75  |   .2724929     .23584    -1.50   0.133      .049963    1.4
+> 86148
+       2015  |   .2970772   .2582238    -1.40   0.163     .0540745    1.6
+> 32098
+    2015.25  |   .2383982   .2138678    -1.60   0.110     .0410854    1.3
+> 83307
+     2015.5  |   .4132473   .3768427    -0.97   0.333     .0691822    2.4
+> 68458
+    2015.75  |   .2518532   .2348998    -1.48   0.139     .0404804    1.5
+> 66934
+       2016  |   .2964516   .2830994    -1.27   0.203     .0456132    1.9
+> 26714
+             |
+       _cons |   .0000599   .0000147   -39.66   0.000      .000037    .00
+> 00968
+   ln(hours) |          1  (exposure)
+-------------+-----------------------------------------------------------
+> -----
+    /lnalpha |  -1.571595   .1467946                     -1.859307   -1.2
+> 83883
+-------------+-----------------------------------------------------------
+> -----
+       alpha |   .2077137   .0304912                      .1557806    .27
+> 69599
+-------------------------------------------------------------------------
+> -----
+(est1 stored)
+
+. esttab using `"`directory'Model.`injury_label'.`time_label'.`violation_
+> level_label'.C.SSV.2.csv"', replace plain wide p eform
+(note: file C:/Users/slevine2/Dropbox (Stanford Law School)/R-code/Injury
+> -Classification/Model Output + Summaries/big/V1/PS/estout 10-24/Model.P
+> S.Q.P.C.SSV.2.csv not found)
+(output written to C:/Users/slevine2/Dropbox (Stanford Law School)/R-code
+> /Injury-Classification/Model Output + Summaries/big/V1/PS/estout 10-24/
+> Model.PS.Q.P.C.SSV.2.csv)
+
+. /*
+> est store nbin
+> 
+> pause "next"
+> 
+> // test for over-dispersion
+> lrtest pois nbin, stats force 
+> 
+> pause "next" 
+> 
+> // final model + diagnostics/assessment
+> quietly nbreg dv `ss_lag_1_vars' `covariates' ib(freq).state ib(freq).t
+> ime, vce(cl mineid) exposure(hours) iter(50) irr
+> */
+. predict cssv2_yhat 
+(option n assumed; predicted number of events)
+(57 missing values generated)
+
+. gen cssv2_res = dv - cssv2_yhat
+(57 missing values generated)
+
+. 
+. summ dv cssv2_yhat
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+          dv |      2,726    6.319516    6.454206          0         71
+  cssv2_yhat |      2,669    6.649674    5.445005   .0060972   43.58539
+
+. /*
+> pause "next"
+> 
+> scatter dv cssv2_yhat
+> 
+> pause "next"
+> 
+> scatter cssv2_res dv
+> 
+> pause "next"
+> 
+> scatter cssv2_res cssv2_yhat
+> */
+. pause "complete: C.SSV.2"
+
+. 
+. ***********************************************************************
+> *********
+. ***********************************************************************
+> *********
+. 
+. // Model C.SSV.3
+. 
+. // poisson model
+. /*
+> glm dv `ss_lag_4_vars' `covariates' ib(freq).state ib(freq).time, famil
+> y(poisson) link(log) vce(cl mineid) exposure(hours) iter(50) eform
+>         
+> quietly poisson dv `ss_lag_4_vars' `covariates' ib(freq).state ib(freq)
+> .time, vce(cl mineid) exposure(hours) iter(50) irr
+> est store pois
+> estat gof
+>         
+> pause "next"
+> 
+> // negative binomial model
+> glm dv `ss_lag_4_vars' `covariates' ib(freq).state ib(freq).time, famil
+> y(nbinomial) link(log) vce(cl mineid) exposure(hours) iter(50) eform
+> 
+> pause "next"
+> */
+. eststo clear
+
+. eststo: nbreg dv `ss_lag_4_vars' `covariates' ib(freq).state ib(freq).t
+> ime, vce(cl mineid) exposure(hours) iter(50) irr
+
+Fitting Poisson model:
+
+Iteration 0:   log pseudolikelihood = -7187.0777  
+Iteration 1:   log pseudolikelihood = -7173.3528  
+Iteration 2:   log pseudolikelihood =  -7173.338  
+Iteration 3:   log pseudolikelihood =  -7173.338  
+
+Fitting constant-only model:
+
+Iteration 0:   log pseudolikelihood = -7283.2087  
+Iteration 1:   log pseudolikelihood = -7006.4765  
+Iteration 2:   log pseudolikelihood = -6990.2047  
+Iteration 3:   log pseudolikelihood = -6990.0415  
+Iteration 4:   log pseudolikelihood = -6990.0415  
+
+Fitting full model:
+
+Iteration 0:   log pseudolikelihood =   -6665.38  
+Iteration 1:   log pseudolikelihood = -6585.7607  
+Iteration 2:   log pseudolikelihood = -6577.2894  
+Iteration 3:   log pseudolikelihood = -6577.2505  
+Iteration 4:   log pseudolikelihood = -6577.2505  
+
+Negative binomial regression                    Number of obs     =      
+> 2,636
+                                                Wald chi2(63)     =      
+>     .
+Dispersion           = mean                     Prob > chi2       =      
+>     .
+Log pseudolikelihood = -6577.2505               Pseudo R2         =     0
+> .0591
+
+                                (Std. Err. adjusted for 66 clusters in mi
+> neid)
+-------------------------------------------------------------------------
+> -----
+             |               Robust
+          dv |        IRR   Std. Err.      z    P>|z|     [95% Conf. Inte
+> rval]
+-------------+-----------------------------------------------------------
+> -----
+p48_ss_c_4~g |   .9913334    .026398    -0.33   0.744     .9409212    1.0
+> 44447
+p75_ss_c_4~g |    1.00065   .0005808     1.12   0.263     .9995119    1.0
+> 01789
+   mine_time |   1.012599   .0218122     0.58   0.561     .9707373    1.0
+> 56265
+onsite_ins~s |   .9996216   .0001636    -2.31   0.021     .9993011    .99
+> 99422
+             |
+       state |
+         IL  |   1.357086   .1280468     3.24   0.001     1.127958    1.6
+> 32758
+         IN  |   1.119195   .0908358     1.39   0.165     .9545985    1.3
+> 12172
+         KY  |   1.049816   .1075673     0.47   0.635     .8588086    1.2
+> 83305
+         NM  |   .7284019    .059239    -3.90   0.000     .6210765    .85
+> 42737
+         OH  |   .9222857   .0734215    -1.02   0.310     .7890469    1.0
+> 78023
+         PA  |    .856383   .1144154    -1.16   0.246     .6590902    1.1
+> 12734
+         UT  |   .3528985     .07391    -4.97   0.000     .2340867    .53
+> 20138
+         VA  |   .6037153   .1600939    -1.90   0.057     .3590126    1.0
+> 15207
+             |
+        time |
+    2003.25  |   1.071518   .0964432     0.77   0.443     .8982272    1.2
+> 78242
+     2003.5  |   1.153621   .1192338     1.38   0.167      .942077    1.4
+> 12668
+    2003.75  |   .9470499   .1033778    -0.50   0.618      .764641    1.1
+> 72973
+       2004  |   .8897382   .1134273    -0.92   0.359      .693023    1.1
+> 42291
+    2004.25  |   1.037662   .1377079     0.28   0.781     .8000062    1.3
+> 45918
+     2004.5  |   1.139609   .1841503     0.81   0.419     .8302516    1.5
+> 64236
+    2004.75  |   .7631056   .1375866    -1.50   0.134      .535938    1.0
+> 86563
+       2005  |    .746445   .1441246    -1.51   0.130     .5112657    1.0
+> 89805
+    2005.25  |   .8469182   .1757398    -0.80   0.423      .563914     1.
+> 27195
+     2005.5  |   .8740902   .1918932    -0.61   0.540     .5684444    1.3
+> 44078
+    2005.75  |   .8991624   .1942916    -0.49   0.623     .5887215    1.3
+> 73303
+       2006  |    .754335   .1937462    -1.10   0.272     .4559723     1.
+> 24793
+    2006.25  |   .7067945   .1933793    -1.27   0.205     .4134319    1.2
+> 08321
+     2006.5  |   .8731648   .2647994    -0.45   0.655     .4819006    1.5
+> 82104
+    2006.75  |   .6262442   .1974369    -1.48   0.138     .3375858    1.1
+> 61725
+       2007  |   .6754685   .2370892    -1.12   0.264     .3394952     1.
+> 34393
+    2007.25  |   .6447481   .2714093    -1.04   0.297     .2825357    1.4
+> 71319
+     2007.5  |    .755083   .2945117    -0.72   0.471     .3515548    1.6
+> 21796
+    2007.75  |   .7377312   .3028221    -0.74   0.459     .3299886    1.6
+> 49291
+       2008  |    .600782   .2441631    -1.25   0.210     .2708826    1.3
+> 32456
+    2008.25  |   .6059401   .2584587    -1.17   0.240     .2626376    1.3
+> 97985
+     2008.5  |   .6709482   .3072357    -0.87   0.383     .2734721    1.6
+> 46133
+    2008.75  |   .5494381   .2746905    -1.20   0.231      .206235    1.4
+> 63778
+       2009  |   .5351974   .2734944    -1.22   0.221     .1965787    1.4
+> 57107
+    2009.25  |   .4516894   .2401933    -1.49   0.135     .1592939    1.2
+> 80798
+     2009.5  |   .5028019   .2791743    -1.24   0.216     .1693473    1.4
+> 92848
+    2009.75  |   .4565021    .262942    -1.36   0.173     .1476239    1.4
+> 11656
+       2010  |   .4127417   .2467481    -1.48   0.139     .1278814    1.3
+> 32139
+    2010.25  |   .5550787   .3570757    -0.92   0.360     .1573209    1.9
+> 58496
+     2010.5  |   .5348423   .3293636    -1.02   0.310     .1599719    1.7
+> 88166
+    2010.75  |   .4205178   .2748433    -1.33   0.185     .1168028    1.5
+> 13963
+       2011  |   .3979643   .2638708    -1.39   0.165      .108506    1.4
+> 59602
+    2011.25  |   .4590114   .3103264    -1.15   0.249     .1219964     1.
+> 72703
+     2011.5  |   .4739669   .3323929    -1.06   0.287     .1198949    1.8
+> 73681
+    2011.75  |    .362235    .264345    -1.39   0.164     .0866596    1.5
+> 14134
+       2012  |   .3739681   .2737125    -1.34   0.179     .0890898    1.5
+> 69788
+    2012.25  |   .3013063   .2346009    -1.54   0.123     .0655016    1.3
+> 86004
+     2012.5  |   .4290756   .3406001    -1.07   0.286      .090542    2.0
+> 33374
+    2012.75  |   .3560118   .2930476    -1.25   0.210     .0709261    1.7
+> 86991
+       2013  |   .3320886   .2823563    -1.30   0.195     .0627372    1.7
+> 57854
+    2013.25  |   .3678366   .3157694    -1.17   0.244     .0683819     1.
+> 97865
+     2013.5  |   .3984397   .3522275    -1.04   0.298     .0704508    2.2
+> 53406
+    2013.75  |   .2952193   .2652638    -1.36   0.175     .0507357    1.7
+> 17814
+       2014  |     .36411   .3349136    -1.10   0.272     .0600185     2.
+> 20892
+    2014.25  |   .3754893   .3529788    -1.04   0.297     .0594874    2.3
+> 70117
+     2014.5  |   .4063768   .3980153    -0.92   0.358     .0595993    2.7
+> 70871
+    2014.75  |    .321684   .3239079    -1.13   0.260     .0447037    2.3
+> 14811
+       2015  |   .3486592   .3530871    -1.04   0.298      .047906    2.5
+> 37539
+    2015.25  |   .2801159      .2912    -1.22   0.221     .0365136    2.1
+> 48923
+     2015.5  |   .4874232   .5164807    -0.68   0.498     .0610887    3.8
+> 89123
+    2015.75  |   .3016662   .3271132    -1.11   0.269     .0360182    2.5
+> 26569
+       2016  |   .3550007    .394048    -0.93   0.351      .040309    3.1
+> 26484
+             |
+       _cons |   .0000615   .0000171   -34.83   0.000     .0000356    .00
+> 01062
+   ln(hours) |          1  (exposure)
+-------------+-----------------------------------------------------------
+> -----
+    /lnalpha |  -1.590293   .1485413                     -1.881428   -1.2
+> 99157
+-------------+-----------------------------------------------------------
+> -----
+       alpha |   .2038659   .0302825                      .1523723    .27
+> 27616
+-------------------------------------------------------------------------
+> -----
+(est1 stored)
+
+. esttab using `"`directory'Model.`injury_label'.`time_label'.`violation_
+> level_label'.C.SSV.3.csv"', replace plain wide p eform
+(note: file C:/Users/slevine2/Dropbox (Stanford Law School)/R-code/Injury
+> -Classification/Model Output + Summaries/big/V1/PS/estout 10-24/Model.P
+> S.Q.P.C.SSV.3.csv not found)
+(output written to C:/Users/slevine2/Dropbox (Stanford Law School)/R-code
+> /Injury-Classification/Model Output + Summaries/big/V1/PS/estout 10-24/
+> Model.PS.Q.P.C.SSV.3.csv)
+
+. /*
+> est store nbin
+> 
+> pause "next"
+> 
+> // test for over-dispersion
+> lrtest pois nbin, stats force 
+> 
+> pause "next" 
+> 
+> // final model + diagnostics/assessment
+> quietly nbreg dv `ss_lag_4_vars' `covariates' ib(freq).state ib(freq).t
+> ime, vce(cl mineid) exposure(hours) iter(50) irr
+> */
+. predict cssv3_yhat 
+(option n assumed; predicted number of events)
+(90 missing values generated)
+
+. gen cssv3_res = dv - cssv3_yhat
+(90 missing values generated)
+
+. 
+. summ dv cssv3_yhat
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+          dv |      2,726    6.319516    6.454206          0         71
+  cssv3_yhat |      2,636    6.708371    5.466427   .0064234   43.61332
+
+. /*
+> pause "next"
+> 
+> scatter dv cssv3_yhat
+> 
+> pause "next"
+> 
+> scatter cssv3_res dv
+> 
+> pause "next"
+> 
+> scatter cssv3_res cssv3_yhat
+> */
+. pause "complete: C.SSV.3"
+
+. 
+. ***********************************************************************
+> *********
+. ***********************************************************************
+> *********
+. 
+. // Model C.SSV.4
+. 
+. // poisson model
+. /*
+> glm dv `ss_lag_all_vars' `covariates' ib(freq).state ib(freq).time, fam
+> ily(poisson) link(log) vce(cl mineid) exposure(hours) iter(50) eform
+>         
+> quietly poisson dv `ss_lag_all_vars' `covariates' ib(freq).state ib(fre
+> q).time, vce(cl mineid) exposure(hours) iter(50) irr
+> est store pois
+> estat gof
+>         
+> pause "next"
+> 
+> // negative binomial model
+> glm dv `ss_lag_all_vars' `covariates' ib(freq).state ib(freq).time, fam
+> ily(nbinomial) link(log) vce(cl mineid) exposure(hours) iter(50) eform
+> 
+> pause "next"
+> */
+. eststo clear
+
+. eststo: nbreg dv `ss_lag_all_vars' `covariates' ib(freq).state ib(freq)
+> .time, vce(cl mineid) exposure(hours) iter(50) irr
+
+Fitting Poisson model:
+
+Iteration 0:   log pseudolikelihood = -6401.9794  
+Iteration 1:   log pseudolikelihood = -6392.1467  
+Iteration 2:   log pseudolikelihood = -6392.1222  
+Iteration 3:   log pseudolikelihood = -6392.1222  
+
+Fitting constant-only model:
+
+Iteration 0:   log pseudolikelihood =  -6555.289  
+Iteration 1:   log pseudolikelihood = -6238.1966  
+Iteration 2:   log pseudolikelihood =  -6217.431  
+Iteration 3:   log pseudolikelihood = -6217.1646  
+Iteration 4:   log pseudolikelihood = -6217.1646  
+
+Fitting full model:
+
+Iteration 0:   log pseudolikelihood = -5944.8419  
+Iteration 1:   log pseudolikelihood = -5885.0164  
+Iteration 2:   log pseudolikelihood = -5881.5149  
+Iteration 3:   log pseudolikelihood = -5881.5071  
+Iteration 4:   log pseudolikelihood = -5881.5071  
+
+Negative binomial regression                    Number of obs     =      
+> 2,281
+                                                Wald chi2(62)     =      
+>     .
+Dispersion           = mean                     Prob > chi2       =      
+>     .
+Log pseudolikelihood = -5881.5071               Pseudo R2         =     0
+> .0540
+
+                                (Std. Err. adjusted for 64 clusters in mi
+> neid)
+-------------------------------------------------------------------------
+> -----
+             |               Robust
+          dv |        IRR   Std. Err.      z    P>|z|     [95% Conf. Inte
+> rval]
+-------------+-----------------------------------------------------------
+> -----
+p48_ss_c_l~l |   1.010025   .0159935     0.63   0.529     .9791599    1.0
+> 41863
+p75_ss_c_l~l |   .9998598   .0001036    -1.35   0.176     .9996568    1.0
+> 00063
+   mine_time |   1.007017   .0258754     0.27   0.786      .957558    1.0
+> 59031
+onsite_ins~s |   .9999494   .0001317    -0.38   0.701     .9996913    1.0
+> 00208
+             |
+       state |
+         IL  |   1.332126   .1411733     2.71   0.007     1.082277    1.6
+> 39654
+         IN  |    1.08892    .119918     0.77   0.439     .8775198    1.3
+> 51248
+         KY  |   1.085627   .1008563     0.88   0.377     .9049042    1.3
+> 02442
+         NM  |   .7260093   .0627096    -3.71   0.000     .6129414    .85
+> 99345
+         OH  |   .9405784   .1138141    -0.51   0.613     .7419863    1.1
+> 92323
+         PA  |   .7686522    .085166    -2.37   0.018     .6186107    .95
+> 50856
+         UT  |   .4396739   .0544122    -6.64   0.000     .3449764    .56
+> 03661
+         VA  |   .6110358   .1631657    -1.84   0.065     .3620505     1.
+> 03125
+             |
+        time |
+    2003.25  |   1.061105   .0983739     0.64   0.522     .8847989    1.2
+> 72543
+     2003.5  |   1.157403   .1231731     1.37   0.170     .9395025    1.4
+> 25841
+    2003.75  |   .9627166   .1119948    -0.33   0.744     .7664369    1.2
+> 09262
+       2004  |   .9177136   .1281455    -0.61   0.539     .6979899    1.2
+> 06605
+    2004.25  |   1.071286   .1549522     0.48   0.634     .8068386    1.4
+> 22409
+     2004.5  |   1.180165   .2234445     0.87   0.382     .8142951    1.7
+> 10423
+    2004.75  |   .7997048    .158177    -1.13   0.258      .542709    1.1
+> 78399
+       2005  |   .7821775   .1720324    -1.12   0.264     .5082668    1.2
+> 03702
+    2005.25  |   .8708628   .2158483    -0.56   0.577     .5357653    1.4
+> 15549
+     2005.5  |   .9086251   .2222806    -0.39   0.695      .562538    1.4
+> 67633
+    2005.75  |    .912048   .2707261    -0.31   0.756     .5097448    1.6
+> 31859
+       2006  |   .7909756   .2525497    -0.73   0.463     .4230423    1.4
+> 78912
+    2006.25  |   .7516412   .2598417    -0.83   0.409     .3817254    1.4
+> 80029
+     2006.5  |   .9603767   .3634514    -0.11   0.915     .4574117    2.0
+> 16397
+    2006.75  |   .7008487      .2679    -0.93   0.352     .3313232    1.4
+> 82507
+       2007  |   .7461083   .3044034    -0.72   0.473     .3353681    1.6
+> 59901
+    2007.25  |    .731955   .3741448    -0.61   0.542      .268773    1.9
+> 93348
+     2007.5  |   .8714146   .4003403    -0.30   0.764     .3541366    2.1
+> 44267
+    2007.75  |   .7921169   .3989151    -0.46   0.644     .2952016    2.1
+> 25494
+       2008  |   .6377641   .3166236    -0.91   0.365     .2410314    1.6
+> 87511
+    2008.25  |   .6202029   .3290211    -0.90   0.368     .2192636    1.7
+> 54288
+     2008.5  |     .73827   .4117976    -0.54   0.586     .2474149     2.
+> 20295
+    2008.75  |   .6144173   .3713516    -0.81   0.420     .1879318    2.0
+> 08753
+       2009  |   .6270805   .3808382    -0.77   0.442     .1907094    2.0
+> 61933
+    2009.25  |   .5464736    .348011    -0.95   0.343      .156855    1.9
+> 03883
+     2009.5  |   .5897991   .4023766    -0.77   0.439     .1548788    2.2
+> 46034
+    2009.75  |   .5432059   .3796414    -0.87   0.383       .13806    2.1
+> 37279
+       2010  |   .4760801   .3523955    -1.00   0.316     .1115884    2.0
+> 31146
+    2010.25  |   .6489306   .4847569    -0.58   0.563      .150087    2.8
+> 05778
+     2010.5  |   .6206756   .4634156    -0.64   0.523     .1436585    2.6
+> 81625
+    2010.75  |    .513603    .402358    -0.85   0.395     .1106099    2.3
+> 84851
+       2011  |    .451825   .3696527    -0.97   0.332     .0909022    2.2
+> 45773
+    2011.25  |   .4920788   .4097208    -0.85   0.394     .0962269    2.5
+> 16359
+     2011.5  |   .5337821   .4473095    -0.75   0.454     .1032897    2.7
+> 58488
+    2011.75  |   .4104245    .362267    -1.01   0.313     .0727626    2.3
+> 15039
+       2012  |   .4355461   .3771427    -0.96   0.337     .0797943    2.3
+> 77366
+    2012.25  |    .382318   .3442017    -1.07   0.286     .0654766    2.2
+> 32355
+     2012.5  |   .5299687   .4892378    -0.69   0.492     .0867897    3.2
+> 36178
+    2012.75  |   .4275062   .4032116    -0.90   0.368     .0673153    2.7
+> 15009
+       2013  |   .4077124   .3987893    -0.92   0.359      .059949    2.7
+> 72849
+    2013.25  |     .47314   .4726914    -0.75   0.454     .0667721    3.3
+> 52619
+     2013.5  |   .5096224   .5184307    -0.66   0.508     .0693961    3.7
+> 42504
+    2013.75  |   .4147513   .4317693    -0.85   0.398     .0539088    3.1
+> 90918
+       2014  |   .4768327   .5249605    -0.67   0.501     .0551126    4.1
+> 25544
+    2014.25  |   .4929481   .5591569    -0.62   0.533     .0533671     4.
+> 55333
+     2014.5  |   .5483529   .6329095    -0.52   0.603     .0570956    5.2
+> 66449
+    2014.75  |   .4399513   .5187308    -0.70   0.486     .0436298     4.
+> 43635
+       2015  |   .4577784   .5396029    -0.66   0.507     .0454264    4.6
+> 13206
+    2015.25  |   .3812788   .4806227    -0.76   0.444     .0322297    4.5
+> 10541
+     2015.5  |   .6512166   .8217308    -0.34   0.734     .0549093     7.
+> 72334
+    2015.75  |   .4107557   .5412952    -0.68   0.500     .0310361    5.4
+> 36255
+       2016  |   .4736531   .6361524    -0.56   0.578      .034059    6.5
+> 87025
+             |
+       _cons |   .0000638    .000022   -28.07   0.000     .0000325    .00
+> 01253
+   ln(hours) |          1  (exposure)
+-------------+-----------------------------------------------------------
+> -----
+    /lnalpha |   -1.69756   .1537796                     -1.998963   -1.3
+> 96158
+-------------+-----------------------------------------------------------
+> -----
+       alpha |   .1831297   .0281616                      .1354757    .24
+> 75462
+-------------------------------------------------------------------------
+> -----
+(est1 stored)
+
+. esttab using `"`directory'Model.`injury_label'.`time_label'.`violation_
+> level_label'.C.SSV.4.csv"', replace plain wide p eform
+(note: file C:/Users/slevine2/Dropbox (Stanford Law School)/R-code/Injury
+> -Classification/Model Output + Summaries/big/V1/PS/estout 10-24/Model.P
+> S.Q.P.C.SSV.4.csv not found)
+(output written to C:/Users/slevine2/Dropbox (Stanford Law School)/R-code
+> /Injury-Classification/Model Output + Summaries/big/V1/PS/estout 10-24/
+> Model.PS.Q.P.C.SSV.4.csv)
+
+. /*
+> est store nbin
+> 
+> pause "next"
+> 
+> // test for over-dispersion
+> lrtest pois nbin, stats force 
+> 
+> pause "next" 
+> 
+> // final model + diagnostics/assessment
+> quietly nbreg dv `ss_lag_all_vars' `covariates' ib(freq).state ib(freq)
+> .time, vce(cl mineid) exposure(hours) iter(50) irr
+> */
+. predict cssv4_yhat 
+(option n assumed; predicted number of events)
+(445 missing values generated)
+
+. gen cssv4_res = dv - cssv4_yhat
+(445 missing values generated)
+
+. 
+. summ dv cssv4_yhat
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+          dv |      2,726    6.319516    6.454206          0         71
+  cssv4_yhat |      2,281     7.28643     5.28457   .0186158   44.48305
+
+. /*
+> pause "next"
+> 
+> scatter dv cssv4_yhat
+> 
+> pause "next"
+> 
+> scatter cssv4_res dv
+> 
+> pause "next"
+> 
+> scatter cssv4_res cssv4_yhat
+> */
+. pause "complete: C.SSV.4"
+
+. 
+. ***********************************************************************
+> *********
+. ***********************************************************************
+> *********
+. 
+. // Model C.PP.1
+. 
+. // poisson model
+. /*
+> glm dv `pp_vars' `covariates' ib(freq).state ib(freq).time if sample_pp
+>  == 1, family(poisson) link(log) vce(cl mineid) exposure(hours) iter(50
+> ) eform
+>         
+> quietly poisson dv `pp_vars' `covariates' ib(freq).state ib(freq).time 
+> if sample_pp == 1, vce(cl mineid) exposure(hours) iter(50) irr
+> est store pois
+> estat gof
+>         
+> pause "next"
+> 
+> // negative binomial model
+> glm dv `pp_vars' `covariates' ib(freq).state ib(freq).time if sample_pp
+>  == 1, family(nbinomial) link(log) vce(cl mineid) exposure(hours) iter(
+> 50) eform
+> 
+> pause "next"
+> */
+. eststo clear
+
+. eststo: nbreg dv `pp_vars' `covariates' ib(freq).state ib(freq).time if
+>  sample_pp == 1, vce(cl mineid) exposure(hours) iter(50) irr
+
+Fitting Poisson model:
+
+Iteration 0:   log pseudolikelihood = -4428.0061  
+Iteration 1:   log pseudolikelihood = -4413.1879  
+Iteration 2:   log pseudolikelihood = -4413.1446  
+Iteration 3:   log pseudolikelihood = -4413.1446  
+
+Fitting constant-only model:
+
+Iteration 0:   log pseudolikelihood = -4520.6499  
+Iteration 1:   log pseudolikelihood = -4334.4306  
+Iteration 2:   log pseudolikelihood = -4326.8166  
+Iteration 3:   log pseudolikelihood = -4326.7372  
+Iteration 4:   log pseudolikelihood = -4326.7372  
+
+Fitting full model:
+
+Iteration 0:   log pseudolikelihood = -4138.3461  
+Iteration 1:   log pseudolikelihood = -4094.7643  
+Iteration 2:   log pseudolikelihood = -4091.5325  
+Iteration 3:   log pseudolikelihood = -4091.5244  
+Iteration 4:   log pseudolikelihood = -4091.5244  
+
+Negative binomial regression                    Number of obs     =      
+> 1,726
+                                                Wald chi2(46)     =      
+>     .
+Dispersion           = mean                     Prob > chi2       =      
+>     .
+Log pseudolikelihood = -4091.5244               Pseudo R2         =     0
+> .0544
+
+                                (Std. Err. adjusted for 57 clusters in mi
+> neid)
+-------------------------------------------------------------------------
+> -----
+             |               Robust
+          dv |        IRR   Std. Err.      z    P>|z|     [95% Conf. Inte
+> rval]
+-------------+-----------------------------------------------------------
+> -----
+      p48_pp |   1.000656   .0005226     1.26   0.209     .9996326    1.0
+> 01681
+      p75_pp |   1.000027   .0000142     1.88   0.061     .9999988    1.0
+> 00054
+   mine_time |   1.029038   .0330113     0.89   0.372     .9663293    1.0
+> 95817
+onsite_ins~s |   .9993888   .0002559    -2.39   0.017     .9988874    .99
+> 98904
+             |
+       state |
+         IL  |   1.200382   .1378723     1.59   0.112     .9584137    1.5
+> 03439
+         IN  |   .9658543   .1066022    -0.31   0.753     .7779717    1.1
+> 99111
+         KY  |   .9452045    .121136    -0.44   0.660     .7352534    1.2
+> 15107
+         NM  |   .6818714   .0644156    -4.05   0.000     .5666181    .82
+> 05679
+         OH  |   1.001493   .0990592     0.02   0.988     .8250002    1.2
+> 15742
+         PA  |   1.007943   .1911338     0.04   0.967     .6950634    1.4
+> 61663
+         UT  |   .3379617   .0831598    -4.41   0.000       .20865    .54
+> 74147
+         VA  |   .4275351   .0657459    -5.53   0.000     .3162823    .57
+> 79212
+             |
+        time |
+    2007.25  |    .874818   .1248063    -0.94   0.349     .6614251    1.1
+> 57057
+     2007.5  |    .970909   .1093625    -0.26   0.793     .7785738    1.2
+> 10758
+    2007.75  |   .9455398   .1233917    -0.43   0.668     .7321485    1.2
+> 21126
+       2008  |   .7716754   .1079343    -1.85   0.064     .5866471    1.0
+> 15061
+    2008.25  |   .7533938   .1219436    -1.75   0.080     .5485894    1.0
+> 34658
+     2008.5  |   .8344749   .1598009    -0.94   0.345      .573336    1.2
+> 14555
+    2008.75  |   .6663487   .1661847    -1.63   0.104     .4087101    1.0
+> 86395
+       2009  |   .6486822   .1692553    -1.66   0.097     .3889869    1.0
+> 81755
+    2009.25  |    .529026   .1560099    -2.16   0.031     .2967956    .94
+> 29673
+     2009.5  |   .5815196   .1927277    -1.64   0.102     .3037096    1.1
+> 13449
+    2009.75  |   .5326702   .1884304    -1.78   0.075     .2662861    1.0
+> 65536
+       2010  |   .4722111   .1878985    -1.89   0.059     .2164875    1.0
+> 30005
+    2010.25  |   .6208378   .2844341    -1.04   0.298      .252932    1.5
+> 23886
+     2010.5  |   .5824984   .2493748    -1.26   0.207     .2517009    1.3
+> 48046
+    2010.75  |   .4566245   .2180864    -1.64   0.101     .1790691    1.1
+> 64388
+       2011  |   .4233986   .2093576    -1.74   0.082      .160641    1.1
+> 15944
+    2011.25  |   .4820784   .2495551    -1.41   0.159     .1747755    1.3
+> 29704
+     2011.5  |   .4796424   .2682258    -1.31   0.189     .1602907    1.4
+> 35247
+    2011.75  |   .3631174   .2149545    -1.71   0.087     .1138051    1.1
+> 58597
+       2012  |   .3740937   .2291457    -1.61   0.108     .1126131    1.2
+> 42715
+    2012.25  |   .2982671   .2005108    -1.80   0.072     .0798699    1.1
+> 13853
+     2012.5  |   .4210417   .2910631    -1.25   0.211     .1086165    1.6
+> 32129
+    2012.75  |   .3448383   .2512434    -1.46   0.144     .0826883    1.4
+> 38092
+       2013  |   .3124428   .2389184    -1.52   0.128     .0698031    1.3
+> 98512
+    2013.25  |   .3425729   .2701924    -1.36   0.174     .0730126    1.6
+> 07342
+     2013.5  |   .3593613   .2955949    -1.24   0.213     .0716754    1.8
+> 01742
+    2013.75  |   .2534244   .2135362    -1.63   0.103     .0485985     1.
+> 32152
+       2014  |   .3176238   .2780942    -1.31   0.190     .0571014    1.7
+> 66766
+    2014.25  |    .319077   .2892152    -1.26   0.208     .0539953    1.8
+> 85536
+     2014.5  |    .335641   .3206865    -1.14   0.253     .0515939     2.
+> 18349
+    2014.75  |   .2664931   .2635793    -1.34   0.181     .0383523    1.8
+> 51742
+       2015  |   .2838349   .2891809    -1.24   0.216     .0385329    2.0
+> 90738
+    2015.25  |   .2252829   .2355222    -1.43   0.154     .0290294    1.7
+> 48307
+     2015.5  |   .3740482   .4012881    -0.92   0.359     .0456812    3.0
+> 62791
+    2015.75  |   .2301259   .2554247    -1.32   0.186     .0261329    2.0
+> 26486
+       2016  |   .2799452   .3192345    -1.12   0.264     .0299508    2.6
+> 16603
+             |
+       _cons |   .0000294    .000027   -11.37   0.000     4.87e-06    .00
+> 01777
+   ln(hours) |          1  (exposure)
+-------------+-----------------------------------------------------------
+> -----
+    /lnalpha |  -1.635024    .201773                     -2.030492   -1.2
+> 39556
+-------------+-----------------------------------------------------------
+> -----
+       alpha |   .1949477   .0393352                       .131271    .28
+> 95128
+-------------------------------------------------------------------------
+> -----
+(est1 stored)
+
+. esttab using `"`directory'Model.`injury_label'.`time_label'.`violation_
+> level_label'.C.PP.1.csv"', replace plain wide p eform
+(note: file C:/Users/slevine2/Dropbox (Stanford Law School)/R-code/Injury
+> -Classification/Model Output + Summaries/big/V1/PS/estout 10-24/Model.P
+> S.Q.P.C.PP.1.csv not found)
+(output written to C:/Users/slevine2/Dropbox (Stanford Law School)/R-code
+> /Injury-Classification/Model Output + Summaries/big/V1/PS/estout 10-24/
+> Model.PS.Q.P.C.PP.1.csv)
+
+. /*
+> est store nbin
+> 
+> pause "next"
+> 
+> // test for over-dispersion
+> lrtest pois nbin, stats force 
+> 
+> pause "next" 
+> 
+> // final model + diagnostics/assessment
+> quietly nbreg dv `pp_vars' `covariates' ib(freq).state ib(freq).time if
+>  sample_pp == 1, vce(cl mineid) exposure(hours) iter(50) irr
+> */
+. predict cpp1_yhat 
+(option n assumed; predicted number of events)
+(38 missing values generated)
+
+. gen cpp1_res = dv - cpp1_yhat
+(38 missing values generated)
+
+. 
+. summ dv cpp1_yhat
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+          dv |      2,726    6.319516    6.454206          0         71
+   cpp1_yhat |      2,688    5.725582    4.996143   .0034781   37.40213
+
+. /*
+> pause "next"
+> 
+> scatter dv cpp1_yhat
+> 
+> pause "next"
+> 
+> scatter cpp1_res dv
+> 
+> pause "next"
+> 
+> scatter cpp1_res cpp1_yhat
+> */
+. pause "complete: C.PP.1"
+
+. 
+. ***********************************************************************
+> *********
+. ***********************************************************************
+> *********
+. 
+. // Model C.PP.2
+. 
+. // poisson model
+. /*
+> glm dv `pp_lag_1_vars' `covariates' ib(freq).state ib(freq).time if sam
+> ple_pp == 1, family(poisson) link(log) vce(cl mineid) exposure(hours) i
+> ter(50) eform
+>         
+> quietly poisson dv `pp_lag_1_vars' `covariates' ib(freq).state ib(freq)
+> .time if sample_pp == 1, vce(cl mineid) exposure(hours) iter(50) irr
+> est store pois
+> estat gof
+>         
+> pause "next"
+> 
+> // negative binomial model
+> glm dv `pp_lag_1_vars' `covariates' ib(freq).state ib(freq).time if sam
+> ple_pp == 1, family(nbinomial) link(log) vce(cl mineid) exposure(hours)
+>  iter(50) eform
+> 
+> pause "next"
+> */
+. eststo clear
+
+. eststo: nbreg dv `pp_lag_1_vars' `covariates' ib(freq).state ib(freq).t
+> ime if sample_pp == 1, vce(cl mineid) exposure(hours) iter(50) irr
+
+Fitting Poisson model:
+
+Iteration 0:   log pseudolikelihood = -4446.9174  
+Iteration 1:   log pseudolikelihood = -4434.0704  
+Iteration 2:   log pseudolikelihood = -4434.0244  
+Iteration 3:   log pseudolikelihood = -4434.0244  
+
+Fitting constant-only model:
+
+Iteration 0:   log pseudolikelihood = -4515.6696  
+Iteration 1:   log pseudolikelihood = -4329.8357  
+Iteration 2:   log pseudolikelihood = -4322.1877  
+Iteration 3:   log pseudolikelihood = -4322.1075  
+Iteration 4:   log pseudolikelihood = -4322.1075  
+
+Fitting full model:
+
+Iteration 0:   log pseudolikelihood = -4135.6621  
+Iteration 1:   log pseudolikelihood = -4094.6319  
+Iteration 2:   log pseudolikelihood = -4091.6681  
+Iteration 3:   log pseudolikelihood = -4091.6614  
+Iteration 4:   log pseudolikelihood = -4091.6614  
+
+Negative binomial regression                    Number of obs     =      
+> 1,717
+                                                Wald chi2(46)     =      
+>     .
+Dispersion           = mean                     Prob > chi2       =      
+>     .
+Log pseudolikelihood = -4091.6614               Pseudo R2         =     0
+> .0533
+
+                                (Std. Err. adjusted for 57 clusters in mi
+> neid)
+-------------------------------------------------------------------------
+> -----
+             |               Robust
+          dv |        IRR   Std. Err.      z    P>|z|     [95% Conf. Inte
+> rval]
+-------------+-----------------------------------------------------------
+> -----
+ p48_pp_1lag |   1.000024   .0004642     0.05   0.958     .9991148    1.0
+> 00935
+ p75_pp_1lag |   1.000021   9.20e-06     2.25   0.024     1.000003    1.0
+> 00039
+   mine_time |   1.027868    .033129     0.85   0.394     .9649453    1.0
+> 94895
+onsite_ins~s |   .9994939   .0001916    -2.64   0.008     .9991184    .99
+> 98695
+             |
+       state |
+         IL  |   1.200015   .1408389     1.55   0.120     .9534243    1.5
+> 10384
+         IN  |   .9723636   .1069721    -0.25   0.799     .7837652    1.2
+> 06345
+         KY  |   .9327291   .1157601    -0.56   0.575     .7313305     1.
+> 18959
+         NM  |   .6770774    .062611    -4.22   0.000     .5648402    .81
+> 16169
+         OH  |   .9879623   .0972564    -0.12   0.902     .8146047    1.1
+> 98212
+         PA  |   .9613459   .1617916    -0.23   0.815     .6912339    1.3
+> 37009
+         UT  |   .3305398   .0808961    -4.52   0.000      .204598    .53
+> 40061
+         VA  |   .4175943   .0621834    -5.86   0.000     .3118914    .55
+> 91209
+             |
+        time |
+       2007  |   1.029367   .1614798     0.18   0.854     .7569026    1.3
+> 99912
+     2007.5  |   1.053321   .1832746     0.30   0.765     .7489523    1.4
+> 81382
+    2007.75  |   1.018955   .1547812     0.12   0.902     .7565821    1.3
+> 72316
+       2008  |   .8088238   .1413931    -1.21   0.225      .574186    1.1
+> 39345
+    2008.25  |   .7955531   .1342785    -1.36   0.175      .571476    1.1
+> 07491
+     2008.5  |   .8865432   .1765257    -0.60   0.545     .6000831     1.
+> 30975
+    2008.75  |   .6981894   .1720507    -1.46   0.145     .4307414    1.1
+> 31696
+       2009  |   .6739249   .1668962    -1.59   0.111     .4147755     1.
+> 09499
+    2009.25  |   .5669038   .1563746    -2.06   0.040     .3301522    .97
+> 34296
+     2009.5  |   .6167338   .1895627    -1.57   0.116     .3376508    1.1
+> 26491
+    2009.75  |   .5434654   .1716734    -1.93   0.054     .2926098    1.0
+> 09381
+       2010  |   .5039296   .1862187    -1.85   0.064     .2442433    1.0
+> 39722
+    2010.25  |   .6515329   .2936889    -0.95   0.342     .2693045    1.5
+> 76264
+     2010.5  |   .6235183    .249101    -1.18   0.237     .2849619    1.3
+> 64305
+    2010.75  |   .4732591   .2096008    -1.69   0.091     .1986607    1.1
+> 27421
+       2011  |   .4532754   .2102292    -1.71   0.088     .1826311    1.1
+> 24992
+    2011.25  |   .5086935   .2452096    -1.40   0.161     .1977628    1.3
+> 08482
+     2011.5  |   .5192449   .2726324    -1.25   0.212     .1855429    1.4
+> 53116
+    2011.75  |   .3879099   .2144827    -1.71   0.087     .1312458    1.1
+> 46506
+       2012  |   .3948614   .2256062    -1.63   0.104     .1288564    1.2
+> 09994
+    2012.25  |   .3137398   .1983921    -1.83   0.067     .0908481    1.0
+> 83486
+     2012.5  |   .4430153   .2887843    -1.25   0.212     .1234678    1.5
+> 89585
+    2012.75  |   .3646556   .2501773    -1.47   0.141     .0950394    1.3
+> 99143
+       2013  |   .3281872   .2364264    -1.55   0.122     .0799678    1.3
+> 46877
+    2013.25  |   .3619887   .2713603    -1.36   0.175     .0832918    1.5
+> 73213
+     2013.5  |   .3863367   .3022541    -1.22   0.224     .0833721     1.
+> 79024
+    2013.75  |   .2684309   .2142509    -1.65   0.099     .0561613    1.2
+> 83004
+       2014  |   .3459694   .2889192    -1.27   0.204     .0673285    1.7
+> 77774
+    2014.25  |   .3451657   .2976716    -1.23   0.217     .0636722    1.8
+> 71137
+     2014.5  |   .3657884    .335331    -1.10   0.273     .0606602    2.2
+> 05749
+    2014.75  |    .283122   .2684281    -1.33   0.183     .0441519    1.8
+> 15508
+       2015  |   .3025285   .2948545    -1.23   0.220     .0447874    2.0
+> 43507
+    2015.25  |   .2402162   .2408617    -1.42   0.155     .0336599    1.7
+> 14318
+     2015.5  |   .4179031   .4327447    -0.84   0.399     .0549091    3.1
+> 80586
+    2015.75  |   .2447994   .2602538    -1.32   0.186       .03047    1.9
+> 66749
+       2016  |   .2925643   .3188632    -1.13   0.259     .0345545     2.
+> 47707
+             |
+       _cons |   .0000291   .0000287   -10.61   0.000     4.24e-06    .00
+> 02005
+   ln(hours) |          1  (exposure)
+-------------+-----------------------------------------------------------
+> -----
+    /lnalpha |   -1.60379   .1869429                     -1.970191   -1.2
+> 37389
+-------------+-----------------------------------------------------------
+> -----
+       alpha |   .2011327   .0376003                      .1394302    .29
+> 01408
+-------------------------------------------------------------------------
+> -----
+(est1 stored)
+
+. esttab using `"`directory'Model.`injury_label'.`time_label'.`violation_
+> level_label'.C.PP.2.csv"', replace plain wide p eform
+(note: file C:/Users/slevine2/Dropbox (Stanford Law School)/R-code/Injury
+> -Classification/Model Output + Summaries/big/V1/PS/estout 10-24/Model.P
+> S.Q.P.C.PP.2.csv not found)
+(output written to C:/Users/slevine2/Dropbox (Stanford Law School)/R-code
+> /Injury-Classification/Model Output + Summaries/big/V1/PS/estout 10-24/
+> Model.PS.Q.P.C.PP.2.csv)
+
+. /*
+> est store nbin
+> 
+> pause "next"
+> 
+> // test for over-dispersion
+> lrtest pois nbin, stats force 
+> 
+> pause "next" 
+> 
+> // final model + diagnostics/assessment
+> quietly nbreg dv `pp_lag_1_vars' `covariates' ib(freq).state ib(freq).t
+> ime if sample_pp == 1, vce(cl mineid) exposure(hours) iter(50) irr
+> */
+. predict cpp2_yhat 
+(option n assumed; predicted number of events)
+(57 missing values generated)
+
+. gen cpp2_res = dv - cpp2_yhat
+(57 missing values generated)
+
+. 
+. summ dv cpp2_yhat
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+          dv |      2,726    6.319516    6.454206          0         71
+   cpp2_yhat |      2,669    5.729754    4.940235   .0046414   37.86856
+
+. /*
+> pause "next"
+> 
+> scatter dv cpp2_yhat
+> 
+> pause "next"
+> 
+> scatter cpp2_res dv
+> 
+> pause "next"
+> 
+> scatter cpp2_res cpp2_yhat
+> */
+. pause "complete: C.PP.2"
+
+. 
+. ***********************************************************************
+> *********
+. ***********************************************************************
+> *********
+. 
+. // Model C.PP.3
+. 
+. // poisson model
+. /*
+> glm dv `pp_lag_4_vars' `covariates' ib(freq).state ib(freq).time if sam
+> ple_pp == 1, family(poisson) link(log) vce(cl mineid) exposure(hours) i
+> ter(50) eform
+>         
+> quietly poisson dv `pp_lag_4_vars' `covariates' ib(freq).state ib(freq)
+> .time if sample_pp == 1, vce(cl mineid) exposure(hours) iter(50) irr
+> est store pois
+> estat gof
+>         
+> pause "next"
+> 
+> // negative binomial model
+> glm dv `pp_lag_4_vars' `covariates' ib(freq).state ib(freq).time if sam
+> ple_pp == 1, family(nbinomial) link(log) vce(cl mineid) exposure(hours)
+>  iter(50) eform
+> 
+> pause "next"
+> */
+. eststo clear
+
+. eststo: nbreg dv `pp_lag_4_vars' `covariates' ib(freq).state ib(freq).t
+> ime if sample_pp == 1, vce(cl mineid) exposure(hours) iter(50) irr
+
+Fitting Poisson model:
+
+Iteration 0:   log pseudolikelihood = -4410.6604  
+Iteration 1:   log pseudolikelihood = -4398.3357  
+Iteration 2:   log pseudolikelihood = -4398.2919  
+Iteration 3:   log pseudolikelihood = -4398.2919  
+
+Fitting constant-only model:
+
+Iteration 0:   log pseudolikelihood = -4493.8241  
+Iteration 1:   log pseudolikelihood = -4307.7659  
+Iteration 2:   log pseudolikelihood = -4300.0907  
+Iteration 3:   log pseudolikelihood = -4300.0094  
+Iteration 4:   log pseudolikelihood = -4300.0094  
+
+Fitting full model:
+
+Iteration 0:   log pseudolikelihood = -4112.8389  
+Iteration 1:   log pseudolikelihood = -4071.2524  
+Iteration 2:   log pseudolikelihood =  -4068.269  
+Iteration 3:   log pseudolikelihood = -4068.2621  
+Iteration 4:   log pseudolikelihood = -4068.2621  
+
+Negative binomial regression                    Number of obs     =      
+> 1,700
+                                                Wald chi2(46)     =      
+>     .
+Dispersion           = mean                     Prob > chi2       =      
+>     .
+Log pseudolikelihood = -4068.2621               Pseudo R2         =     0
+> .0539
+
+                                (Std. Err. adjusted for 57 clusters in mi
+> neid)
+-------------------------------------------------------------------------
+> -----
+             |               Robust
+          dv |        IRR   Std. Err.      z    P>|z|     [95% Conf. Inte
+> rval]
+-------------+-----------------------------------------------------------
+> -----
+p48_pp_c_4~g |   1.000457   .0003019     1.51   0.130     .9998657    1.0
+> 01049
+p75_pp_c_4~g |   1.000006   3.92e-06     1.41   0.159     .9999978    1.0
+> 00013
+   mine_time |   1.024699    .035879     0.70   0.486     .9567357    1.0
+> 97489
+onsite_ins~s |   .9994671   .0002128    -2.50   0.012     .9990502    .99
+> 98842
+             |
+       state |
+         IL  |   1.190925   .1382145     1.51   0.132     .9486301    1.4
+> 95105
+         IN  |   .9243005   .1070436    -0.68   0.497      .736606    1.1
+> 59822
+         KY  |   .9397603   .1165425    -0.50   0.616     .7369823    1.1
+> 98332
+         NM  |   .6776148   .0666633    -3.96   0.000     .5587818    .82
+> 17194
+         OH  |   .9958107   .1018437    -0.04   0.967     .8149342    1.2
+> 16833
+         PA  |   .9659849   .1704704    -0.20   0.845     .6835277    1.3
+> 65163
+         UT  |   .3330472    .083588    -4.38   0.000      .203644    .54
+> 46782
+         VA  |   .4242595   .0640704    -5.68   0.000     .3155626    .57
+> 03974
+             |
+        time |
+       2007  |    1.07627   .1717951     0.46   0.645       .78714    1.4
+> 71604
+     2007.5  |   1.130886   .1982871     0.70   0.483     .8019937    1.5
+> 94655
+    2007.75  |   1.086585   .1721704     0.52   0.600     .7965082    1.4
+> 82305
+       2008  |    .853275    .153724    -0.88   0.378     .5994301    1.2
+> 14617
+    2008.25  |   .8354903   .1475949    -1.02   0.309     .5909775    1.1
+> 81168
+     2008.5  |   .9194561   .1925617    -0.40   0.688     .6099073    1.3
+> 86112
+    2008.75  |   .7380498   .1901571    -1.18   0.238     .4454257    1.2
+> 22914
+       2009  |   .7094379   .1846738    -1.32   0.187     .4259299    1.1
+> 81655
+    2009.25  |   .5936552   .1738591    -1.78   0.075     .3343871    1.0
+> 53948
+     2009.5  |   .6615614   .2184126    -1.25   0.211     .3463765    1.2
+> 63548
+    2009.75  |   .5922233   .2021871    -1.53   0.125     .3033069    1.1
+> 56348
+       2010  |   .5303222   .2095922    -1.60   0.109     .2444166    1.1
+> 50665
+    2010.25  |   .6963017   .3257809    -0.77   0.439     .2783191    1.7
+> 42015
+     2010.5  |   .6685108   .2890215    -0.93   0.352     .2864859    1.5
+> 59961
+    2010.75  |    .510602   .2443188    -1.40   0.160     .1998894    1.3
+> 04293
+       2011  |   .4798604   .2408708    -1.46   0.144     .1794096    1.2
+> 83465
+    2011.25  |    .549055   .2869592    -1.15   0.251     .1971252    1.5
+> 29289
+     2011.5  |   .5594909   .3185552    -1.02   0.308     .1832937    1.7
+> 07806
+    2011.75  |   .4213329   .2541162    -1.43   0.152     .1291947    1.3
+> 74061
+       2012  |    .428405   .2666694    -1.36   0.173     .1264756    1.4
+> 51117
+    2012.25  |   .3392165   .2318105    -1.58   0.114     .0888773    1.2
+> 94681
+     2012.5  |   .4823833   .3391917    -1.04   0.300     .1215803     1.
+> 91391
+    2012.75  |   .4005463   .2984724    -1.23   0.220     .0929755    1.7
+> 25587
+       2013  |   .3674318   .2888907    -1.27   0.203     .0786911    1.7
+> 15647
+    2013.25  |   .4061294   .3315604    -1.10   0.270     .0819881    2.0
+> 11768
+     2013.5  |   .4327758   .3686479    -0.98   0.325     .0815062    2.2
+> 97921
+    2013.75  |   .3049757   .2642263    -1.37   0.170     .0558209    1.6
+> 66223
+       2014  |   .3868993   .3520089    -1.04   0.297     .0650365    2.3
+> 01646
+    2014.25  |   .3901614   .3672711    -1.00   0.317     .0616569    2.4
+> 68919
+     2014.5  |   .4184413   .4160888    -0.88   0.381     .0595962    2.9
+> 37992
+    2014.75  |   .3253304   .3344324    -1.09   0.275     .0433819    2.4
+> 39725
+       2015  |   .3424786    .361522    -1.02   0.310     .0432614    2.7
+> 11226
+    2015.25  |    .271542   .2950436    -1.20   0.230     .0322823    2.2
+> 84068
+     2015.5  |   .4661023   .5231907    -0.68   0.496     .0516445    4.2
+> 06669
+    2015.75  |   .2805967   .3238277    -1.10   0.271     .0292239    2.6
+> 94184
+       2016  |   .3337346   .3955608    -0.93   0.355     .0326971    3.4
+> 06377
+             |
+       _cons |   .0000305   .0000325    -9.75   0.000     3.77e-06    .00
+> 02466
+   ln(hours) |          1  (exposure)
+-------------+-----------------------------------------------------------
+> -----
+    /lnalpha |  -1.622638   .1904241                     -1.995862   -1.2
+> 49414
+-------------+-----------------------------------------------------------
+> -----
+       alpha |   .1973773   .0375854                      .1358964    .28
+> 66728
+-------------------------------------------------------------------------
+> -----
+(est1 stored)
+
+. esttab using `"`directory'Model.`injury_label'.`time_label'.`violation_
+> level_label'.C.PP.3.csv"', replace plain wide p eform
+(note: file C:/Users/slevine2/Dropbox (Stanford Law School)/R-code/Injury
+> -Classification/Model Output + Summaries/big/V1/PS/estout 10-24/Model.P
+> S.Q.P.C.PP.3.csv not found)
+(output written to C:/Users/slevine2/Dropbox (Stanford Law School)/R-code
+> /Injury-Classification/Model Output + Summaries/big/V1/PS/estout 10-24/
+> Model.PS.Q.P.C.PP.3.csv)
+
+. /*
+> est store nbin
+> 
+> pause "next"
+> 
+> // test for over-dispersion
+> lrtest pois nbin, stats force 
+> 
+> pause "next" 
+> 
+> // final model + diagnostics/assessment
+> quietly nbreg dv `pp_lag_4_vars' `covariates' ib(freq).state ib(freq).t
+> ime if sample_pp == 1, vce(cl mineid) exposure(hours) iter(50) irr
+> */
+. predict cpp3_yhat 
+(option n assumed; predicted number of events)
+(90 missing values generated)
+
+. gen cpp3_res = dv - cpp3_yhat
+(90 missing values generated)
+
+. 
+. summ dv cpp3_yhat
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+          dv |      2,726    6.319516    6.454206          0         71
+   cpp3_yhat |      2,636    5.755337     4.97249   .0048688   39.66513
+
+. /*
+> pause "next"
+> 
+> scatter dv cpp3_yhat
+> 
+> pause "next"
+> 
+> scatter cpp3_res dv
+> 
+> pause "next"
+> 
+> scatter cpp3_res cpp3_yhat
+> */
+. pause "complete: C.PP.3"
+
+. 
+. ***********************************************************************
+> *********
+. ***********************************************************************
+> *********
+. 
+. // Model C.PP.4
+. 
+. // poisson model
+. /*
+> glm dv `pp_lag_all_vars' `covariates' ib(freq).state ib(freq).time if s
+> ample_pp == 1, family(poisson) link(log) vce(cl mineid) exposure(hours)
+>  iter(50) eform
+>         
+> quietly poisson dv `pp_lag_all_vars' `covariates' ib(freq).state ib(fre
+> q).time if sample_pp == 1, vce(cl mineid) exposure(hours) iter(50) irr
+> est store pois
+> estat gof
+>         
+> pause "next"
+> 
+> // negative binomial model
+> glm dv `pp_lag_all_vars' `covariates' ib(freq).state ib(freq).time if s
+> ample_pp == 1, family(nbinomial) link(log) vce(cl mineid) exposure(hour
+> s) iter(50) eform
+> 
+> pause "next"
+> */ 
+. eststo clear
+
+. eststo: nbreg dv `pp_lag_all_vars' `covariates' ib(freq).state ib(freq)
+> .time if sample_pp == 1, vce(cl mineid) exposure(hours) iter(50) irr
+
+Fitting Poisson model:
+
+Iteration 0:   log pseudolikelihood = -3800.6383  
+Iteration 1:   log pseudolikelihood = -3787.9317  
+Iteration 2:   log pseudolikelihood = -3787.8845  
+Iteration 3:   log pseudolikelihood = -3787.8845  
+
+Fitting constant-only model:
+
+Iteration 0:   log pseudolikelihood = -3878.8406  
+Iteration 1:   log pseudolikelihood = -3649.6385  
+Iteration 2:   log pseudolikelihood = -3642.1314  
+Iteration 3:   log pseudolikelihood =  -3642.056  
+Iteration 4:   log pseudolikelihood =  -3642.056  
+
+Fitting full model:
+
+Iteration 0:   log pseudolikelihood = -3516.2105  
+Iteration 1:   log pseudolikelihood = -3491.8057  
+Iteration 2:   log pseudolikelihood = -3490.9681  
+Iteration 3:   log pseudolikelihood = -3490.9674  
+Iteration 4:   log pseudolikelihood = -3490.9674  
+
+Negative binomial regression                    Number of obs     =      
+> 1,393
+                                                Wald chi2(45)     =      
+>     .
+Dispersion           = mean                     Prob > chi2       =      
+>     .
+Log pseudolikelihood = -3490.9674               Pseudo R2         =     0
+> .0415
+
+                                (Std. Err. adjusted for 48 clusters in mi
+> neid)
+-------------------------------------------------------------------------
+> -----
+             |               Robust
+          dv |        IRR   Std. Err.      z    P>|z|     [95% Conf. Inte
+> rval]
+-------------+-----------------------------------------------------------
+> -----
+p48_pp_c_l~l |   1.000273   .0001441     1.89   0.058     .9999902    1.0
+> 00555
+p75_pp_c_l~l |   .9999996   5.89e-07    -0.61   0.545     .9999985    1.0
+> 00001
+   mine_time |   1.000873   .0290961     0.03   0.976     .9454398    1.0
+> 59556
+onsite_ins~s |   .9999071     .00017    -0.55   0.585      .999574     1.
+> 00024
+             |
+       state |
+         IL  |   1.124148   .1190308     1.11   0.269     .9134691    1.3
+> 83418
+         IN  |   .7641564   .1092176    -1.88   0.060     .5774624    1.0
+> 11209
+         KY  |   1.019054   .1140215     0.17   0.866     .8183835    1.2
+> 68931
+         NM  |   .7045959   .0725966    -3.40   0.001     .5757557    .86
+> 22674
+         OH  |   .9705083    .099459    -0.29   0.770     .7939021    1.1
+> 86401
+         PA  |   .7814586   .1306624    -1.47   0.140     .5630958      1
+> .0845
+         UT  |   .4831019   .0688695    -5.10   0.000     .3653374    .63
+> 88273
+         VA  |   .4057755   .0612552    -5.97   0.000     .3018491    .54
+> 54838
+             |
+        time |
+       2007  |   1.020226   .1680552     0.12   0.903     .7387261    1.4
+> 08994
+     2007.5  |   1.198176   .2066988     1.05   0.295     .8544349    1.6
+> 80206
+    2007.75  |   1.098123   .1716622     0.60   0.549     .8083295     1.
+> 49181
+       2008  |   .8921119   .1556532    -0.65   0.513     .6337296    1.2
+> 55841
+    2008.25  |   .8616921   .1462844    -0.88   0.381     .6178011    1.2
+> 01865
+     2008.5  |   1.031366   .2057361     0.15   0.877     .6976154     1.
+> 52479
+    2008.75  |   .8524127   .2120284    -0.64   0.521     .5235073     1.
+> 38796
+       2009  |   .8709875   .1971281    -0.61   0.542     .5589357    1.3
+> 57257
+    2009.25  |   .7605517   .1923526    -1.08   0.279     .4632866    1.2
+> 48555
+     2009.5  |   .8338393   .2518945    -0.60   0.547     .4612569    1.5
+> 07377
+    2009.75  |   .7669344   .2244432    -0.91   0.365     .4321696    1.3
+> 61013
+       2010  |   .6713102      .2474    -1.08   0.280     .3260073    1.3
+> 82354
+    2010.25  |   .9088323    .372149    -0.23   0.815     .4073178    2.0
+> 27842
+     2010.5  |   .8794845   .3154001    -0.36   0.720     .4354827    1.7
+> 76174
+    2010.75  |   .7205237   .2942457    -0.80   0.422      .323621    1.6
+> 04205
+       2011  |   .6391566   .2803826    -1.02   0.308     .2705238    1.5
+> 10111
+    2011.25  |   .6939878   .3048789    -0.83   0.406     .2933639    1.6
+> 41712
+     2011.5  |   .7550872   .3403997    -0.62   0.533     .3120817    1.8
+> 26947
+    2011.75  |   .5838232   .2893166    -1.09   0.277     .2210365    1.5
+> 42051
+       2012  |   .6162526   .3005182    -0.99   0.321     .2369554    1.6
+> 02695
+    2012.25  |   .5371373   .2864025    -1.17   0.244     .1888962    1.5
+> 27381
+     2012.5  |   .7493036   .4131283    -0.52   0.601      .254301     2.
+> 20784
+    2012.75  |   .6070294   .3388032    -0.89   0.371     .2032946    1.8
+> 12565
+       2013  |   .5789381   .3461117    -0.91   0.361     .1793704    1.8
+> 68588
+    2013.25  |   .6757386   .4339845    -0.61   0.542     .1919134    2.3
+> 79316
+     2013.5  |   .7239685   .4675245    -0.50   0.617     .2041881    2.5
+> 66899
+    2013.75  |   .5847459   .3867485    -0.81   0.417     .1599506    2.1
+> 37708
+       2014  |   .6863323   .5116726    -0.50   0.614     .1592022    2.9
+> 58829
+    2014.25  |   .7070718   .5443923    -0.45   0.653     .1563515    3.1
+> 97606
+     2014.5  |   .7884404   .6356469    -0.29   0.768     .1623766    3.8
+> 28373
+    2014.75  |   .6357896   .5255302    -0.55   0.584     .1258138     3.
+> 21291
+       2015  |   .6550638   .5389363    -0.51   0.607     .1306111     3.
+> 28539
+    2015.25  |   .5492532   .5022831    -0.66   0.512     .0914877    3.2
+> 97482
+     2015.5  |   .9340441   .8522457    -0.07   0.940     .1562102    5.5
+> 85029
+    2015.75  |   .5847909   .5622657    -0.56   0.577     .0888354    3.8
+> 49596
+       2016  |   .6858145   .6744296    -0.38   0.701     .0998011    4.7
+> 12787
+             |
+       _cons |   .0000556   .0000508   -10.73   0.000     9.27e-06    .00
+> 03329
+   ln(hours) |          1  (exposure)
+-------------+-----------------------------------------------------------
+> -----
+    /lnalpha |  -1.731729   .1980929                     -2.119984   -1.3
+> 43474
+-------------+-----------------------------------------------------------
+> -----
+       alpha |   .1769782   .0350581                      .1200336    .26
+> 09376
+-------------------------------------------------------------------------
+> -----
+(est1 stored)
+
+. esttab using `"`directory'Model.`injury_label'.`time_label'.`violation_
+> level_label'.C.PP.4.csv"', replace plain wide p eform
+(note: file C:/Users/slevine2/Dropbox (Stanford Law School)/R-code/Injury
+> -Classification/Model Output + Summaries/big/V1/PS/estout 10-24/Model.P
+> S.Q.P.C.PP.4.csv not found)
+(output written to C:/Users/slevine2/Dropbox (Stanford Law School)/R-code
+> /Injury-Classification/Model Output + Summaries/big/V1/PS/estout 10-24/
+> Model.PS.Q.P.C.PP.4.csv)
+
+. /*
+> est store nbin
+> 
+> pause "next"
+> 
+> // test for over-dispersion
+> lrtest pois nbin, stats force 
+> 
+> pause "next"
+> 
+> // final model + diagnostics/assessment
+> quietly nbreg dv `pp_lag_all_vars' `covariates' ib(freq).state ib(freq)
+> .time if sample_pp == 1, vce(cl mineid) exposure(hours) iter(50) irr
+> */
+. predict cpp4_yhat 
+(option n assumed; predicted number of events)
+(445 missing values generated)
+
+. gen cpp4_res = dv - cpp4_yhat
+(445 missing values generated)
+
+. 
+. summ dv cpp4_yhat
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+          dv |      2,726    6.319516    6.454206          0         71
+   cpp4_yhat |      2,281    6.765936    5.005319   .0191229   33.54415
+
+. /*
+> pause "next"
+> 
+> scatter dv cpp4_yhat
+> 
+> pause "next"
+> 
+> scatter cpp4_res dv
+> 
+> pause "next"
+> 
+> scatter cpp4_res cpp4_yhat
+> */
+. pause "complete: C.PP.4"
+
+. 
+. ***********************************************************************
+> *********
+. ***********************************************************************
+> *********
+. 
+. // Model B.V.1
+. 
+. eststo clear
+
+. capture eststo: logit dv_indicator `count_vars' `covariates' ib(freq).s
+> tate ib(freq).time, vce(cl mineid) offset(lnhours) iter(50) or
+
+. capture local rc = _rc 
+
+. 
+. if "`rc'" == "" {
+.         esttab using `"`directory'Model.`injury_label'.`time_label'.`vi
+> olation_level_label'.B.V.1.csv"', replace plain wide p eform
+. 
+.         pause "next"
+. 
+.         // diagnostics/assessment
+.         lfit
+. 
+.         pause "next"
+. 
+.         linktest
+. 
+.         pause "next"
+. 
+.         estat classification
+. 
+.         pause "next"
+. 
+.         predict bv1_yhat 
+.         gen bv1_res = dv_indicator - bv1_yhat
+. 
+.         summ dv_indicator bv1_yhat
+.         /*
+>         pause "next"
+> 
+>         scatter dv_indicator bv1_yhat
+> 
+>         pause "next"
+> 
+>         scatter bv1_res dv_indicator
+> 
+>         pause "next"
+> 
+>         scatter bv1_res bv1_yhat
+>         */
+.         pause "complete: B.V.1"
+. }
+
+. ***********************************************************************
+> *********
+. ***********************************************************************
+> *********
+. 
+. // Model B.V.2
+. 
+. eststo clear
+
+. capture eststo: logit dv_indicator `count_lag_1_vars' `covariates' ib(f
+> req).state ib(freq).time, vce(cl mineid) offset(lnhours) iter(50) or
+
+. capture local rc = _rc 
+
+. 
+. if "`rc'" == "" {
+.         esttab using `"`directory'Model.`injury_label'.`time_label'.`vi
+> olation_level_label'.B.V.2.csv"', replace plain wide p eform
+. 
+.         pause "next"
+. 
+.         // diagnostics/assessment
+.         lfit
+. 
+.         pause "next"
+. 
+.         linktest
+. 
+.         pause "next"
+. 
+.         estat classification
+. 
+.         pause "next"
+. 
+.         predict bv2_yhat 
+.         gen bv2_res = dv_indicator - bv2_yhat
+. 
+.         summ dv_indicator bv2_yhat
+.         /*
+>         pause "next"
+> 
+>         scatter dv_indicator bv2_yhat
+> 
+>         pause "next"
+> 
+>         scatter bv2_res dv_indicator
+> 
+>         pause "next"
+> 
+>         scatter bv2_res bv2_yhat
+>         */
+.         pause "complete: B.V.2"
+. }
+
+. ***********************************************************************
+> *********
+. ***********************************************************************
+> *********
+. 
+. // Model B.V.3
+. 
+. eststo clear
+
+. capture eststo: logit dv_indicator `count_lag_4_vars' `covariates' ib(f
+> req).state ib(freq).time, vce(cl mineid) offset(lnhours) iter(50) or
+
+. capture local rc = _rc 
+
+. 
+. if "`rc'" == "" {
+.         esttab using `"`directory'Model.`injury_label'.`time_label'.`vi
+> olation_level_label'.B.V.3.csv"', replace plain wide p eform
+. 
+.         pause "next"
+. 
+.         // diagnostics/assessment
+.         lfit
+. 
+.         pause "next"
+. 
+.         linktest
+. 
+.         pause "next"
+. 
+.         estat classification
+. 
+.         pause "next"
+. 
+.         predict bv3_yhat 
+.         gen bv3_res = dv_indicator - bv3_yhat
+. 
+.         summ dv_indicator bv3_yhat
+.         /*
+>         pause "next"
+> 
+>         scatter dv_indicator bv3_yhat
+> 
+>         pause "next"
+> 
+>         scatter bv3_res dv_indicator
+> 
+>         pause "next"
+> 
+>         scatter bv3_res bv3_yhat
+>         */
+.         pause "complete: B.V.3"
+. }
+
+. ***********************************************************************
+> *********
+. ***********************************************************************
+> *********
+. 
+. // Model B.V.4
+. 
+. eststo clear
+
+. capture eststo: logit dv_indicator `count_lag_all_vars' `covariates' ib
+> (freq).state ib(freq).time, vce(cl mineid) offset(lnhours) iter(50) or
+
+. capture local rc = _rc 
+
+. 
+. if "`rc'" == "" {
+.         esttab using `"`directory'Model.`injury_label'.`time_label'.`vi
+> olation_level_label'.B.V.4.csv"', replace plain wide p eform
+. 
+.         pause "next"
+. 
+.         // diagnostics/assessment
+.         lfit
+. 
+.         pause "next"
+. 
+.         linktest
+. 
+.         pause "next"
+. 
+.         estat classification
+. 
+.         pause "next"
+. 
+.         predict bv4_yhat 
+.         gen bv4_res = dv_indicator - bv4_yhat
+. 
+.         summ dv_indicator bv4_yhat
+.         /*
+>         pause "next"
+> 
+>         scatter dv_indicator bv4_yhat
+> 
+>         pause "next"
+> 
+>         scatter bv4_res dv_indicator
+> 
+>         pause "next"
+> 
+>         scatter bv4_res bv4_yhat
+>         */
+.         pause "complete: B.V.4"
+. }
+
+. ***********************************************************************
+> *********
+. ***********************************************************************
+> *********
+. 
+. // Model B.SSV.1
+. 
+. eststo clear
+
+. capture eststo: logit dv_indicator `ss_vars' `covariates' ib(freq).stat
+> e ib(freq).time, vce(cl mineid) offset(lnhours) iter(50) or
+
+. capture local rc = _rc 
+
+. 
+. if "`rc'" == "" {
+.         esttab using `"`directory'Model.`injury_label'.`time_label'.`vi
+> olation_level_label'.B.SSV.1.csv"', replace plain wide p eform
+. 
+.         pause "next"
+. 
+.         // diagnostics/assessment
+.         lfit
+. 
+.         pause "next"
+. 
+.         linktest
+. 
+.         pause "next"
+. 
+.         estat classification
+. 
+.         pause "next"
+. 
+.         predict bssv1_yhat 
+.         gen bssv1_res = dv_indicator - bssv1_yhat
+. 
+.         summ dv_indicator bssv1_yhat
+.         /*
+>         pause "next"
+> 
+>         scatter dv_indicator bssv1_yhat
+> 
+>         pause "next"
+> 
+>         scatter bssv1_res dv_indicator
+> 
+>         pause "next"
+> 
+>         scatter bssv1_res bssv1_yhat
+>         */
+.         pause "complete: B.SSV.1"
+. }
+
+. ***********************************************************************
+> *********
+. ***********************************************************************
+> *********
+. 
+. // Model B.SSV.2
+. 
+. eststo clear
+
+. capture eststo: logit dv_indicator `ss_lag_1_vars' `covariates' ib(freq
+> ).state ib(freq).time, vce(cl mineid) offset(lnhours) iter(50) or
+
+. capture local rc = _rc 
+
+. 
+. if "`rc'" == "" {
+.         esttab using `"`directory'Model.`injury_label'.`time_label'.`vi
+> olation_level_label'.B.SSV.2.csv"', replace plain wide p eform
+. 
+.         pause "next"
+. 
+.         // diagnostics/assessment
+.         lfit
+. 
+.         pause "next"
+. 
+.         linktest
+. 
+.         pause "next"
+. 
+.         estat classification
+. 
+.         pause "next"
+. 
+.         predict bssv2_yhat 
+.         gen bssv2_res = dv_indicator - bssv2_yhat
+. 
+.         summ dv_indicator bssv2_yhat
+.         /*
+>         pause "next"
+> 
+>         scatter dv_indicator bssv2_yhat
+> 
+>         pause "next"
+> 
+>         scatter bssv2_res dv_indicator
+> 
+>         pause "next"
+> 
+>         scatter bssv2_res bssv2_yhat
+>         */
+.         pause "complete: B.SSV.2"
+. }
+
+. ***********************************************************************
+> *********
+. ***********************************************************************
+> *********
+. 
+. // Model B.SSV.3
+. 
+. eststo clear
+
+. capture eststo: logit dv_indicator `ss_lag_4_vars' `covariates' ib(freq
+> ).state ib(freq).time, vce(cl mineid) offset(lnhours) iter(50) or
+
+. capture local rc = _rc 
+
+. 
+. if "`rc'" == "" {
+.         esttab using `"`directory'Model.`injury_label'.`time_label'.`vi
+> olation_level_label'.B.SSV.3.csv"', replace plain wide p eform
+. 
+.         pause "next"
+. 
+.         // diagnostics/assessment
+.         lfit
+. 
+.         pause "next"
+. 
+.         linktest
+. 
+.         pause "next"
+. 
+.         estat classification
+. 
+.         pause "next"
+. 
+.         predict bssv3_yhat 
+.         gen bssv3_res = dv_indicator - bssv3_yhat
+. 
+.         summ dv_indicator bssv3_yhat
+.         /*
+>         pause "next"
+> 
+>         scatter dv_indicator bssv3_yhat
+> 
+>         pause "next"
+> 
+>         scatter bssv3_res dv_indicator
+> 
+>         pause "next"
+> 
+>         scatter bssv3_res bssv3_yhat
+>         */
+.         pause "complete: B.SSV.3"
+. }
+
+. ***********************************************************************
+> *********
+. ***********************************************************************
+> *********
+. 
+. // Model B.SSV.4
+. 
+. eststo clear
+
+. capture eststo: logit dv_indicator `ss_lag_all_vars' `covariates' ib(fr
+> eq).state ib(freq).time, vce(cl mineid) offset(lnhours) iter(50) or
+
+. capture local rc = _rc 
+
+. 
+. if "`rc'" == "" {
+.         esttab using `"`directory'Model.`injury_label'.`time_label'.`vi
+> olation_level_label'.B.SSV.4.csv"', replace plain wide p eform
+. 
+.         pause "next"
+. 
+.         // diagnostics/assessment
+.         lfit
+. 
+.         pause "next"
+. 
+.         linktest
+. 
+.         pause "next"
+. 
+.         estat classification
+. 
+.         pause "next"
+. 
+.         predict bssv4_yhat 
+.         gen bssv4_res = dv_indicator - bssv4_yhat
+. 
+.         summ dv_indicator bssv4_yhat
+.         /*
+>         pause "next"
+> 
+>         scatter dv_indicator bssv4_yhat
+> 
+>         pause "next"
+> 
+>         scatter bssv4_res dv_indicator
+> 
+>         pause "next"
+> 
+>         scatter bssv4_res bssv4_yhat
+>         */
+.         pause "complete: B.SSV.4"
+. }
+
+. ***********************************************************************
+> *********
+. ***********************************************************************
+> *********
+. 
+. // Model B.PP.1
+. 
+. eststo clear
+
+. capture eststo: logit dv_indicator `pp_vars' `covariates' ib(freq).stat
+> e ib(freq).time if sample_pp == 1, vce(cl mineid) offset(lnhours) iter(
+> 50) or
+
+. capture local rc = _rc 
+
+. 
+. if "`rc'" == "" {
+.         esttab using `"`directory'Model.`injury_label'.`time_label'.`vi
+> olation_level_label'.B.PP.1.csv"', replace plain wide p eform
+. 
+.         pause "next"
+. 
+.         // diagnostics/assessment
+.         lfit
+. 
+.         pause "next"
+. 
+.         linktest
+. 
+.         pause "next"
+. 
+.         estat classification
+. 
+.         pause "next"
+. 
+.         predict bpp1_yhat 
+.         gen bpp1_res = dv_indicator - bpp1_yhat
+. 
+.         summ dv_indicator bpp1_yhat
+.         /*
+>         pause "next"
+> 
+>         scatter dv_indicator bpp1_yhat
+> 
+>         pause "next"
+> 
+>         scatter bpp1_res dv_indicator
+> 
+>         pause "next"
+> 
+>         scatter bpp1_res bpp1_yhat
+>         */
+.         pause "complete: B.PP.1"
+. }
+
+. ***********************************************************************
+> *********
+. ***********************************************************************
+> *********
+. 
+. // Model B.PP.2
+. 
+. eststo clear
+
+. capture eststo: logit dv_indicator `pp_lag_1_vars' `covariates' ib(freq
+> ).state ib(freq).time if sample_pp == 1, vce(cl mineid) offset(lnhours)
+>  iter(50) or
+
+. capture local rc = _rc 
+
+. 
+. if "`rc'" == "" {
+.         esttab using `"`directory'Model.`injury_label'.`time_label'.`vi
+> olation_level_label'.B.PP.2.csv"', replace plain wide p eform
+. 
+.         pause "next"
+. 
+.         // diagnostics/assessment
+.         lfit
+. 
+.         pause "next"
+. 
+.         linktest
+. 
+.         pause "next"
+. 
+.         estat classification
+. 
+.         pause "next"
+. 
+.         predict bpp2_yhat 
+.         gen bpp2_res = dv_indicator - bpp2_yhat
+. 
+.         summ dv_indicator bpp2_yhat
+.         /*
+>         pause "next"
+> 
+>         scatter dv_indicator bpp2_yhat
+> 
+>         pause "next"
+> 
+>         scatter bpp2_res dv_indicator
+> 
+>         pause "next"
+> 
+>         scatter bpp2_res bpp2_yhat
+>         */
+.         pause "complete: B.PP.2"
+. }
+
+. ***********************************************************************
+> *********
+. ***********************************************************************
+> *********
+. 
+. // Model B.PP.3
+. 
+. eststo clear
+
+. capture eststo: logit dv_indicator `pp_lag_4_vars' `covariates' ib(freq
+> ).state ib(freq).time if sample_pp == 1, vce(cl mineid) offset(lnhours)
+>  iter(50) or
+
+. capture local rc = _rc 
+
+. 
+. if "`rc'" == "" {
+.         esttab using `"`directory'Model.`injury_label'.`time_label'.`vi
+> olation_level_label'.B.PP.3.csv"', replace plain wide p eform
+. 
+.         pause "next"
+. 
+.         // diagnostics/assessment
+.         lfit
+. 
+.         pause "next"
+. 
+.         linktest
+. 
+.         pause "next"
+. 
+.         estat classification
+. 
+.         pause "next"
+. 
+.         predict bpp3_yhat 
+.         gen bpp3_res = dv_indicator - bpp3_yhat
+. 
+.         summ dv_indicator bpp3_yhat
+.         /*
+>         pause "next"
+> 
+>         scatter dv_indicator bpp3_yhat
+> 
+>         pause "next"
+> 
+>         scatter bpp3_res dv_indicator
+> 
+>         pause "next"
+> 
+>         scatter bpp3_res bpp3_yhat
+>         */
+.         pause "complete: B.PP.3"
+. }
+
+. ***********************************************************************
+> *********
+. ***********************************************************************
+> *********
+. 
+. // Model B.PP.4
+. 
+. eststo clear
+
+. capture eststo: logit dv_indicator `pp_lag_all_vars' `covariates' ib(fr
+> eq).state ib(freq).time if sample_pp == 1, vce(cl mineid) offset(lnhour
+> s) iter(50) or
+
+. capture local rc = _rc 
+
+. 
+. if "`rc'" == "" {
+.         esttab using `"`directory'Model.`injury_label'.`time_label'.`vi
+> olation_level_label'.B.PP.4.csv"', replace plain wide p eform
+. 
+.         pause "next"
+. 
+.         // diagnostics/assessment
+.         lfit
+. 
+.         pause "next"
+. 
+.         linktest
+. 
+.         pause "next"
+. 
+.         estat classification
+. 
+.         pause "next"
+. 
+.         predict bpp4_yhat 
+.         gen bpp4_res = dv_indicator - bpp4_yhat
+. 
+.         summ dv_indicator bpp4_yhat
+.         /*
+>         pause "next"
+> 
+>         scatter dv_indicator bpp4_yhat
+> 
+>         pause "next"
+> 
+>         scatter bpp4_res dv_indicator
+> 
+>         pause "next"
+> 
+>         scatter bpp4_res bpp4_yhat
+>         */
+.         pause "complete: B.PP.4"
+. }
+
+. ***********************************************************************
+> *********
+. ***********************************************************************
+> *********
+. 
+. log close
+      name:  <unnamed>
+       log:  C:/Users/slevine2/Dropbox (Stanford Law School)/R-code/Injur
+> y-Classification/Model Output + Summaries/big/V1/PS/log 10-24/log_part_
+> quarter.txt
+  log type:  text
+ closed on:  24 Oct 2016, 21:14:32
+-------------------------------------------------------------------------

@@ -1,0 +1,1161 @@
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      name:  <unnamed>
+       log:  C:/Users/slevine2/Dropbox (Stanford Law School)/R-code/Injury-Classification/Model Output + Summaries/bad/inj/V2/PS/log 10-24/log_part_year.txt
+  log type:  text
+ opened on:  26 Oct 2016, 15:28:08
+. }
+
+. 
+. ********************************************************************************
+. ********************************************************************************
+. // DATA SET-UP
+. 
+. // format variables
+. if "`injury_type'" == "MR" {
+.         rename MR dv
+.         rename MR_indicator dv_indicator
+.         local injury_label "MR"
+.         local relevant_parts "47 48 71 72 75 77"
+. }
+
+. 
+. if "`injury_type'" == "PS" {
+.         rename PS dv
+.         rename PS_indicator dv_indicator
+.         local injury_label "PS"
+.         local relevant_parts "48 75"
+. }
+
+. 
+. if "`violation_level'" == "part" {
+.         local violation_level_label "P"
+. }
+
+. 
+. if "`violation_level'" == "subpart" {
+.         local violation_level_label "SP"
+. }
+
+. 
+. // flag obs after or equal to 2007 to use in penlaty points analyses (assessments changed for the last time in 2007)
+. gen sample_pp = quarter >= 2007 
+
+. 
+. // format time
+. tostring quarter, replace
+quarter was double now str7
+
+. encode quarter, gen(quart)
+
+. drop quarter year
+
+. rename quart time
+
+. local time_label "Q" // will be overwritten if unit_of_analysis is year_sum or year_avg
+
+. 
+. // collapse to quarter levels (sums)
+. if "`unit_of_analysis'" == "year_sum" { // collapse to mine years - sums 
+.         local time_label "Y"
+.         
+.         // count number of complete quarters per year
+.         decode time, gen(year)
+.         replace year = regexs(0) if(regexm(year, "^[0-9][0-9][0-9][0-9]"))
+(1,780 real changes made)
+.         gen marker = 1
+.         bysort mineid year: egen num_quarts = sum(marker)
+.                 /*tab num_quarts
+>                          num_quarts |      Freq.     Percent        Cum.
+>                         ------------+-----------------------------------
+>                                           1 |      1,100        3.63        3.63
+>                                           2 |      1,666        5.50        9.13
+>                                           3 |      2,511        8.29       17.42
+>                                           4 |     25,012       82.58      100.00
+>                         ------------+-----------------------------------
+>                                   Total |     30,289      100.00 - Sarah 9/21/2016 @ 10:54 PM */
+.         drop if num_quarts < 4
+(224 observations deleted)
+.         
+.         // collapse to the mine-year 
+.         collapse (sum) p* sp* onsite_insp_hours hours dv* (firstnm) state sample_pp union longwall, by(mineid year)
+.         rename year time
+.         encode time, gen(time2)
+.         drop time
+.         rename time2 time
+.         bys mineid: gen mine_time = _n
+.         
+.         pause "complete: year_sum collapse"
+. }
+
+. // collapse to quarter levels (means)
+. if "`unit_of_analysis'" == "year_avg" { // collapse on mine years - a
+> verages
+.         local time_label "Y"
+.         decode time, gen(year)
+.         replace year = regexs(0) if(regexm(year, "^[0-9][0-9][0-9][0-
+> 9]"))
+.         pause "collapsing to mine-year"
+.         collapse (mean) p* sp* onsite_insp_hours hours dv* (firstnm) 
+> state sample_pp union longwall, by(mineid year)
+.         rename year time
+.         encode time, gen(time2)
+.         drop time
+.         rename time2 time
+.         bys mineid: gen mine_time = _n
+.         
+.         pause "complete: year_avg collapse"
+. }
+
+. // format depvars
+. drop dv_indicator
+
+. gen dv_binary = 0 if dv == 0
+(505 missing values generated)
+
+. replace dv_binary = 1 if dv != 0
+(505 real changes made)
+
+. rename dv_binary dv_indicator
+
+.         
+. gen lnhours = log(hours)
+
+. pause "complete: data formatting"
+
+. 
+. // group variables
+. local covariates "mine_time onsite_insp_hours"
+
+. 
+. if "`union_status'" == "on" {
+.         local covariates "`covariates' union longwall"
+. }
+
+. 
+. *** lag 0 ***
+. if "`violation_level'" == "part" {
+. 
+.         foreach x in `relevant_parts' {
+  2.                 foreach var of varlist p`x' {
+  3.                         local count_vars `count_vars' `var'
+  4.                 }
+  5.         }
+.         noi di "`count_vars'"
+p48 p75
+. 
+.         foreach var of varlist p*ss {
+  2.                 local ss_vars `ss_vars' `var'
+  3.         }
+.         noi di "`ss_vars'"
+p48_ss p75_ss
+. 
+.         foreach var of varlist p*pp {
+  2.                 local pp_vars `pp_vars' `var'
+  3.         }
+.         noi di "`pp_vars'"
+p48_pp p75_pp
+.         
+.         pause "complete: variable groups - part no lag"
+. }
+
+. 
+. if "`violation_level'" == "subpart" {
+. 
+.         foreach x in 1 2 3 4 5 6 7 8 9 0 {
+  2.                 foreach var of varlist sp*`x' {
+  3.                         local count_vars `count_vars' `var'
+  4.                 }
+  5.         }
+.         noi di "`count_vars'"
+. 
+.         foreach var of varlist sp*ss {
+  2.                 local ss_vars `ss_vars' `var'
+  3.         }
+.         noi di "`ss_vars'"
+. 
+.         foreach var of varlist sp*pp {
+  2.                 local pp_vars `pp_vars' `var'
+  3.         }
+.         noi di "`pp_vars'"
+.         
+.         pause "complete: variable groups - subpart no lag"
+. }
+
+. 
+. *** lag 1 ***
+. if "`violation_level'" == "part" {
+. 
+.         foreach x in `relevant_parts' {
+  2.                 foreach var of varlist p`x'_1lag  {
+  3.                         local count_lag_1_vars `count_lag_1_vars' 
+> `var'
+  4.                 }
+  5.         }
+.         noi di "`count_lag_1_vars'"
+p48_1lag p75_1lag
+. 
+.         foreach var of varlist p*ss_1lag  {
+  2.                 local ss_lag_1_vars `ss_lag_1_vars' `var'
+  3.         }
+.         noi di "`ss_lag_1_vars'"
+p48_ss_1lag p75_ss_1lag
+. 
+.         foreach var of varlist p*pp_1lag  {
+  2.                 local pp_lag_1_vars `pp_lag_1_vars' `var'
+  3.         }
+.         noi di "`pp_lag_1_vars'"
+p48_pp_1lag p75_pp_1lag
+.         
+.         pause "complete: variable groups - part lag 1"
+. }
+
+. 
+. if "`violation_level'" == "subpart" {
+. 
+.         foreach x in 1 2 3 4 5 6 7 8 9 0 {
+  2.                 foreach var of varlist sp*`x'_1lag  {
+  3.                         local count_lag_1_vars `count_lag_1_vars' 
+> `var'
+  4.                 }
+  5.         }
+.         noi di "`count_lag_1_vars'"
+. 
+.         foreach var of varlist sp*ss_1lag  {
+  2.                 local ss_lag_1_vars `ss_lag_1_vars' `var'
+  3.         }
+.         noi di "`ss_lag_1_vars'"
+. 
+. 
+.         foreach var of varlist sp*pp_1lag  {
+  2.                 local pp_lag_1_vars `pp_lag_1_vars' `var'
+  3.         }
+.         noi di "`pp_lag_1_vars'"
+. 
+.         pause "complete: variable groups - subpart lag 1"
+. } 
+
+. 
+. *** lag 4 ***
+. if "`violation_level'" == "part" {
+.         
+.         foreach x in `relevant_parts' {
+  2.                 foreach var of varlist p`x'_c_4lag  {
+  3.                         local count_lag_4_vars `count_lag_4_vars' 
+> `var'
+  4.                 }
+  5.         }
+.         noi di "`count_lag_4_vars'"
+p48_c_4lag p75_c_4lag
+. 
+.         foreach var of varlist p*ss_c_4lag {
+  2.                 local ss_lag_4_vars `ss_lag_4_vars' `var'
+  3.         }
+.         noi di "`ss_lag_4_vars'"
+p48_ss_c_4lag p75_ss_c_4lag
+. 
+.         foreach var of varlist p*pp_c_4lag {
+  2.                 local pp_lag_4_vars `pp_lag_4_vars' `var'
+  3.         }
+.         noi di "`pp_lag_4_vars'"
+p48_pp_c_4lag p75_pp_c_4lag
+. 
+.         pause "complete: variable groups - part lag 4"
+. }
+
+. 
+. if "`violation_level'" == "subpart" {
+. 
+.         foreach x in 1 2 3 4 5 6 7 8 9 0 {
+  2.                 foreach var of varlist sp*`x'_c_4lag  {
+  3.                         local count_lag_4_vars `count_lag_4_vars' 
+> `var'
+  4.                 }
+  5.         }
+.         noi di "`count_lag_4_vars'"
+. 
+.         foreach var of varlist sp*ss_c_4lag {
+  2.                 local ss_lag_4_vars `ss_lag_4_vars' `var'
+  3.         }
+.         noi di "`ss_lag_4_vars'"
+. 
+.         foreach var of varlist sp*pp_c_4lag {
+  2.                 local pp_lag_4_vars `pp_lag_4_vars' `var'
+  3.         }
+.         noi di "`pp_lag_4_vars'"
+. 
+.         pause "complete: variable groups - subpart lag 4"
+. }
+
+. 
+. *** lag all ***
+. if "`violation_level'" == "part" {
+. 
+.         foreach x in `relevant_parts' {
+  2.                 foreach var of varlist p`x'_c_lag_all  {
+  3.                         local count_lag_all_vars `count_lag_all_va
+> rs' `var'
+  4.                 }
+  5.         }
+.         noi di "`count_lag_all_vars'"
+p48_c_lag_all p75_c_lag_all
+. 
+.         foreach var of varlist p*ss_c_lag_all {
+  2.                 local ss_lag_all_vars `ss_lag_all_vars' `var'
+  3.         }
+.         noi di "`ss_lag_all_vars'"
+p48_ss_c_lag_all p75_ss_c_lag_all
+. 
+.         foreach var of varlist p*pp_c_lag_all {
+  2.                 local pp_lag_all_vars `pp_lag_all_vars' `var'
+  3.         }
+.         noi di "`pp_lag_all_vars'"
+p48_pp_c_lag_all p75_pp_c_lag_all
+. 
+.         pause "complete: variable groups - part lag all"
+. }
+
+. 
+. if "`violation_level'" == "subpart" {
+. 
+.         foreach x in 1 2 3 4 5 6 7 8 9 0 {
+  2.                 foreach var of varlist sp*`x'_c_lag_all  {
+  3.                         local count_lag_all_vars `count_lag_all_va
+> rs' `var'
+  4.                 }
+  5.         }
+.         noi di "`count_lag_all_vars'"
+.         
+.         foreach var of varlist sp*ss_c_lag_all {
+  2.                 local ss_lag_all_vars `ss_lag_all_vars' `var'
+  3.         }
+.         noi di "`ss_lag_all_vars'"
+.         
+.         foreach var of varlist sp*pp_c_lag_all {
+  2.                 local pp_lag_all_vars `pp_lag_all_vars' `var'
+  3.         }
+.         noi di "`pp_lag_all_vars'"
+. 
+.         pause "complete: variable groups - subpart lag all"
+. }
+
+. 
+. *********************************************************************
+> ***********
+. *********************************************************************
+> **********
+. // DATA OVERVIEW
+. 
+. // outcome variables
+. summ dv
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+          dv |        552    14.31884    20.93963          0        200
+
+. 
+. pause "next"
+
+. 
+. tab dv_indicator
+
+dv_indicato |
+          r |      Freq.     Percent        Cum.
+------------+-----------------------------------
+          0 |         47        8.51        8.51
+          1 |        505       91.49      100.00
+------------+-----------------------------------
+      Total |        552      100.00
+
+.           
+. pause "next"
+
+. 
+. if "`violation_level'" == "part" {
+.         summ `count_vars' `ss_vars' `pp_vars'
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+         p48 |        552    .3442029    .9023074          0          8
+         p75 |        552    110.5707    138.1782          0       1177
+      p48_ss |        552    .0923913    .4711034          0          5
+      p75_ss |        552    35.12862    43.09463          0        283
+      p48_pp |        552    15.02899    48.72992          0        499
+-------------+---------------------------------------------------------
+      p75_pp |        552    6045.946    9518.628          0      83190
+.         
+.         pause "next"
+.         
+.         summ `count_lag_1_vars' `ss_lag_1_vars' `pp_lag_1_vars'
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+    p48_1lag |        552    .3532609    .9734349          0          9
+    p75_1lag |        552    110.4547    138.2101          0       1231
+ p48_ss_1lag |        552    .0978261    .4641746          0          5
+ p75_ss_1lag |        552    35.27355    43.51372          0        287
+ p48_pp_1lag |        552    14.97464    49.08357          0        458
+-------------+---------------------------------------------------------
+ p75_pp_1lag |        552    5945.958    9533.442          0      95414
+.         
+.         pause "next"
+.         
+.         summ `count_lag_4_vars' `ss_lag_4_vars' `pp_lag_4_vars'
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+  p48_c_4lag |        552    1.398551    3.518249          0         33
+  p75_c_4lag |        552    435.4873    544.9684          0       4860
+p48_ss_c_4~g |        552    .3822464     1.60441          0         18
+p75_ss_c_4~g |        552     138.971    168.7673          0       1144
+p48_pp_c_4~g |        552    57.96558    186.4158          0       2287
+-------------+---------------------------------------------------------
+p75_pp_c_4~g |        552    23358.27    37584.08          0     378581
+.         
+.         pause "next"
+.         
+.         summ `count_lag_all_vars' `ss_lag_all_vars' `pp_lag_all_vars'
+
+    Variable |        Obs        Mean    Std. Dev.       Min        Max
+-------------+---------------------------------------------------------
+p48_c_lag_~l |        552    8.106884    18.57055          0        108
+p75_c_lag_~l |        552    2290.011    4409.474          0      29832
+p48_ss_c_l~l |        552    2.818841    7.661141          0         52
+p75_ss_c_l~l |        552    726.4511    1235.253          0       6755
+p48_pp_c_l~l |        552    265.7228    839.1905          0       5444
+-------------+---------------------------------------------------------
+p75_pp_c_l~l |        552    86316.55    205497.1          0    1425828
+. }
+
+. 
+. pause "complete: data overview"
+
+. 
+. *********************************************************************
+> **********/
+. /********************************************************************
+> ***********
+> // MODEL LABEL KEY
+> 
+> Model X.Y.Z
+>   X
+>     C: response variable is count of injuries
+>     B: response variable is binary of injuries
+>   Y
+>     V: predictors are number of violations
+>     SSV: predictors are number of significant and substantial violati
+> ons
+>     PP: predictors are number of penalty points
+>   Z
+>     1: inj_t ~ viol_t
+>     2: inj_t ~ viol_(t_-1)
+>     3: inj_t ~ viol_(annual sum pre_t)
+>     4: inj_t ~ viol_(sum since study period) 
+> 
+> *********************************************************************
+> **********/
+. *********************************************************************
+> ***********
+. // NULL MODELS (V & SSV)
+. 
+. // count outcome (V & SSV)
+. /*
+> glm dv, family(poisson) link(log) vce(cl mineid) exposure(hours) efor
+> m
+>         
+> pause "next"    
+>         
+> quietly poisson dv, vce(cl mineid) exposure(hours) irr
+> estat gof
+> 
+> pause "next"
+>         
+> glm dv, family(nbinomial) link(log) vce(cl mineid) exposure(hours) ef
+> orm
+> 
+> pause "next"
+> */
+. 
+. nbreg dv, vce(cl mineid) exposure(hours) irr
+
+Fitting Poisson model:
+
+Iteration 0:   log pseudolikelihood = -2434.6848  
+Iteration 1:   log pseudolikelihood = -2434.6848  
+
+Fitting constant-only model:
+
+Iteration 0:   log pseudolikelihood = -1807.0497  
+Iteration 1:   log pseudolikelihood = -1738.8665  
+Iteration 2:   log pseudolikelihood = -1723.8148  
+Iteration 3:   log pseudolikelihood = -1723.3693  
+Iteration 4:   log pseudolikelihood = -1723.3693  
+--Break--
+r(1);
+
+end of do-file
+
+--Break--
+r(1);
+
+. do "C:\Users\slevine2\AppData\Local\Temp\STD1n000000.tmp"
+
+. // NIOSH Project 2014-N-15776
+. 
+. // 15 - Model Specification Exploration
+. 
+. // Last edit 10/22/16
+. 
+. ********************************************************************************
+. ********************************************************************************
+. // SETTINGS
+. 
+. * pause on
+. pause oN
+
+. set more off
+
+. 
+. /****** FELLOW ****************************/
+. * local fellow "jbodson"
+. local fellow "slevine2"
+
+. local date "10-24"
+
+. 
+. /****** INJURY TYPE ***********************/
+. * local injury_type "MR"
+. local injury_type "PS"
+
+. 
+. /****** ANALYSIS TYPE *********************/
+. * local analysis_type "robust"
+. local analysis_type "exploratory"
+
+. 
+. /****** UNIT OF ANALYSIS ******************/
+. local unit_of_analysis "year_sum"
+
+. * local unit_of_analysis "year_avg"
+. * local unit_of_analysis "quarter"
+. 
+. /****** VIOLATION LEVEL *******************/
+. local violation_level "part"
+
+. * local violation_level "subpart"
+. 
+. /****** INCLUDE UNION STATUS? *************/
+. * local union_status "on" // includes "longwall" indicator as well
+. local union_status "off"
+
+. 
+. /****** MINE SAMPLE ***********************/
+. local mine_sample "all"
+
+. * local mine_sample "big"
+. * local mine_sample "bad"
+. * local mine_sample "big_bad"
+. 
+. /****** SET VERSIONS/BADNESS **************/
+. if "`mine_sample'" == "bad" | "`mine_sample'" == "big_bad" { 
+.         local badness "inj"
+.         * local badness "viol"
+. }
+
+. 
+. if "`mine_sample'" != "all" { 
+.         * local version "V1"
+.         local version "V2"
+. }
+
+. 
+. ********************************************************************************
+. ********************************************************************************
+. // INPUT + OUTPUT SET-UP
+. 
+. // read data 
+. if "`injury_type'" == "MR" {
+.         if "`mine_sample'" == "all" { 
+.                 use "X:\Projects\Mining\NIOSH\analysis\data\5_prediction-ready\MR_prediction_data.dta", clear
+.         }
+.         if "`mine_sample'" == "big" { 
+.                 use "X:\Projects\Mining\NIOSH\analysis\data\5_prediction-ready\Big + Bad Data\MR\MR_prediction_data_big_`version'.dta", clear
+.                 if "`analysis_type'" == "exploratory" {
+.                         keep if quarter >= 2003
+.                 }
+.         }
+.         if "`mine_sample'" == "bad" | "`mine_sample'" == "big_bad" { 
+.                 use "X:\Projects\Mining\NIOSH\analysis\data\5_prediction-ready\Big + Bad Data\MR\MR_prediction_data_`mine_sample'_`badness'_`version'.dta", clear
+.                 if "`analysis_type'" == "exploratory" {
+.                         keep if quarter >= 2003
+.                 }
+.         }
+. }
+
+. 
+end of do-file
+
+. do "C:\Users\slevine2\AppData\Local\Temp\STD1n000000.tmp"
+
+. // NIOSH Project 2014-N-15776
+. 
+. // 15 - Model Specification Exploration
+. 
+. // Last edit 10/22/16
+. 
+. ********************************************************************************
+. ********************************************************************************
+. // SETTINGS
+. 
+. * pause on
+. pause oN
+
+. set more off
+
+. 
+. /****** FELLOW ****************************/
+. * local fellow "jbodson"
+. local fellow "slevine2"
+
+. local date "10-24"
+
+. 
+. /****** INJURY TYPE ***********************/
+. * local injury_type "MR"
+. local injury_type "PS"
+
+. 
+. /****** ANALYSIS TYPE *********************/
+. * local analysis_type "robust"
+. local analysis_type "exploratory"
+
+. 
+. /****** UNIT OF ANALYSIS ******************/
+. local unit_of_analysis "year_sum"
+
+. * local unit_of_analysis "year_avg"
+. * local unit_of_analysis "quarter"
+. 
+. /****** VIOLATION LEVEL *******************/
+. local violation_level "part"
+
+. * local violation_level "subpart"
+. 
+. /****** INCLUDE UNION STATUS? *************/
+. * local union_status "on" // includes "longwall" indicator as well
+. local union_status "off"
+
+. 
+. /****** MINE SAMPLE ***********************/
+. local mine_sample "all"
+
+. * local mine_sample "big"
+. * local mine_sample "bad"
+. * local mine_sample "big_bad"
+. 
+. /****** SET VERSIONS/BADNESS **************/
+. if "`mine_sample'" == "bad" | "`mine_sample'" == "big_bad" { 
+.         local badness "inj"
+.         * local badness "viol"
+. }
+
+. 
+. if "`mine_sample'" != "all" { 
+.         * local version "V1"
+.         local version "V2"
+. }
+
+. 
+. ********************************************************************************
+. ********************************************************************************
+. // INPUT + OUTPUT SET-UP
+. 
+. // read data 
+. if "`injury_type'" == "MR" {
+.         if "`mine_sample'" == "all" { 
+.                 use "X:\Projects\Mining\NIOSH\analysis\data\5_prediction-ready\MR_prediction_data.dta", clear
+.         }
+.         if "`mine_sample'" == "big" { 
+.                 use "X:\Projects\Mining\NIOSH\analysis\data\5_prediction-ready\Big + Bad Data\MR\MR_prediction_data_big_`version'.dta", clear
+.                 if "`analysis_type'" == "exploratory" {
+.                         keep if quarter >= 2003
+.                 }
+.         }
+.         if "`mine_sample'" == "bad" | "`mine_sample'" == "big_bad" { 
+.                 use "X:\Projects\Mining\NIOSH\analysis\data\5_prediction-ready\Big + Bad Data\MR\MR_prediction_data_`mine_sample'_`badness'_`version'.dta", clear
+.                 if "`analysis_type'" == "exploratory" {
+.                         keep if quarter >= 2003
+.                 }
+.         }
+. }
+
+. 
+end of do-file
+
+. do "C:\Users\slevine2\AppData\Local\Temp\STD1n000000.tmp"
+
+. // NIOSH Project 2014-N-15776
+. 
+. // 15 - Model Specification Exploration
+. 
+. // Last edit 10/22/16
+. 
+. ********************************************************************************
+. ********************************************************************************
+. // SETTINGS
+. 
+. * pause on
+. pause oN
+
+. set more off
+
+. 
+. /****** FELLOW ****************************/
+. * local fellow "jbodson"
+. local fellow "slevine2"
+
+. local date "10-24"
+
+. 
+. /****** INJURY TYPE ***********************/
+. local injury_type "MR"
+
+. *local injury_type "PS"
+. 
+. /****** ANALYSIS TYPE *********************/
+. * local analysis_type "robust"
+. local analysis_type "exploratory"
+
+. 
+. /****** UNIT OF ANALYSIS ******************/
+. local unit_of_analysis "year_sum"
+
+. * local unit_of_analysis "year_avg"
+. * local unit_of_analysis "quarter"
+. 
+. /****** VIOLATION LEVEL *******************/
+. local violation_level "part"
+
+. * local violation_level "subpart"
+. 
+. /****** INCLUDE UNION STATUS? *************/
+. * local union_status "on" // includes "longwall" indicator as well
+. local union_status "off"
+
+. 
+. /****** MINE SAMPLE ***********************/
+. local mine_sample "all"
+
+. * local mine_sample "big"
+. * local mine_sample "bad"
+. * local mine_sample "big_bad"
+. 
+. /****** SET VERSIONS/BADNESS **************/
+. if "`mine_sample'" == "bad" | "`mine_sample'" == "big_bad" { 
+.         local badness "inj"
+.         * local badness "viol"
+. }
+
+. 
+. if "`mine_sample'" != "all" { 
+.         * local version "V1"
+.         local version "V2"
+. }
+
+. 
+. ********************************************************************************
+. ********************************************************************************
+. // INPUT + OUTPUT SET-UP
+. 
+. // read data 
+. if "`injury_type'" == "MR" {
+.         if "`mine_sample'" == "all" { 
+.                 use "X:\Projects\Mining\NIOSH\analysis\data\5_prediction-ready\MR_prediction_data.dta", clear
+(Written by R.              )
+.         }
+.         if "`mine_sample'" == "big" { 
+.                 use "X:\Projects\Mining\NIOSH\analysis\data\5_prediction-ready\Big + Bad Data\MR\MR_prediction_data_big_`version'.dta", clear
+.                 if "`analysis_type'" == "exploratory" {
+.                         keep if quarter >= 2003
+.                 }
+.         }
+.         if "`mine_sample'" == "bad" | "`mine_sample'" == "big_bad" { 
+.                 use "X:\Projects\Mining\NIOSH\analysis\data\5_prediction-ready\Big + Bad Data\MR\MR_prediction_data_`mine_sample'_`badness'_`version'.dta", clear
+.                 if "`analysis_type'" == "exploratory" {
+.                         keep if quarter >= 2003
+.                 }
+.         }
+. }
+
+. 
+end of do-file
+
+. do "C:\Users\slevine2\AppData\Local\Temp\STD1n000000.tmp"
+
+.                 eststo: nbreg dv p47 p48 p71 p72 p75 mine_time onsite_insp_hours ib(freq).state ib(freq).time, vce(cl mineid) exposure(hours) iter(50) irr
+variable dv not found
+r(111);
+
+end of do-file
+
+r(111);
+
+. do "C:\Users\slevine2\AppData\Local\Temp\STD1n000000.tmp"
+
+. // format time
+. tostring quarter, replace
+quarter was double now str7
+
+. encode quarter, gen(quart)
+
+. drop quarter year
+
+. rename quart time
+
+. local time_label "Q" // will be overwritten if unit_of_analysis is year_sum or year_avg
+
+. 
+end of do-file
+
+. do "C:\Users\slevine2\AppData\Local\Temp\STD1n000000.tmp"
+
+.         rename MR dv
+
+.         rename MR_indicator dv_indicator
+
+. 
+end of do-file
+
+. do "C:\Users\slevine2\AppData\Local\Temp\STD1n000000.tmp"
+
+.                 eststo: nbreg dv p47 p48 p71 p72 p75 mine_time onsite_insp_hours ib(freq).state ib(freq).time, vce(cl mineid) exposure(hours) iter(50) irr
+
+Fitting Poisson model:
+
+Iteration 0:   log pseudolikelihood = -20873.326  
+Iteration 1:   log pseudolikelihood = -19529.439  
+Iteration 2:   log pseudolikelihood =  -19501.36  
+Iteration 3:   log pseudolikelihood = -19501.242  
+Iteration 4:   log pseudolikelihood = -19501.242  
+
+Fitting constant-only model:
+
+Iteration 0:   log pseudolikelihood = -20107.698  
+Iteration 1:   log pseudolikelihood = -19847.991  
+Iteration 2:   log pseudolikelihood = -19841.286  
+Iteration 3:   log pseudolikelihood = -19841.282  
+Iteration 4:   log pseudolikelihood = -19841.282  
+
+Fitting full model:
+
+Iteration 0:   log pseudolikelihood =  -19386.41  
+Iteration 1:   log pseudolikelihood = -19357.263  
+Iteration 2:   log pseudolikelihood = -19356.364  
+Iteration 3:   log pseudolikelihood = -19356.364  
+
+Negative binomial regression                    Number of obs     =     28,337
+                                                Wald chi2(84)     =          .
+Dispersion           = mean                     Prob > chi2       =          .
+Log pseudolikelihood = -19356.364               Pseudo R2         =     0.0244
+
+                                  (Std. Err. adjusted for 1,544 clusters in mineid)
+-----------------------------------------------------------------------------------
+                  |               Robust
+               dv |        IRR   Std. Err.      z    P>|z|     [95% Conf. Interval]
+------------------+----------------------------------------------------------------
+              p47 |   .9770549     .09858    -0.23   0.818     .8017462    1.190696
+              p48 |   .9905439   .0136411    -0.69   0.490     .9641654    1.017644
+              p71 |    .880131   .0750385    -1.50   0.134     .7446896    1.040206
+              p72 |   1.048815   .0434563     1.15   0.250     .9670084    1.137541
+              p75 |   1.003016    .000928     3.26   0.001     1.001199    1.004837
+        mine_time |    .998632   .0019007    -0.72   0.472     .9949136    1.002364
+onsite_insp_hours |   .9995286   .0001744    -2.70   0.007     .9991868    .9998704
+                  |
+            state |
+              AL  |   1.094943    .091657     1.08   0.279     .9292611    1.290164
+              AR  |   1.992185   .1106029    12.41   0.000     1.786785    2.221197
+              CO  |   .6976117   .1131454    -2.22   0.026     .5076422    .9586715
+              IL  |   1.161693   .0944477     1.84   0.065      .990575    1.362372
+              IN  |   .9186984   .1443652    -0.54   0.589     .6751718    1.250062
+              MD  |   .9957894   .1661894    -0.03   0.980     .7179739    1.381104
+              MT  |   .8573157   .0416304    -3.17   0.002     .7794841    .9429187
+              NM  |   .8007769   .0365675    -4.87   0.000     .7322196    .8757532
+              OH  |   1.090205   .1468159     0.64   0.521      .837295    1.419508
+              OK  |   .8582796   .2238445    -0.59   0.558     .5147903    1.430959
+              PA  |   .9656982   .0894425    -0.38   0.706     .8053849    1.157922
+              TN  |   1.314545   .1737844     2.07   0.039     1.014485    1.703355
+              UT  |   .6146389   .0802235    -3.73   0.000     .4759048    .7938163
+              VA  |   .6899679   .0578959    -4.42   0.000      .585334    .8133061
+              WV  |   1.011198   .0549737     0.20   0.838     .9089935    1.124894
+              WY  |   1.092504   .0529722     1.82   0.068      .993461    1.201421
+                  |
+             time |
+            2000  |   1.108523   .1220454     0.94   0.349     .8933667    1.375497
+         2000.25  |   1.184733   .1312917     1.53   0.126     .9534337    1.472144
+          2000.5  |   1.440226   .1494995     3.51   0.000     1.175097    1.765175
+         2000.75  |   1.045233   .1153648     0.40   0.689      .841907    1.297664
+            2001  |   1.050192   .1079639     0.48   0.634      .858543    1.284623
+          2001.5  |   1.201081   .1254275     1.75   0.079     .9787738    1.473881
+         2001.75  |   1.005425    .100215     0.05   0.957     .8270019    1.222341
+            2002  |   1.069239   .1187853     0.60   0.547     .8600271    1.329345
+         2002.25  |   .9773959   .1105847    -0.20   0.840     .7830036    1.220049
+          2002.5  |   1.187933   .1271713     1.61   0.108     .9630943    1.465262
+         2002.75  |   1.104437   .1209509     0.91   0.364     .8910922     1.36886
+            2003  |    .896657   .1027356    -0.95   0.341     .7163064    1.122416
+         2003.25  |   1.001174   .1135471     0.01   0.992     .8016251    1.250396
+          2003.5  |   1.093385   .1245599     0.78   0.433     .8745876     1.36692
+         2003.75  |   .7940704   .0888648    -2.06   0.039     .6376768    .9888204
+            2004  |   1.026973    .116591     0.23   0.815     .8220972    1.282906
+         2004.25  |   .9759574   .1088758    -0.22   0.827     .7842825    1.214477
+          2004.5  |   .9698463    .111179    -0.27   0.789     .7746843    1.214174
+         2004.75  |   .8644562   .0969272    -1.30   0.194     .6939081    1.076921
+            2005  |   .7537077   .0835787    -2.55   0.011     .6064753    .9366833
+         2005.25  |   .9794694   .0984131    -0.21   0.836      .804388    1.192659
+          2005.5  |   .8626202   .1001941    -1.27   0.203     .6869922    1.083147
+         2005.75  |   .7893685   .0919182    -2.03   0.042     .6282919    .9917408
+            2006  |   .8249103   .0913149    -1.74   0.082     .6640205    1.024783
+         2006.25  |   .8225026   .0980267    -1.64   0.101     .6511637    1.038925
+          2006.5  |   .9077035   .1020329    -0.86   0.389     .7282196    1.131425
+         2006.75  |   .7385126   .0866039    -2.58   0.010     .5868663    .9293442
+            2007  |   .7686642   .0874491    -2.31   0.021     .6150316    .9606736
+         2007.25  |   .7253615   .0926477    -2.51   0.012     .5647207    .9316983
+          2007.5  |   .8005734   .0896304    -1.99   0.047     .6428396    .9970105
+         2007.75  |   .7782726     .09361    -2.08   0.037     .6148227    .9851755
+            2008  |   .6648858   .0801405    -3.39   0.001      .524988    .8420631
+         2008.25  |   .6946681   .0799607    -3.17   0.002     .5543687    .8704745
+          2008.5  |   .7913792   .0937446    -1.98   0.048     .6274132    .9981955
+         2008.75  |   .6424521   .0780255    -3.64   0.000      .506364    .8151147
+            2009  |   .6267517   .0757162    -3.87   0.000     .4946114    .7941945
+         2009.25  |   .6019774   .0733268    -4.17   0.000     .4741278    .7643019
+          2009.5  |   .7281452   .0915313    -2.52   0.012     .5691384    .9315756
+         2009.75  |   .5491343   .0662813    -4.97   0.000     .4334483    .6956965
+            2010  |   .5880269    .074963    -4.17   0.000     .4580196    .7549363
+         2010.25  |   .6065829   .0759774    -3.99   0.000     .4745402    .7753669
+          2010.5  |   .7209051   .0910159    -2.59   0.010     .5628751    .9233029
+         2010.75  |   .5764192   .0733816    -4.33   0.000     .4491335     .739778
+            2011  |    .661484   .0818183    -3.34   0.001      .519081    .8429535
+         2011.25  |   .6586581   .0789451    -3.48   0.000     .5207594    .8330728
+          2011.5  |   .7247129   .0911557    -2.56   0.010     .5663701    .9273244
+         2011.75  |   .5913334    .074303    -4.18   0.000     .4622491    .7564647
+            2012  |   .7344232   .0881217    -2.57   0.010     .5805141    .9291375
+         2012.25  |     .62908    .077162    -3.78   0.000     .4946509    .8000422
+          2012.5  |   .7180983    .088665    -2.68   0.007     .5637472    .9147099
+         2012.75  |   .5950979   .0774091    -3.99   0.000     .4611751    .7679113
+            2013  |   .6253875   .0828977    -3.54   0.000     .4823018    .8109228
+         2013.25  |   .5382829   .0753738    -4.42   0.000      .409091     .708274
+          2013.5  |   .7049606   .0960009    -2.57   0.010       .53982    .9206205
+         2013.75  |   .5724374   .0789567    -4.04   0.000     .4368387     .750127
+            2014  |   .5326025   .0773884    -4.34   0.000     .4006098    .7080841
+         2014.25  |   .5988016   .0834395    -3.68   0.000     .4556936    .7868518
+          2014.5  |   .6237693   .0815188    -3.61   0.000     .4828172    .8058706
+         2014.75  |   .6294139   .0869407    -3.35   0.001     .4801314    .8251112
+            2015  |   .5848581   .0837393    -3.75   0.000     .4417498    .7743273
+         2015.25  |   .6261031   .0939305    -3.12   0.002     .4666005    .8401301
+          2015.5  |   .7947395   .1138495    -1.60   0.109     .6001875    1.052356
+         2015.75  |   .4903326   .0800939    -4.36   0.000     .3560003    .6753535
+            2016  |   .6789847   .1041332    -2.52   0.012     .5027066    .9170761
+                  |
+            _cons |   .0000149   1.31e-06  -126.49   0.000     .0000126    .0000177
+        ln(hours) |          1  (exposure)
+------------------+----------------------------------------------------------------
+         /lnalpha |  -1.455715   .1251878                     -1.701078   -1.210351
+------------------+----------------------------------------------------------------
+            alpha |   .2332336    .029198                      .1824867    .2980927
+-----------------------------------------------------------------------------------
+(est1 stored)
+
+. 
+end of do-file
+
+. esttab using "X:/Projects/Mining/NIOSH/analysis/tex/example.tex", label
+(output written to X:/Projects/Mining/NIOSH/analysis/tex/example.tex)
+
+. esttab using "X:/Projects/Mining/NIOSH/analysis/tex/example.tex", label replace booktabs
+(output written to X:/Projects/Mining/NIOSH/analysis/tex/example.tex)
+
+. esttab using "X:/Projects/Mining/NIOSH/analysis/tex/example.tex", label replace booktabs drop (20*)
+(output written to X:/Projects/Mining/NIOSH/analysis/tex/example.tex)
+
+. esttab using "X:/Projects/Mining/NIOSH/analysis/tex/example.tex", label replace booktabs drop (20* mine_time onsite_insp_hours)
+(output written to X:/Projects/Mining/NIOSH/analysis/tex/example.tex)
+
+. tab states
+variable states not found
+r(111);
+
+. tab state
+
+      state |      Freq.     Percent        Cum.
+------------+-----------------------------------
+         AL |        481        1.59        1.59
+         AR |         64        0.21        1.80
+         CO |        514        1.70        3.50
+         IL |        630        2.08        5.58
+         IN |        343        1.13        6.71
+         KY |     10,059       33.21       39.92
+         MD |        117        0.39       40.31
+         MT |         54        0.18       40.48
+         NM |         65        0.21       40.70
+         OH |        478        1.58       42.28
+         OK |         83        0.27       42.55
+         PA |      2,514        8.30       50.85
+         TN |        417        1.38       52.23
+         UT |        603        1.99       54.22
+         VA |      4,035       13.32       67.54
+         WV |      9,783       32.30       99.84
+         WY |         49        0.16      100.00
+------------+-----------------------------------
+      Total |     30,289      100.00
+
+. esttab using "X:/Projects/Mining/NIOSH/analysis/tex/example.tex", label replace booktabs keep (p*)
+(output written to X:/Projects/Mining/NIOSH/analysis/tex/example.tex)
+
+. do "C:\Users\slevine2\AppData\Local\Temp\STD1n000000.tmp"
+
+.                                 viol_level "p"
+command viol_level is unrecognized
+r(199);
+
+end of do-file
+
+r(199);
+
+. do "C:\Users\slevine2\AppData\Local\Temp\STD1n000000.tmp"
+
+.                                 local viol_level "p"
+
+.                                 esttab using "X:/Projects/Mining/NIOSH/analysis/tex/example.tex", replace label booktabs keep (`viol_level'* )
+(output written to X:/Projects/Mining/NIOSH/analysis/tex/example.tex)
+
+. 
+end of do-file
+
+. do "C:\Users\slevine2\AppData\Local\Temp\STD1n000000.tmp"
+
+. // NIOSH Project 2014-N-15776
+. 
+. // 15 - Model Specification Exploration
+. 
+. // Last edit 10/22/16
+. 
+. ********************************************************************************
+. ********************************************************************************
+. // SETTINGS
+. 
+. * pause on
+. pause oN
+
+. set more off
+
+. 
+. /****** FELLOW ****************************/
+. * local fellow "jbodson"
+. local fellow "slevine2"
+
+. local date "10-24"
+
+. 
+. /****** INJURY TYPE ***********************/
+. local injury_type "MR"
+
+. *local injury_type "PS"
+. 
+. /****** ANALYSIS TYPE *********************/
+. * local analysis_type "robust"
+. local analysis_type "exploratory"
+
+. 
+. /****** UNIT OF ANALYSIS ******************/
+. local unit_of_analysis "year_sum"
+
+. * local unit_of_analysis "year_avg"
+. * local unit_of_analysis "quarter"
+. 
+. /****** VIOLATION LEVEL *******************/
+. local violation_level "part"
+
+. * local violation_level "subpart"
+. 
+. /****** INCLUDE UNION STATUS? *************/
+. * local union_status "on" // includes "longwall" indicator as well
+. local union_status "off"
+
+. 
+. /****** MINE SAMPLE ***********************/
+. local mine_sample "all"
+
+. * local mine_sample "big"
+. * local mine_sample "bad"
+. * local mine_sample "big_bad"
+. 
+. /****** SET VERSIONS/BADNESS **************/
+. if "`mine_sample'" == "bad" | "`mine_sample'" == "big_bad" { 
+.         local badness "inj"
+.         * local badness "viol"
+. }
+
+. 
+. if "`mine_sample'" != "all" { 
+.         * local version "V1"
+.         local version "V2"
+. }
+
+. 
+. ********************************************************************************
+. ********************************************************************************
+. // INPUT + OUTPUT SET-UP
+. 
+. // read data 
+. if "`injury_type'" == "MR" {
+.         if "`mine_sample'" == "all" { 
+.                 use "X:\Projects\Mining\NIOSH\analysis\data\5_prediction-ready\MR_prediction_data.dta", clear
+(Written by R.              )
+.         }
+.         if "`mine_sample'" == "big" { 
+.                 use "X:\Projects\Mining\NIOSH\analysis\data\5_prediction-ready\Big + Bad Data\MR\MR_prediction_data_big_`version'.dta", clear
+.                 if "`analysis_type'" == "exploratory" {
+.                         keep if quarter >= 2003
+.                 }
+.         }
+.         if "`mine_sample'" == "bad" | "`mine_sample'" == "big_bad" { 
+.                 use "X:\Projects\Mining\NIOSH\analysis\data\5_prediction-ready\Big + Bad Data\MR\MR_prediction_data_`mine_sample'_`badness'_`version'.dta", clear
+.                 if "`analysis_type'" == "exploratory" {
+.                         keep if quarter >= 2003
+.                 }
+.         }
+. }
+
+. 
+. if "`injury_type'" == "PS" {
+.         if "`mine_sample'" == "all" { 
+.                 use "X:\Projects\Mining\NIOSH\analysis\data\5_prediction-ready\PS_prediction_data.dta", clear
+.         }
+.         if "`mine_sample'" == "big" { 
+.                 use "X:\Projects\Mining\NIOSH\analysis\data\5_prediction-ready\Big + Bad Data\PS\PS_prediction_data_big_`version'.dta", clear
+.                 if "`analysis_type'" == "exploratory" {
+.                         keep if quarter >= 2003
+.                 }
+.         }
+.         if "`mine_sample'" == "bad" | "`mine_sample'" == "big_bad" { 
+.                 use "X:\Projects\Mining\NIOSH\analysis\data\5_prediction-ready\Big + Bad Data\PS\PS_prediction_data_`mine_sample'_`badness'_`version'.dta", clear
+.                 if "`analysis_type'" == "exploratory" {
+.                         keep if quarter >= 2003
+.                 }
+.         }
+. }
+
+. 
+. // name outputs
+. local log_time "quarter"
+
+. if "`unit_of_analysis'" != "quarter" {
+.         local log_time "year"
+. }
+
+. // make logs 
+. if "`mine_sample'" == "all" { 
+.         // make directories
+.         capture mkdir "C:/Users/`fellow'/Dropbox (Stanford Law School)/R-code/Injury-Classification/Model Output + Summaries/`mine_sample'/`injury_type'/log `date'/"
+.         capture mkdir "C:/Users/`fellow'/Dropbox (Stanford Law School)/R-code/Injury-Classification/Model Output + Summaries/`mine_sample'/`injury_type'/estout `date'/"
+.         // make logs
+.         local directory "C:/Users/`fellow'/Dropbox (Stanford Law School)/R-code/Injury-Classification/Model Output + Summaries/`mine_sample'/`injury_type'/estout `date'/"
+.         capture log close
