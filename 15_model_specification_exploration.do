@@ -10,37 +10,49 @@
 
 * pause on
 pause off
-
 set more off
 
-local date "10-22"
+/****** FELLOW ****************************/
+* local fellow "jbodson"
+local fellow "slevine2"
+local date "10-24"
 
-* local injury_type "MR"
-local injury_type "PS"
+/****** INJURY TYPE ***********************/
+local injury_type "MR"
+*local injury_type "PS"
 
-* local unit_of_analysis "year_sum"
+/****** ANALYSIS TYPE *********************/
+* local analysis_type "robust"
+local analysis_type "exploratory"
+
+/****** UNIT OF ANALYSIS ******************/
+local unit_of_analysis "year_sum"
 * local unit_of_analysis "year_avg"
-local unit_of_analysis "quarter"
+* local unit_of_analysis "quarter"
 
-* local violation_level "part"
-local violation_level "subpart"
+/****** VIOLATION LEVEL *******************/
+local violation_level "part"
+* local violation_level "subpart"
 
-* local union_status "on"
+/****** INCLUDE UNION STATUS? *************/
+* local union_status "on" // includes "longwall" indicator as well
 local union_status "off"
 
+/****** MINE SAMPLE ***********************/
 local mine_sample "all"
 * local mine_sample "big"
 * local mine_sample "bad"
 * local mine_sample "big_bad"
 
+/****** SET VERSIONS/BADNESS **************/
 if "`mine_sample'" == "bad" | "`mine_sample'" == "big_bad" { 
 	local badness "inj"
 	* local badness "viol"
 }
 
 if "`mine_sample'" != "all" { 
-	local version "V1"
-	* local version "V2"
+	* local version "V1"
+	local version "V2"
 }
 
 ********************************************************************************
@@ -54,9 +66,15 @@ if "`injury_type'" == "MR" {
 	}
 	if "`mine_sample'" == "big" { 
 		use "X:\Projects\Mining\NIOSH\analysis\data\5_prediction-ready\Big + Bad Data\MR\MR_prediction_data_big_`version'.dta", clear
+		if "`analysis_type'" == "exploratory" {
+			keep if quarter >= 2003
+		}
 	}
 	if "`mine_sample'" == "bad" | "`mine_sample'" == "big_bad" { 
 		use "X:\Projects\Mining\NIOSH\analysis\data\5_prediction-ready\Big + Bad Data\MR\MR_prediction_data_`mine_sample'_`badness'_`version'.dta", clear
+		if "`analysis_type'" == "exploratory" {
+			keep if quarter >= 2003
+		}
 	}
 }
 
@@ -66,9 +84,15 @@ if "`injury_type'" == "PS" {
 	}
 	if "`mine_sample'" == "big" { 
 		use "X:\Projects\Mining\NIOSH\analysis\data\5_prediction-ready\Big + Bad Data\PS\PS_prediction_data_big_`version'.dta", clear
+		if "`analysis_type'" == "exploratory" {
+			keep if quarter >= 2003
+		}
 	}
 	if "`mine_sample'" == "bad" | "`mine_sample'" == "big_bad" { 
 		use "X:\Projects\Mining\NIOSH\analysis\data\5_prediction-ready\Big + Bad Data\PS\PS_prediction_data_`mine_sample'_`badness'_`version'.dta", clear
+		if "`analysis_type'" == "exploratory" {
+			keep if quarter >= 2003
+		}
 	}
 }
 
@@ -77,23 +101,35 @@ local log_time "quarter"
 if "`unit_of_analysis'" != "quarter" {
 	local log_time "year"
 }
-
+// make logs 
 if "`mine_sample'" == "all" { 
-	local directory "C:/Users/jbodson/Dropbox (Stanford Law School)/R-code/Injury-Classification/Model Output + Summaries/all/`injury_type'/estout `date'/"
+	// make directories
+	capture mkdir "C:/Users/`fellow'/Dropbox (Stanford Law School)/R-code/Injury-Classification/Model Output + Summaries/`mine_sample'/`injury_type'/log `date'/"
+	capture mkdir "C:/Users/`fellow'/Dropbox (Stanford Law School)/R-code/Injury-Classification/Model Output + Summaries/`mine_sample'/`injury_type'/estout `date'/"
+	// make logs
+	local directory "C:/Users/`fellow'/Dropbox (Stanford Law School)/R-code/Injury-Classification/Model Output + Summaries/`mine_sample'/`injury_type'/estout `date'/"
 	capture log close
-	log using "C:/Users/jbodson/Dropbox (Stanford Law School)/R-code/Injury-Classification/Model Output + Summaries/all/`injury_type'/log `date'/log_`violation_level'_`log_time'.txt", text
+	log using "C:/Users/`fellow'/Dropbox (Stanford Law School)/R-code/Injury-Classification/Model Output + Summaries/`mine_sample'/`injury_type'/log `date'/log_`violation_level'_`log_time'.txt", text replace
 }
 
 if "`mine_sample'" == "big" { 
-	local directory "C:/Users/jbodson/Dropbox (Stanford Law School)/R-code/Injury-Classification/Model Output + Summaries/big/`version'/`injury_type'/estout `date'/"
+	// make directories 
+	capture mkdir "C:/Users/`fellow'/Dropbox (Stanford Law School)/R-code/Injury-Classification/Model Output + Summaries/`mine_sample'/`version'/`injury_type'/log `date'/"
+	capture mkdir "C:/Users/`fellow'/Dropbox (Stanford Law School)/R-code/Injury-Classification/Model Output + Summaries/`mine_sample'/`version'/`injury_type'/estout `date'/"
+	// make logs 	
+	local directory "C:/Users/`fellow'/Dropbox (Stanford Law School)/R-code/Injury-Classification/Model Output + Summaries/`mine_sample'/`version'/`injury_type'/estout `date'/"
 	capture log close
-	log using "C:/Users/jbodson/Dropbox (Stanford Law School)/R-code/Injury-Classification/Model Output + Summaries/big/`version'/`injury_type'/log `date'/log_`violation_level'_`log_time'.txt", text
+	log using "C:/Users/`fellow'/Dropbox (Stanford Law School)/R-code/Injury-Classification/Model Output + Summaries/`mine_sample'/`version'/`injury_type'/log `date'/log_`violation_level'_`log_time'.txt", text replace
 }	
 	
 if "`mine_sample'" == "bad" | "`mine_sample'" == "big_bad" { 
-	local directory "C:/Users/jbodson/Dropbox (Stanford Law School)/R-code/Injury-Classification/Model Output + Summaries/`mine_sample'/`badness'/`version'/`injury_type'/estout `date'/"
+	// make directories 
+	capture mkdir "C:/Users/`fellow'/Dropbox (Stanford Law School)/R-code/Injury-Classification/Model Output + Summaries/`mine_sample'/`badness'/`version'/`injury_type'/estout `date'/"
+	capture mkdir "C:/Users/`fellow'/Dropbox (Stanford Law School)/R-code/Injury-Classification/Model Output + Summaries/`mine_sample'/`badness'/`version'/`injury_type'/log `date'/"
+	// make logs 			
+	local directory "C:/Users/`fellow'/Dropbox (Stanford Law School)/R-code/Injury-Classification/Model Output + Summaries/`mine_sample'/`badness'/`version'/`injury_type'/estout `date'/"
 	capture log close
-	log using "C:/Users/jbodson/Dropbox (Stanford Law School)/R-code/Injury-Classification/Model Output + Summaries/`mine_sample'/`/`badness'/`version'/`injury_type'/log `date'/log_`violation_level'_`log_time'.txt", text
+	log using "C:/Users/`fellow'/Dropbox (Stanford Law School)/R-code/Injury-Classification/Model Output + Summaries/`mine_sample'/`badness'/`version'/`injury_type'/log `date'/log_`violation_level'_`log_time'.txt", text replace
 }
 
 ********************************************************************************
@@ -123,15 +159,17 @@ if "`violation_level'" == "subpart" {
 	local violation_level_label "SP"
 }
 
-gen sample_pp = quarter >= 2007 // flag obs after or equal to 2007 to use in penlaty points analyses (assessments changed for the last time in 2007)
+// flag obs after or equal to 2007 to use in penlaty points analyses (assessments changed for the last time in 2007)
+gen sample_pp = quarter >= 2007 
 
+// format time
 tostring quarter, replace
 encode quarter, gen(quart)
 drop quarter year
 rename quart time
-
 local time_label "Q" // will be overwritten if unit_of_analysis is year_sum or year_avg
 
+// collapse to quarter levels (sums)
 if "`unit_of_analysis'" == "year_sum" { // collapse to mine years - sums 
 	local time_label "Y"
 	
@@ -161,7 +199,7 @@ if "`unit_of_analysis'" == "year_sum" { // collapse to mine years - sums
 	
 	pause "complete: year_sum collapse"
 }
-
+// collapse to quarter levels (means)
 if "`unit_of_analysis'" == "year_avg" { // collapse on mine years - averages
 	local time_label "Y"
 	decode time, gen(year)
@@ -176,21 +214,20 @@ if "`unit_of_analysis'" == "year_avg" { // collapse on mine years - averages
 	
 	pause "complete: year_avg collapse"
 }
-
+// format depvars
 drop dv_indicator
 gen dv_binary = 0 if dv == 0
 replace dv_binary = 1 if dv != 0
 rename dv_binary dv_indicator
 	
 gen lnhours = log(hours)
-
 pause "complete: data formatting"
 
 // group variables
-local covariates "mine_time onsite_insp_hours longwall"
+local covariates "mine_time onsite_insp_hours"
 
 if "`union_status'" == "on" {
-	local covariates "`covariates' union"
+	local covariates "`covariates' union longwall"
 }
 
 *** lag 0 ***
@@ -1199,516 +1236,552 @@ pause "complete: C.PP.4"
 // Model B.V.1
 
 eststo clear
-eststo: logit dv_indicator `count_vars' `covariates' ib(freq).state ib(freq).time, vce(cl mineid) offset(lnhours) iter(50) or
-esttab using `"`directory'Model.`injury_label'.`time_label'.`violation_level_label'.B.V.1.csv"', replace plain wide p eform
+capture eststo: logit dv_indicator `count_vars' `covariates' ib(freq).state ib(freq).time, vce(cl mineid) offset(lnhours) iter(50) or
+capture local rc = _rc 
 
-pause "next"
+if "`rc'" == "" {
+	esttab using `"`directory'Model.`injury_label'.`time_label'.`violation_level_label'.B.V.1.csv"', replace plain wide p eform
 
-// diagnostics/assessment
-lfit
+	pause "next"
 
-pause "next"
+	// diagnostics/assessment
+	lfit
 
-linktest
+	pause "next"
 
-pause "next"
+	linktest
 
-estat classification
+	pause "next"
 
-pause "next"
+	estat classification
 
-predict bv1_yhat 
-gen bv1_res = dv_indicator - bv1_yhat
+	pause "next"
 
-summ dv_indicator bv1_yhat
-/*
-pause "next"
+	predict bv1_yhat 
+	gen bv1_res = dv_indicator - bv1_yhat
 
-scatter dv_indicator bv1_yhat
+	summ dv_indicator bv1_yhat
+	/*
+	pause "next"
 
-pause "next"
+	scatter dv_indicator bv1_yhat
 
-scatter bv1_res dv_indicator
+	pause "next"
 
-pause "next"
+	scatter bv1_res dv_indicator
 
-scatter bv1_res bv1_yhat
-*/
-pause "complete: B.V.1"
+	pause "next"
 
+	scatter bv1_res bv1_yhat
+	*/
+	pause "complete: B.V.1"
+}
 ********************************************************************************
 ********************************************************************************
 
 // Model B.V.2
 
 eststo clear
-eststo: logit dv_indicator `count_lag_1_vars' `covariates' ib(freq).state ib(freq).time, vce(cl mineid) offset(lnhours) iter(50) or
-esttab using `"`directory'Model.`injury_label'.`time_label'.`violation_level_label'.B.V.2.csv"', replace plain wide p eform
+capture eststo: logit dv_indicator `count_lag_1_vars' `covariates' ib(freq).state ib(freq).time, vce(cl mineid) offset(lnhours) iter(50) or
+capture local rc = _rc 
 
-pause "next"
+if "`rc'" == "" {
+	esttab using `"`directory'Model.`injury_label'.`time_label'.`violation_level_label'.B.V.2.csv"', replace plain wide p eform
 
-// diagnostics/assessment
-lfit
+	pause "next"
 
-pause "next"
+	// diagnostics/assessment
+	lfit
 
-linktest
+	pause "next"
 
-pause "next"
+	linktest
 
-estat classification
+	pause "next"
 
-pause "next"
+	estat classification
 
-predict bv2_yhat 
-gen bv2_res = dv_indicator - bv2_yhat
+	pause "next"
 
-summ dv_indicator bv2_yhat
-/*
-pause "next"
+	predict bv2_yhat 
+	gen bv2_res = dv_indicator - bv2_yhat
 
-scatter dv_indicator bv2_yhat
+	summ dv_indicator bv2_yhat
+	/*
+	pause "next"
 
-pause "next"
+	scatter dv_indicator bv2_yhat
 
-scatter bv2_res dv_indicator
+	pause "next"
 
-pause "next"
+	scatter bv2_res dv_indicator
 
-scatter bv2_res bv2_yhat
-*/
-pause "complete: B.V.2"
+	pause "next"
 
+	scatter bv2_res bv2_yhat
+	*/
+	pause "complete: B.V.2"
+}
 ********************************************************************************
 ********************************************************************************
 
 // Model B.V.3
 
 eststo clear
-eststo: logit dv_indicator `count_lag_4_vars' `covariates' ib(freq).state ib(freq).time, vce(cl mineid) offset(lnhours) iter(50) or
-esttab using `"`directory'Model.`injury_label'.`time_label'.`violation_level_label'.B.V.3.csv"', replace plain wide p eform
+capture eststo: logit dv_indicator `count_lag_4_vars' `covariates' ib(freq).state ib(freq).time, vce(cl mineid) offset(lnhours) iter(50) or
+capture local rc = _rc 
 
-pause "next"
+if "`rc'" == "" {
+	esttab using `"`directory'Model.`injury_label'.`time_label'.`violation_level_label'.B.V.3.csv"', replace plain wide p eform
 
-// diagnostics/assessment
-lfit
+	pause "next"
 
-pause "next"
+	// diagnostics/assessment
+	lfit
 
-linktest
+	pause "next"
 
-pause "next"
+	linktest
 
-estat classification
+	pause "next"
 
-pause "next"
+	estat classification
 
-predict bv3_yhat 
-gen bv3_res = dv_indicator - bv3_yhat
+	pause "next"
 
-summ dv_indicator bv3_yhat
-/*
-pause "next"
+	predict bv3_yhat 
+	gen bv3_res = dv_indicator - bv3_yhat
 
-scatter dv_indicator bv3_yhat
+	summ dv_indicator bv3_yhat
+	/*
+	pause "next"
 
-pause "next"
+	scatter dv_indicator bv3_yhat
 
-scatter bv3_res dv_indicator
+	pause "next"
 
-pause "next"
+	scatter bv3_res dv_indicator
 
-scatter bv3_res bv3_yhat
-*/
-pause "complete: B.V.3"
+	pause "next"
 
+	scatter bv3_res bv3_yhat
+	*/
+	pause "complete: B.V.3"
+}
 ********************************************************************************
 ********************************************************************************
 
 // Model B.V.4
 
 eststo clear
-eststo: logit dv_indicator `count_lag_all_vars' `covariates' ib(freq).state ib(freq).time, vce(cl mineid) offset(lnhours) iter(50) or
-esttab using `"`directory'Model.`injury_label'.`time_label'.`violation_level_label'.B.V.4.csv"', replace plain wide p eform
+capture eststo: logit dv_indicator `count_lag_all_vars' `covariates' ib(freq).state ib(freq).time, vce(cl mineid) offset(lnhours) iter(50) or
+capture local rc = _rc 
 
-pause "next"
+if "`rc'" == "" {
+	esttab using `"`directory'Model.`injury_label'.`time_label'.`violation_level_label'.B.V.4.csv"', replace plain wide p eform
 
-// diagnostics/assessment
-lfit
+	pause "next"
 
-pause "next"
+	// diagnostics/assessment
+	lfit
 
-linktest
+	pause "next"
 
-pause "next"
+	linktest
 
-estat classification
+	pause "next"
 
-pause "next"
+	estat classification
 
-predict bv4_yhat 
-gen bv4_res = dv_indicator - bv4_yhat
+	pause "next"
 
-summ dv_indicator bv4_yhat
-/*
-pause "next"
+	predict bv4_yhat 
+	gen bv4_res = dv_indicator - bv4_yhat
 
-scatter dv_indicator bv4_yhat
+	summ dv_indicator bv4_yhat
+	/*
+	pause "next"
 
-pause "next"
+	scatter dv_indicator bv4_yhat
 
-scatter bv4_res dv_indicator
+	pause "next"
 
-pause "next"
+	scatter bv4_res dv_indicator
 
-scatter bv4_res bv4_yhat
-*/
-pause "complete: B.V.4"
+	pause "next"
 
+	scatter bv4_res bv4_yhat
+	*/
+	pause "complete: B.V.4"
+}
 ********************************************************************************
 ********************************************************************************
 
 // Model B.SSV.1
 
 eststo clear
-eststo: logit dv_indicator `ss_vars' `covariates' ib(freq).state ib(freq).time, vce(cl mineid) offset(lnhours) iter(50) or
-esttab using `"`directory'Model.`injury_label'.`time_label'.`violation_level_label'.B.SSV.1.csv"', replace plain wide p eform
+capture eststo: logit dv_indicator `ss_vars' `covariates' ib(freq).state ib(freq).time, vce(cl mineid) offset(lnhours) iter(50) or
+capture local rc = _rc 
 
-pause "next"
+if "`rc'" == "" {
+	esttab using `"`directory'Model.`injury_label'.`time_label'.`violation_level_label'.B.SSV.1.csv"', replace plain wide p eform
 
-// diagnostics/assessment
-lfit
+	pause "next"
 
-pause "next"
+	// diagnostics/assessment
+	lfit
 
-linktest
+	pause "next"
 
-pause "next"
+	linktest
 
-estat classification
+	pause "next"
 
-pause "next"
+	estat classification
 
-predict bssv1_yhat 
-gen bssv1_res = dv_indicator - bssv1_yhat
+	pause "next"
 
-summ dv_indicator bssv1_yhat
-/*
-pause "next"
+	predict bssv1_yhat 
+	gen bssv1_res = dv_indicator - bssv1_yhat
 
-scatter dv_indicator bssv1_yhat
+	summ dv_indicator bssv1_yhat
+	/*
+	pause "next"
 
-pause "next"
+	scatter dv_indicator bssv1_yhat
 
-scatter bssv1_res dv_indicator
+	pause "next"
 
-pause "next"
+	scatter bssv1_res dv_indicator
 
-scatter bssv1_res bssv1_yhat
-*/
-pause "complete: B.SSV.1"
+	pause "next"
 
+	scatter bssv1_res bssv1_yhat
+	*/
+	pause "complete: B.SSV.1"
+}
 ********************************************************************************
 ********************************************************************************
 
 // Model B.SSV.2
 
 eststo clear
-eststo: logit dv_indicator `ss_lag_1_vars' `covariates' ib(freq).state ib(freq).time, vce(cl mineid) offset(lnhours) iter(50) or
-esttab using `"`directory'Model.`injury_label'.`time_label'.`violation_level_label'.B.SSV.2.csv"', replace plain wide p eform
+capture eststo: logit dv_indicator `ss_lag_1_vars' `covariates' ib(freq).state ib(freq).time, vce(cl mineid) offset(lnhours) iter(50) or
+capture local rc = _rc 
 
-pause "next"
+if "`rc'" == "" {
+	esttab using `"`directory'Model.`injury_label'.`time_label'.`violation_level_label'.B.SSV.2.csv"', replace plain wide p eform
 
-// diagnostics/assessment
-lfit
+	pause "next"
 
-pause "next"
+	// diagnostics/assessment
+	lfit
 
-linktest
+	pause "next"
 
-pause "next"
+	linktest
 
-estat classification
+	pause "next"
 
-pause "next"
+	estat classification
 
-predict bssv2_yhat 
-gen bssv2_res = dv_indicator - bssv2_yhat
+	pause "next"
 
-summ dv_indicator bssv2_yhat
-/*
-pause "next"
+	predict bssv2_yhat 
+	gen bssv2_res = dv_indicator - bssv2_yhat
 
-scatter dv_indicator bssv2_yhat
+	summ dv_indicator bssv2_yhat
+	/*
+	pause "next"
 
-pause "next"
+	scatter dv_indicator bssv2_yhat
 
-scatter bssv2_res dv_indicator
+	pause "next"
 
-pause "next"
+	scatter bssv2_res dv_indicator
 
-scatter bssv2_res bssv2_yhat
-*/
-pause "complete: B.SSV.2"
+	pause "next"
 
+	scatter bssv2_res bssv2_yhat
+	*/
+	pause "complete: B.SSV.2"
+}
 ********************************************************************************
 ********************************************************************************
 
 // Model B.SSV.3
 
 eststo clear
-eststo: logit dv_indicator `ss_lag_4_vars' `covariates' ib(freq).state ib(freq).time, vce(cl mineid) offset(lnhours) iter(50) or
-esttab using `"`directory'Model.`injury_label'.`time_label'.`violation_level_label'.B.SSV.3.csv"', replace plain wide p eform
+capture eststo: logit dv_indicator `ss_lag_4_vars' `covariates' ib(freq).state ib(freq).time, vce(cl mineid) offset(lnhours) iter(50) or
+capture local rc = _rc 
 
-pause "next"
+if "`rc'" == "" {
+	esttab using `"`directory'Model.`injury_label'.`time_label'.`violation_level_label'.B.SSV.3.csv"', replace plain wide p eform
 
-// diagnostics/assessment
-lfit
+	pause "next"
 
-pause "next"
+	// diagnostics/assessment
+	lfit
 
-linktest
+	pause "next"
 
-pause "next"
+	linktest
 
-estat classification
+	pause "next"
 
-pause "next"
+	estat classification
 
-predict bssv3_yhat 
-gen bssv3_res = dv_indicator - bssv3_yhat
+	pause "next"
 
-summ dv_indicator bssv3_yhat
-/*
-pause "next"
+	predict bssv3_yhat 
+	gen bssv3_res = dv_indicator - bssv3_yhat
 
-scatter dv_indicator bssv3_yhat
+	summ dv_indicator bssv3_yhat
+	/*
+	pause "next"
 
-pause "next"
+	scatter dv_indicator bssv3_yhat
 
-scatter bssv3_res dv_indicator
+	pause "next"
 
-pause "next"
+	scatter bssv3_res dv_indicator
 
-scatter bssv3_res bssv3_yhat
-*/
-pause "complete: B.SSV.3"
+	pause "next"
 
+	scatter bssv3_res bssv3_yhat
+	*/
+	pause "complete: B.SSV.3"
+}
 ********************************************************************************
 ********************************************************************************
 
 // Model B.SSV.4
 
 eststo clear
-eststo: logit dv_indicator `ss_lag_all_vars' `covariates' ib(freq).state ib(freq).time, vce(cl mineid) offset(lnhours) iter(50) or
-esttab using `"`directory'Model.`injury_label'.`time_label'.`violation_level_label'.B.SSV.4.csv"', replace plain wide p eform
+capture eststo: logit dv_indicator `ss_lag_all_vars' `covariates' ib(freq).state ib(freq).time, vce(cl mineid) offset(lnhours) iter(50) or
+capture local rc = _rc 
 
-pause "next"
+if "`rc'" == "" {
+	esttab using `"`directory'Model.`injury_label'.`time_label'.`violation_level_label'.B.SSV.4.csv"', replace plain wide p eform
 
-// diagnostics/assessment
-lfit
+	pause "next"
 
-pause "next"
+	// diagnostics/assessment
+	lfit
 
-linktest
+	pause "next"
 
-pause "next"
+	linktest
 
-estat classification
+	pause "next"
 
-pause "next"
+	estat classification
 
-predict bssv4_yhat 
-gen bssv4_res = dv_indicator - bssv4_yhat
+	pause "next"
 
-summ dv_indicator bssv4_yhat
-/*
-pause "next"
+	predict bssv4_yhat 
+	gen bssv4_res = dv_indicator - bssv4_yhat
 
-scatter dv_indicator bssv4_yhat
+	summ dv_indicator bssv4_yhat
+	/*
+	pause "next"
 
-pause "next"
+	scatter dv_indicator bssv4_yhat
 
-scatter bssv4_res dv_indicator
+	pause "next"
 
-pause "next"
+	scatter bssv4_res dv_indicator
 
-scatter bssv4_res bssv4_yhat
-*/
-pause "complete: B.SSV.4"
+	pause "next"
 
+	scatter bssv4_res bssv4_yhat
+	*/
+	pause "complete: B.SSV.4"
+}
 ********************************************************************************
 ********************************************************************************
 
 // Model B.PP.1
 
 eststo clear
-eststo: logit dv_indicator `pp_vars' `covariates' ib(freq).state ib(freq).time if sample_pp == 1, vce(cl mineid) offset(lnhours) iter(50) or
-esttab using `"`directory'Model.`injury_label'.`time_label'.`violation_level_label'.B.PP.1.csv"', replace plain wide p eform
+capture eststo: logit dv_indicator `pp_vars' `covariates' ib(freq).state ib(freq).time if sample_pp == 1, vce(cl mineid) offset(lnhours) iter(50) or
+capture local rc = _rc 
 
-pause "next"
+if "`rc'" == "" {
+	esttab using `"`directory'Model.`injury_label'.`time_label'.`violation_level_label'.B.PP.1.csv"', replace plain wide p eform
 
-// diagnostics/assessment
-lfit
+	pause "next"
 
-pause "next"
+	// diagnostics/assessment
+	lfit
 
-linktest
+	pause "next"
 
-pause "next"
+	linktest
 
-estat classification
+	pause "next"
 
-pause "next"
+	estat classification
 
-predict bpp1_yhat 
-gen bpp1_res = dv_indicator - bpp1_yhat
+	pause "next"
 
-summ dv_indicator bpp1_yhat
-/*
-pause "next"
+	predict bpp1_yhat 
+	gen bpp1_res = dv_indicator - bpp1_yhat
 
-scatter dv_indicator bpp1_yhat
+	summ dv_indicator bpp1_yhat
+	/*
+	pause "next"
 
-pause "next"
+	scatter dv_indicator bpp1_yhat
 
-scatter bpp1_res dv_indicator
+	pause "next"
 
-pause "next"
+	scatter bpp1_res dv_indicator
 
-scatter bpp1_res bpp1_yhat
-*/
-pause "complete: B.PP.1"
+	pause "next"
 
+	scatter bpp1_res bpp1_yhat
+	*/
+	pause "complete: B.PP.1"
+}
 ********************************************************************************
 ********************************************************************************
 
 // Model B.PP.2
 
 eststo clear
-eststo: logit dv_indicator `pp_lag_1_vars' `covariates' ib(freq).state ib(freq).time if sample_pp == 1, vce(cl mineid) offset(lnhours) iter(50) or
-esttab using `"`directory'Model.`injury_label'.`time_label'.`violation_level_label'.B.PP.2.csv"', replace plain wide p eform
+capture eststo: logit dv_indicator `pp_lag_1_vars' `covariates' ib(freq).state ib(freq).time if sample_pp == 1, vce(cl mineid) offset(lnhours) iter(50) or
+capture local rc = _rc 
 
-pause "next"
+if "`rc'" == "" {
+	esttab using `"`directory'Model.`injury_label'.`time_label'.`violation_level_label'.B.PP.2.csv"', replace plain wide p eform
 
-// diagnostics/assessment
-lfit
+	pause "next"
 
-pause "next"
+	// diagnostics/assessment
+	lfit
 
-linktest
+	pause "next"
 
-pause "next"
+	linktest
 
-estat classification
+	pause "next"
 
-pause "next"
+	estat classification
 
-predict bpp2_yhat 
-gen bpp2_res = dv_indicator - bpp2_yhat
+	pause "next"
 
-summ dv_indicator bpp2_yhat
-/*
-pause "next"
+	predict bpp2_yhat 
+	gen bpp2_res = dv_indicator - bpp2_yhat
 
-scatter dv_indicator bpp2_yhat
+	summ dv_indicator bpp2_yhat
+	/*
+	pause "next"
 
-pause "next"
+	scatter dv_indicator bpp2_yhat
 
-scatter bpp2_res dv_indicator
+	pause "next"
 
-pause "next"
+	scatter bpp2_res dv_indicator
 
-scatter bpp2_res bpp2_yhat
-*/
-pause "complete: B.PP.2"
+	pause "next"
 
+	scatter bpp2_res bpp2_yhat
+	*/
+	pause "complete: B.PP.2"
+}
 ********************************************************************************
 ********************************************************************************
 
 // Model B.PP.3
 
 eststo clear
-eststo: logit dv_indicator `pp_lag_4_vars' `covariates' ib(freq).state ib(freq).time if sample_pp == 1, vce(cl mineid) offset(lnhours) iter(50) or
-esttab using `"`directory'Model.`injury_label'.`time_label'.`violation_level_label'.B.PP.3.csv"', replace plain wide p eform
+capture eststo: logit dv_indicator `pp_lag_4_vars' `covariates' ib(freq).state ib(freq).time if sample_pp == 1, vce(cl mineid) offset(lnhours) iter(50) or
+capture local rc = _rc 
 
-pause "next"
+if "`rc'" == "" {
+	esttab using `"`directory'Model.`injury_label'.`time_label'.`violation_level_label'.B.PP.3.csv"', replace plain wide p eform
 
-// diagnostics/assessment
-lfit
+	pause "next"
 
-pause "next"
+	// diagnostics/assessment
+	lfit
 
-linktest
+	pause "next"
 
-pause "next"
+	linktest
 
-estat classification
+	pause "next"
 
-pause "next"
+	estat classification
 
-predict bpp3_yhat 
-gen bpp3_res = dv_indicator - bpp3_yhat
+	pause "next"
 
-summ dv_indicator bpp3_yhat
-/*
-pause "next"
+	predict bpp3_yhat 
+	gen bpp3_res = dv_indicator - bpp3_yhat
 
-scatter dv_indicator bpp3_yhat
+	summ dv_indicator bpp3_yhat
+	/*
+	pause "next"
 
-pause "next"
+	scatter dv_indicator bpp3_yhat
 
-scatter bpp3_res dv_indicator
+	pause "next"
 
-pause "next"
+	scatter bpp3_res dv_indicator
 
-scatter bpp3_res bpp3_yhat
-*/
-pause "complete: B.PP.3"
+	pause "next"
 
+	scatter bpp3_res bpp3_yhat
+	*/
+	pause "complete: B.PP.3"
+}
 ********************************************************************************
 ********************************************************************************
 
 // Model B.PP.4
 
 eststo clear
-eststo: logit dv_indicator `pp_lag_all_vars' `covariates' ib(freq).state ib(freq).time if sample_pp == 1, vce(cl mineid) offset(lnhours) iter(50) or
-esttab using `"`directory'Model.`injury_label'.`time_label'.`violation_level_label'.B.PP.4.csv"', replace plain wide p eform
+capture eststo: logit dv_indicator `pp_lag_all_vars' `covariates' ib(freq).state ib(freq).time if sample_pp == 1, vce(cl mineid) offset(lnhours) iter(50) or
+capture local rc = _rc 
 
-pause "next"
+if "`rc'" == "" {
+	esttab using `"`directory'Model.`injury_label'.`time_label'.`violation_level_label'.B.PP.4.csv"', replace plain wide p eform
 
-// diagnostics/assessment
-lfit
+	pause "next"
 
-pause "next"
+	// diagnostics/assessment
+	lfit
 
-linktest
+	pause "next"
 
-pause "next"
+	linktest
 
-estat classification
+	pause "next"
 
-pause "next"
+	estat classification
 
-predict bpp4_yhat 
-gen bpp4_res = dv_indicator - bpp4_yhat
+	pause "next"
 
-summ dv_indicator bpp4_yhat
-/*
-pause "next"
+	predict bpp4_yhat 
+	gen bpp4_res = dv_indicator - bpp4_yhat
 
-scatter dv_indicator bpp4_yhat
+	summ dv_indicator bpp4_yhat
+	/*
+	pause "next"
 
-pause "next"
+	scatter dv_indicator bpp4_yhat
 
-scatter bpp4_res dv_indicator
+	pause "next"
 
-pause "next"
+	scatter bpp4_res dv_indicator
 
-scatter bpp4_res bpp4_yhat
-*/
-pause "complete: B.PP.4"
+	pause "next"
 
+	scatter bpp4_res bpp4_yhat
+	*/
+	pause "complete: B.PP.4"
+}
 ********************************************************************************
 ********************************************************************************
 
