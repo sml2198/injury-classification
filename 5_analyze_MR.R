@@ -53,8 +53,8 @@ imputation.method = 3
 falling.accidents = "included"
 
 # set preferences - data type - either training data for model selection, or real accidents data for classification
-data.type = "training data"
-# data.type = "real accidents data"
+# data.type = "training data"
+data.type = "real accidents data"
 
 dummies.option = "off"
 
