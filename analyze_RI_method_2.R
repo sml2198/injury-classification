@@ -14,8 +14,8 @@ date = "12-6/"
 
 # WHICH MODELS DO YOU WANT TO RUN?
 
-  # injtype = "PS"
-  injtype = "MR"
+  injtype = "PS"
+  # injtype = "MR"
   
   subpart.form = "rate"
   # subpart.form = "not-a-rate"
@@ -24,26 +24,35 @@ date = "12-6/"
   specification.test = "off"
   
   lag_3 = "on" # cannot be on at same time as ulw specification test. will also run lag 5.
-  #lag_3 = "off"
+  # lag_3 = "off"
   
   lag_5 = "on" # cannot be on at same time as ulw specification test. will also run lag 3.
-  #lag_5 = "off"
+  # lag_5 = "off"
 
 ######################################################################################################
 
 # define file names
-dtaroot = paste0("X:/Projects/Mining/NIOSH/analysis/results/dta/", date, "method_2/", collapse = NULL)
-csvroot = paste0("X:/Projects/Mining/NIOSH/analysis/results/csv/", date, collapse = NULL)
-
+if (lag_3 == "off" & lag_5 == "off") {
+  dtaroot = paste0("X:/Projects/Mining/NIOSH/analysis/results/dta/", date, "method_2/", collapse = NULL)
+  csvroot = paste0("X:/Projects/Mining/NIOSH/analysis/results/csv/", date, collapse = NULL)
+}
+if (lag_3 == "on" | lag_5 == "on") {
+  dtaroot3 = paste0("X:/Projects/Mining/NIOSH/analysis/results/dta/", date, "lag_3/method_2/", collapse = NULL)
+  csvroot3 = paste0("X:/Projects/Mining/NIOSH/analysis/results/csv/", date, "lag_3/", collapse = NULL)
+  
+  dtaroot5 = paste0("X:/Projects/Mining/NIOSH/analysis/results/dta/", date, "lag_5/method_2/", collapse = NULL)
+  csvroot5 = paste0("X:/Projects/Mining/NIOSH/analysis/results/csv/", date, "lag_5/", collapse = NULL)  
+}
+  
 # significant variable lists
   # load in 4 csvs - preferred model results
-if (subpart.form == "rate") {
+if (subpart.form == "rate" & lag_3 == "off" & lag_5 == "off") {
   B_1 = paste0(csvroot, injtype, "_B_sp_1_sig.csv", collapse = NULL)
   B_4 = paste0(csvroot, injtype, "_B_sp_4_sig.csv", collapse = NULL)
   C_1 = paste0(csvroot, injtype, "_C_sp_1_sig.csv", collapse = NULL)
   C_4 = paste0(csvroot, injtype, "_C_sp_4_sig.csv", collapse = NULL)
 }
-if (subpart.form == "not-a-rate") {
+if (subpart.form == "not-a-rate" & lag_3 == "off" & lag_5 == "off") {
   B_1 = paste0(csvroot, injtype, "_B_sp_1_non-rate_sig.csv", collapse = NULL)
   B_4 = paste0(csvroot, injtype, "_B_sp_4_non-rate_sig.csv", collapse = NULL)
   C_1 = paste0(csvroot, injtype, "_C_sp_1_non-rate_sig.csv", collapse = NULL)
@@ -51,18 +60,51 @@ if (subpart.form == "not-a-rate") {
 }
 # method 2 inputs
   # load in 4 csvs - method 1 RI results
-if (subpart.form == "rate") {
+if (subpart.form == "rate" & lag_3 == "off" & lag_5 == "off") {
   B_1_sig = paste0(csvroot, injtype, "_B_1_method_2_input.csv", collapse = NULL)
   B_4_sig = paste0(csvroot, injtype, "_B_4_method_2_input.csv", collapse = NULL)
   C_1_sig = paste0(csvroot, injtype, "_C_1_method_2_input.csv", collapse = NULL)
   C_4_sig = paste0(csvroot, injtype, "_C_4_method_2_input.csv", collapse = NULL)
 }
-if (subpart.form == "not-a-rate") {
+if (subpart.form == "not-a-rate" & lag_3 == "off" & lag_5 == "off") {
   B_1_sig = paste0(csvroot, injtype, "_B_1_non-rate_method_2_input.csv", collapse = NULL)
   B_4_sig = paste0(csvroot, injtype, "_B_4_non-rate_method_2_input.csv", collapse = NULL)
   C_1_sig = paste0(csvroot, injtype, "_C_1_non-rate_method_2_input.csv", collapse = NULL)
   C_4_sig = paste0(csvroot, injtype, "_C_4_non-rate_method_2_input.csv", collapse = NULL)
 }
+
+######################################################################################################
+
+# significant variable lists
+  # load in 4 csvs - preferred model results
+if (subpart.form == "rate" & (lag_3 == "on" | lag_5 == "on")) {
+  B_1 = paste0(csvroot3, injtype, "_B_sp_3_sig.csv", collapse = NULL)
+  B_4 = paste0(csvroot5, injtype, "_B_sp_5_sig.csv", collapse = NULL)
+  C_1 = paste0(csvroot3, injtype, "_C_sp_3_sig.csv", collapse = NULL)
+  C_4 = paste0(csvroot5, injtype, "_C_sp_5_sig.csv", collapse = NULL)
+}
+if (subpart.form == "not-a-rate" & (lag_3 == "on" | lag_5 == "on")) {
+  B_1 = paste0(csvroot3, injtype, "_B_sp_3_non-rate_sig.csv", collapse = NULL)
+  B_4 = paste0(csvroot5, injtype, "_B_sp_5_non-rate_sig.csv", collapse = NULL)
+  C_1 = paste0(csvroot3, injtype, "_C_sp_3_non-rate_sig.csv", collapse = NULL)
+  C_4 = paste0(csvroot5, injtype, "_C_sp_5_non-rate_sig.csv", collapse = NULL)
+}
+# method 2 inputs
+  # load in 4 csvs - method 1 RI results
+if (subpart.form == "rate" & (lag_3 == "on" | lag_5 == "on")) {
+  B_1_sig = paste0(csvroot3, injtype, "_B_3_method_2_input.csv", collapse = NULL)
+  B_4_sig = paste0(csvroot5, injtype, "_B_5_method_2_input.csv", collapse = NULL)
+  C_1_sig = paste0(csvroot3, injtype, "_C_3_method_2_input.csv", collapse = NULL)
+  C_4_sig = paste0(csvroot5, injtype, "_C_5_method_2_input.csv", collapse = NULL)
+}
+if (subpart.form == "not-a-rate" & (lag_3 == "on" | lag_5 == "on")) {
+  B_1_sig = paste0(csvroot3, injtype, "_B_3_non-rate_method_2_input.csv", collapse = NULL)
+  B_4_sig = paste0(csvroot5, injtype, "_B_5_non-rate_method_2_input.csv", collapse = NULL)
+  C_1_sig = paste0(csvroot3, injtype, "_C_3_non-rate_method_2_input.csv", collapse = NULL)
+  C_4_sig = paste0(csvroot5, injtype, "_C_5_non-rate_method_2_input.csv", collapse = NULL)
+}
+
+######################################################################################################
 
 if (subpart.form == "rate") {
   ext = ""
@@ -73,17 +115,30 @@ if (subpart.form == "not-a-rate") {
 
 ######################################################################################################
 
-if (subpart.form == "rate") {
+# define outfiles 
+if (subpart.form == "rate" & lag_3 == "off" & lag_5 == "off") {
   B_1_out_file = paste0(csvroot, injtype, "_B_1_method_2_output.csv", collapse = NULL)
   B_4_out_file = paste0(csvroot, injtype, "_B_4_method_2_output.csv", collapse = NULL)
   C_1_out_file = paste0(csvroot, injtype, "_C_1_method_2_output.csv", collapse = NULL)
   C_4_out_file = paste0(csvroot, injtype, "_C_4_method_2_output.csv", collapse = NULL)
 }
-if (subpart.form == "not-a-rate") {
+if (subpart.form == "not-a-rate" & lag_3 == "off" & lag_5 == "off") {
   B_1_out_file = paste0(csvroot, injtype, "_B_1_non-rate_method_2_output.csv", collapse = NULL)
   B_4_out_file = paste0(csvroot, injtype, "_B_4_non-rate_method_2_output.csv", collapse = NULL)
   C_1_out_file = paste0(csvroot, injtype, "_C_1_non-rate_method_2_output.csv", collapse = NULL)
   C_4_out_file = paste0(csvroot, injtype, "_C_4_non-rate_method_2_output.csv", collapse = NULL)
+}
+if (subpart.form == "rate" & (lag_3 == "on" | lag_5 == "on")) {  
+  B_1_out_file = paste0(csvroot3, injtype, "_B_3_method_2_output.csv", collapse = NULL)
+  B_4_out_file = paste0(csvroot5, injtype, "_B_5_method_2_output.csv", collapse = NULL)
+  C_1_out_file = paste0(csvroot3, injtype, "_C_3_method_2_output.csv", collapse = NULL)
+  C_4_out_file = paste0(csvroot5, injtype, "_C_5_method_2_output.csv", collapse = NULL)
+}
+if (subpart.form == "not-a-rate" & (lag_3 == "on" | lag_5 == "on")) {
+  B_1_out_file = paste0(csvroot3, injtype, "_B_3_non-rate_method_2_output.csv", collapse = NULL)
+  B_4_out_file = paste0(csvroot5, injtype, "_B_5_non-rate_method_2_output.csv", collapse = NULL)
+  C_1_out_file = paste0(csvroot3, injtype, "_C_3_non-rate_method_2_output.csv", collapse = NULL)
+  C_4_out_file = paste0(csvroot5, injtype, "_C_5_non-rate_method_2_output.csv", collapse = NULL)
 }
 
 ######################################################################################################
@@ -104,13 +159,23 @@ C_4_sig = read.table(C_4_sig, sep = ",", header = T)
 
 # create lists of the subparts that were tested in method 2 (and their file paths)
 B_1_sig_list = B_1_sig$subpart
-B_1_sig_files = paste0(dtaroot, injtype, "_B_1_", ext, B_1_sig_list, ".dta", collapse = NULL)
 B_4_sig_list = B_4_sig$subpart
-B_4_sig_files = paste0(dtaroot, injtype, "_B_4_", ext, B_4_sig_list, ".dta", collapse = NULL)
 C_1_sig_list = C_1_sig$subpart
-C_1_sig_files = paste0(dtaroot, injtype, "_C_1_", ext, C_1_sig_list, ".dta", collapse = NULL)
 C_4_sig_list = C_4_sig$subpart
-C_4_sig_files = paste0(dtaroot, injtype, "_C_4_", ext, C_4_sig_list, ".dta", collapse = NULL)
+
+# create lists of the file paths to the method 2 output
+if (lag_3 == "off" & lag_5 == "off") {
+  B_1_sig_files = paste0(dtaroot, injtype, "_B_1_", ext, B_1_sig_list, ".dta", collapse = NULL)
+  B_4_sig_files = paste0(dtaroot, injtype, "_B_4_", ext, B_4_sig_list, ".dta", collapse = NULL)
+  C_1_sig_files = paste0(dtaroot, injtype, "_C_1_", ext, C_1_sig_list, ".dta", collapse = NULL)
+  C_4_sig_files = paste0(dtaroot, injtype, "_C_4_", ext, C_4_sig_list, ".dta", collapse = NULL)
+}
+if (lag_3 == "on" | lag_5 == "on") {
+  B_1_sig_files = paste0(dtaroot3, injtype, "_B_1_", ext, B_1_sig_list, ".dta", collapse = NULL)
+  B_4_sig_files = paste0(dtaroot5, injtype, "_B_4_", ext, B_4_sig_list, ".dta", collapse = NULL)
+  C_1_sig_files = paste0(dtaroot3, injtype, "_C_1_", ext, C_1_sig_list, ".dta", collapse = NULL)
+  C_4_sig_files = paste0(dtaroot5, injtype, "_C_4_", ext, C_4_sig_list, ".dta", collapse = NULL)
+}
 
 ######################################################################################################
 
@@ -121,11 +186,8 @@ names(B_1) = names
 names(B_4) = names
 names(C_1) = names
 names(C_4) = names
-B_1$b = as.numeric(as.character(B_1$b))
-B_4$b = as.numeric(as.character(B_4$b))
-C_1$b = as.numeric(as.character(C_1$b))
-C_4$b = as.numeric(as.character(C_4$b))
 
+# remove whitespace in tables
 B_1 = B_1[which(B_1$p != "."), ]
 B_1 = B_1[-1, ]
 B_1 = B_1[-1, ]
@@ -142,6 +204,18 @@ C_4 = C_4[which(C_4$p != "."), ]
 C_4 = C_4[-1, ]
 C_4 = C_4[-1, ]
 
+# strip asterisks, if present (otherwise b will be dropped when formatted as a #)
+B_1$b = gsub("\\*", "", B_1$b)
+B_4$b = gsub("\\*", "", B_4$b)
+C_1$b = gsub("\\*", "", C_1$b)
+C_4$b = gsub("\\*", "", C_4$b)
+
+# format coefficients as numeric
+B_1$b = as.numeric(as.character(B_1$b))
+B_4$b = as.numeric(as.character(B_4$b))
+C_1$b = as.numeric(as.character(C_1$b))
+C_4$b = as.numeric(as.character(C_4$b))
+
 ######################################################################################################
 
 # LOAD IN RI METHOD 2 RESULTS & CALCULATE P VALUES FOR EACH SUBPART
@@ -149,7 +223,12 @@ C_4 = C_4[-1, ]
 names = "fake_coef"
 B_1_sig$new_p = NA
 for (a in B_1_sig_list) {
-  data = read.dta(paste0(dtaroot, injtype, "_B_1_", ext, a, ".dta", collapse = NULL))
+  if (lag_3 == "on") {
+  data = read.dta(paste0(dtaroot3, injtype, "_B_3_", ext, a, ".dta", collapse = NULL))
+  }
+  if (lag_3 == "off") {
+    data = read.dta(paste0(dtaroot, injtype, "_B_1_", ext, a, ".dta", collapse = NULL))
+  }  
   names(data) = names
   data$fake_coef = as.numeric(as.character(data$fake_coef))
   fake_coefs = data$fake_coef
@@ -160,7 +239,12 @@ for (a in B_1_sig_list) {
 
 B_4_sig$new_p = NA
 for (a in B_4_sig_list) {
-  data = read.dta(paste0(dtaroot, injtype, "_B_4_", ext, a, ".dta", collapse = NULL))
+  if (lag_5 == "on") {
+    data = read.dta(paste0(dtaroot5, injtype, "_B_5_", ext, a, ".dta", collapse = NULL))
+  }
+  if (lag_5 == "off") {
+    data = read.dta(paste0(dtaroot, injtype, "_B_4_", ext, a, ".dta", collapse = NULL))
+  }  
   names(data) = names
   data$fake_coef = as.numeric(as.character(data$fake_coef))
   fake_coefs = data$fake_coef
@@ -171,7 +255,12 @@ for (a in B_4_sig_list) {
 
 C_1_sig$new_p = NA
 for (a in C_1_sig_list) {
-  data = read.dta(paste0(dtaroot, injtype, "_C_1_", ext, a, ".dta", collapse = NULL))
+  if (lag_3 == "on") {
+    data = read.dta(paste0(dtaroot3, injtype, "_C_3_", ext, a, ".dta", collapse = NULL))
+  }
+  if (lag_3 == "off") {
+    data = read.dta(paste0(dtaroot, injtype, "_C_1_", ext, a, ".dta", collapse = NULL))
+  }  
   names(data) = names
   data$fake_coef = as.numeric(as.character(data$fake_coef))
   fake_coefs = data$fake_coef
@@ -182,7 +271,12 @@ for (a in C_1_sig_list) {
 
 C_4_sig$new_p = NA
 for (a in C_4_sig_list) {
-  data = read.dta(paste0(dtaroot, injtype, "_C_4_", ext, a, ".dta", collapse = NULL))
+  if (lag_5 == "on") {
+    data = read.dta(paste0(dtaroot5, injtype, "_C_5_", ext, a, ".dta", collapse = NULL))
+  }
+  if (lag_5 == "off") {
+    data = read.dta(paste0(dtaroot, injtype, "_C_4_", ext, a, ".dta", collapse = NULL))
+  }  
   names(data) = names
   data$fake_coef = as.numeric(as.character(data$fake_coef))
   fake_coefs = data$fake_coef
