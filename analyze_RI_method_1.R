@@ -24,18 +24,23 @@ date = "12-6/"
   specification.test = "off"
 
   lag_3 = "on" # cannot be on at same time as ulw specification test. will also run lag 5.
-  #lag_3 = "off"
+  # lag_3 = "off"
   
   lag_5 = "on" # cannot be on at same time as ulw specification test. will also run lag 3.
-  #lag_5 = "off"
+  # lag_5 = "off"
   
 # WHAT DO YOU WANT TO DO WITH THIS SAMPLE?
   
-  append.models = "on" # make a csv of each model set appended
-  # append.models = "off"
+  # analyze.method.1 = "on" # analyze method 1, spit out csvs of robustly significant subparts (p < 0.05)
+  analyze.method.1 = "off"
   
-  analyze.method.1 = "on" # analyze method 1, spit out csvs of robustly significant subparts
-  # analyze.method.1 = "off"
+  # append.models = "on" # make a csv of each model set appended - cannot be done if analyzing method 1 
+  if (analyze.method.1 == "on") {
+    append.models = "off"
+  }
+  if (analyze.method.1 == "off") {
+    append.models = "on"
+  }
   
 ######################################################################################################
 
